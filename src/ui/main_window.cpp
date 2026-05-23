@@ -134,12 +134,12 @@ void MainWindow::setupCentralWidget() {
     fileListLayout->addWidget(m_fileListWidget);
     topLayout->addWidget(fileListGroup, 2);
 
-    QGroupBox* configGroup = new QGroupBox(tr("转换设置"));
+    QGroupBox* configGroup = new QGroupBox();
     configGroup->setStyleSheet(
-        "QGroupBox { font-weight: bold; border: 2px solid #2196F3; border-radius: 6px; margin-top: 8px; padding-top: 8px; background-color: #f8fbff; }"
-        "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 8px; color: #2196F3; font-size: 13px; }"
+        "QGroupBox { font-weight: bold; border: 2px solid #2196F3; border-radius: 6px; background-color: #f8fbff; }"
     );
     QVBoxLayout* configLayout = new QVBoxLayout(configGroup);
+    configLayout->setContentsMargins(0, 0, 0, 0);
     m_configPanel = new ConfigPanel();
     configLayout->addWidget(m_configPanel);
     topLayout->addWidget(configGroup, 1);
