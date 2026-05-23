@@ -455,7 +455,11 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         return false;
     }
     emit statusChanged(tr("正在转换..."));
-    return true;
+    // Wait for the process to actually finish before returning.
+    // `waitForFinished` processes QProcess events internally even without an event loop,
+    // so onProcessReadyReadStandardError and onProcessFinished will fire correctly.
+    m_process->waitForFinished(-1);
+    return m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
 }
 
 bool FFmpegConverter::runFFprobe(const QStringList& args, QString& output) {

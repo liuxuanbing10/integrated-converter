@@ -122,16 +122,22 @@ QString TaskManager::addTask(ConversionTask* task) {
     if (!task) {
         return QString();
     }
-    QMutexLocker locker(&m_mutex);
-    QString taskId = task->id();
-    m_tasks[taskId] = task;
-    updateTaskPriority(taskId);
-    insertTaskByPriority(taskId);
-    LOG_INFO("TaskManager", QString("添加任务: %1, 优先级: %2")
-             .arg(taskId)
-             .arg(ConversionTask::priorityToString(task->priority())));
+    QString taskId;
+    bool shouldProcess = false;
+    {
+        QMutexLocker locker(&m_mutex);
+        taskId = task->id();
+        m_tasks[taskId] = task;
+        updateTaskPriority(taskId);
+        insertTaskByPriority(taskId);
+        shouldProcess = m_started && !m_paused;
+        LOG_INFO("TaskManager", QString("添加任务: %1, 优先级: %2")
+                 .arg(taskId)
+                 .arg(ConversionTask::priorityToString(task->priority())));
+    }
+    // Emit signal OUTSIDE mutex to prevent deadlock when connected slot calls back into TaskManager
     emit taskAdded(taskId);
-    if (m_started && !m_paused) {
+    if (shouldProcess) {
         processQueue();
     }
     return taskId;
@@ -151,18 +157,29 @@ QString TaskManager::addTask(const QString& inputFile, const QString& outputFile
 }
 
 void TaskManager::removeTask(const QString& taskId) {
-    QMutexLocker locker(&m_mutex);
-    if (!m_tasks.contains(taskId)) {
-        return;
+    {
+        QMutexLocker locker(&m_mutex);
+        if (!m_tasks.contains(taskId)) {
+            return;
+        }
+        // Cancel inline to avoid re-entering mutex via cancelTask()
+        ConversionTask* task = m_tasks.value(taskId);
+        if (task) {
+            ConversionTask::Status status = task->status();
+            if (status == ConversionTask::Status::Running) {
+                task->requestCancel();
+            } else if (status == ConversionTask::Status::Pending) {
+                task->setStatus(ConversionTask::Status::Cancelled);
+                m_pendingQueue.removeAll(taskId);
+            }
+        }
+        task = m_tasks.take(taskId);
+        m_runningTasks.remove(taskId);
+        if (task) {
+            task->deleteLater();
+        }
+        LOG_INFO("TaskManager", QString("移除任务: %1").arg(taskId));
     }
-    cancelTask(taskId);
-    ConversionTask* task = m_tasks.take(taskId);
-    m_pendingQueue.removeAll(taskId);
-    m_runningTasks.remove(taskId);
-    if (task) {
-        task->deleteLater();
-    }
-    LOG_INFO("TaskManager", QString("移除任务: %1").arg(taskId));
     emit taskRemoved(taskId);
 }
 
@@ -260,10 +277,12 @@ QList<ConversionTask*> TaskManager::getFailedTasks() const {
 }
 
 void TaskManager::start() {
-    QMutexLocker locker(&m_mutex);
-    m_started = true;
-    m_paused = false;
-    LOG_INFO("TaskManager", "启动任务管理器");
+    {
+        QMutexLocker locker(&m_mutex);
+        m_started = true;
+        m_paused = false;
+        LOG_INFO("TaskManager", "启动任务管理器");
+    }
     processQueue();
 }
 
@@ -274,10 +293,16 @@ void TaskManager::pause() {
 }
 
 void TaskManager::resume() {
-    QMutexLocker locker(&m_mutex);
-    if (m_paused) {
-        m_paused = false;
-        LOG_INFO("TaskManager", "恢复任务管理器");
+    bool shouldProcess = false;
+    {
+        QMutexLocker locker(&m_mutex);
+        if (m_paused) {
+            m_paused = false;
+            shouldProcess = true;
+            LOG_INFO("TaskManager", "恢复任务管理器");
+        }
+    }
+    if (shouldProcess) {
         processQueue();
     }
 }
@@ -376,6 +401,7 @@ void TaskManager::adjustParallelTasksForMemory() {
 }
 
 void TaskManager::processQueue() {
+    QMutexLocker locker(&m_mutex);
     if (m_paused || !m_started) {
         return;
     }
@@ -421,18 +447,23 @@ void TaskManager::onTaskProgressChanged(const QString& taskId, int progress) {
 
 void TaskManager::onTaskFinished(const QString& taskId, bool success, const QString& message) {
     Q_UNUSED(message);
-    QMutexLocker locker(&m_mutex);
-    m_runningTasks.remove(taskId);
-    LOG_INFO("TaskManager", QString("任务完成: %1, 成功: %2").arg(taskId).arg(success));
-    emit taskCompleted(taskId, success);
-    bool hasPending = false;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Pending) {
-            hasPending = true;
-            break;
+    bool allDone = false;
+    {
+        QMutexLocker locker(&m_mutex);
+        m_runningTasks.remove(taskId);
+        LOG_INFO("TaskManager", QString("任务完成: %1, 成功: %2").arg(taskId).arg(success));
+        bool hasPending = false;
+        for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+            if (it.value() && it.value()->status() == ConversionTask::Status::Pending) {
+                hasPending = true;
+                break;
+            }
         }
+        allDone = m_runningTasks.isEmpty() && !hasPending;
     }
-    if (m_runningTasks.isEmpty() && !hasPending) {
+    // Emit signals OUTSIDE mutex
+    emit taskCompleted(taskId, success);
+    if (allDone) {
         LOG_INFO("TaskManager", "所有任务已完成");
         emit allTasksCompleted();
     } else {
@@ -460,13 +491,13 @@ void TaskManager::onMemoryCritical(size_t current, size_t threshold) {
 }
 
 void TaskManager::onMemoryNormalized() {
-    LOG_INFO("TaskManager", "内存恢复正常，恢复并行任务数");
-    m_memoryUnderPressure = false;
-    m_maxParallel = m_baseMaxParallel;
-    m_threadPool->setMaxThreadCount(m_maxParallel);
-    emit memoryPressureChanged(false);
-    QMutexLocker locker(&m_mutex);
-    if (m_started && !m_paused) {
-        processQueue();
+    {
+        QMutexLocker locker(&m_mutex);
+        LOG_INFO("TaskManager", "内存恢复正常，恢复并行任务数");
+        m_memoryUnderPressure = false;
+        m_maxParallel = m_baseMaxParallel;
+        m_threadPool->setMaxThreadCount(m_maxParallel);
     }
+    emit memoryPressureChanged(false);
+    processQueue();
 }
