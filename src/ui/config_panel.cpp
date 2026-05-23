@@ -25,16 +25,17 @@ ConfigPanel::~ConfigPanel() {
 
 void ConfigPanel::setupUI() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(16, 16, 16, 16);
-    mainLayout->setSpacing(16);
+    mainLayout->setContentsMargins(12, 12, 12, 12);
+    mainLayout->setSpacing(12);
 
     QLabel* titleLabel = new QLabel(tr("格式转换设置"));
-    titleLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #2196F3;");
+    titleLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #2196F3;");
+    titleLabel->setWordWrap(true);
     mainLayout->addWidget(titleLabel);
 
     QFrame* line = new QFrame();
     line->setFrameShape(QFrame::HLine);
-    line->setStyleSheet("color: #e0e0e0;");
+    line->setStyleSheet("color: #e0e0e0; max-height: 1px;");
     mainLayout->addWidget(line);
 
     QLabel* formatTitle = new QLabel(tr("目标格式"));
@@ -44,19 +45,19 @@ void ConfigPanel::setupUI() {
     QHBoxLayout* formatLayout = new QHBoxLayout();
     QLabel* arrowLabel = new QLabel(tr("转换为"));
     arrowLabel->setStyleSheet("font-size: 13px; color: #666;");
+    arrowLabel->setMinimumWidth(40);
     formatLayout->addWidget(arrowLabel);
 
     m_outputFormatCombo = new QComboBox();
-    m_outputFormatCombo->setMinimumWidth(220);
+    m_outputFormatCombo->setMinimumWidth(160);
     m_outputFormatCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     m_outputFormatCombo->setStyleSheet("font-size: 14px; padding: 6px;");
     formatLayout->addWidget(m_outputFormatCombo, 1);
-    formatLayout->addStretch();
     mainLayout->addLayout(formatLayout);
 
     QFrame* line2 = new QFrame();
     line2->setFrameShape(QFrame::HLine);
-    line2->setStyleSheet("color: #e0e0e0;");
+    line2->setStyleSheet("color: #e0e0e0; max-height: 1px;");
     mainLayout->addWidget(line2);
 
     QLabel* outputTitle = new QLabel(tr("输出位置"));
@@ -74,7 +75,6 @@ void ConfigPanel::setupUI() {
     outputDirLayout->addWidget(m_browseOutputBtn);
 
     mainLayout->addLayout(outputDirLayout);
-    mainLayout->addStretch();
 
     updateOutputFormats();
 }
@@ -89,7 +89,7 @@ void ConfigPanel::applyStyleSheet() {
             padding: 8px 12px;
             border: 2px solid #2196F3;
             border-radius: 8px;
-            min-width: 160px;
+            min-width: 120px;
             background-color: #ffffff;
             font-size: 14px;
         }
@@ -123,9 +123,6 @@ void ConfigPanel::applyStyleSheet() {
         }
         QPushButton:hover {
             background-color: #1976D2;
-        }
-        QLabel {
-            padding: 2px 0;
         }
     )";
     setStyleSheet(styleSheet);
