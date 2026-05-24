@@ -1,0 +1,73 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Debug (tests enabled)",
+            "description": "Debug build with test suite enabled. Override CMAKE_PREFIX_PATH via -D or CMakeUserPresets.json if your Qt6 installation is elsewhere.",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_STANDARD": "17",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "BUILD_TESTS": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release",
+            "description": "Release build with optimizations",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_STANDARD": "17",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "BUILD_TESTS": "OFF",
+                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+            }
+        },
+        {
+            "name": "test-only",
+            "displayName": "Debug (tests only)",
+            "description": "Build and run tests only",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/test",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_STANDARD": "17",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "BUILD_TESTS": "ON",
+                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release"
+        },
+        {
+            "name": "test-only",
+            "configurePreset": "test-only",
+            "targets": ["test_runner"]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "verbose"
+            }
+        }
+    ]
+}

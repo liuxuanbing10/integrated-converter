@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QFile>
+#include <QStandardPaths>
 #include "ui/main_window.h"
 #include "core/logger.h"
 #include "core/config_manager.h"
@@ -13,7 +14,8 @@ int main(int argc, char* argv[]) {
     app.setApplicationName("IntegratedConverter");
     app.setApplicationVersion("1.0.0");
     app.setOrganizationName("ConverterTools");
-    QString configDir = QDir::homePath() + "/.integrated_converter";
+    QString configDir = QStandardPaths::writableLocation(
+        QStandardPaths::AppConfigLocation);
     QDir().mkpath(configDir);
     QString logPath = configDir + "/converter.log";
     Logger::instance().setLogFile(logPath);

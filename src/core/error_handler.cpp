@@ -5,10 +5,7 @@
 #include <algorithm>
 
 ErrorHandler* ErrorHandler::instance() {
-    static ErrorHandler* s_instance = nullptr;
-    if (!s_instance) {
-        s_instance = new ErrorHandler();
-    }
+    static ErrorHandler* s_instance = new ErrorHandler();
     return s_instance;
 }
 

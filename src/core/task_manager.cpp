@@ -8,12 +8,7 @@
 #include <QCoreApplication>
 
 TaskManager* TaskManager::instance() {
-    static TaskManager* s_instance = nullptr;
-    static QMutex s_instanceMutex;
-    QMutexLocker locker(&s_instanceMutex);
-    if (!s_instance) {
-        s_instance = new TaskManager();
-    }
+    static TaskManager* s_instance = new TaskManager();
     return s_instance;
 }
 
@@ -118,7 +113,7 @@ int TaskManager::calculateDynamicMaxParallel() const {
     return m_baseMaxParallel;
 }
 
-QString TaskManager::addTask(ConversionTask* task) {
+QString TaskManager::addTask(std::unique_ptr<ConversionTask> task) {
     if (!task) {
         return QString();
     }
@@ -127,13 +122,16 @@ QString TaskManager::addTask(ConversionTask* task) {
     {
         QMutexLocker locker(&m_mutex);
         taskId = task->id();
-        m_tasks[taskId] = task;
+        // Take ownership: release from unique_ptr, store as raw pointer internally.
+        // QMap does not support move-only types (COW semantics), so we manage
+        // lifetime manually via qDeleteAll in the destructor / deleteLater in removeTask.
+        m_tasks[taskId] = task.release();
         updateTaskPriority(taskId);
         insertTaskByPriority(taskId);
         shouldProcess = m_started && !m_paused;
         LOG_INFO("TaskManager", QString("添加任务: %1, 优先级: %2")
                  .arg(taskId)
-                 .arg(ConversionTask::priorityToString(task->priority())));
+                 .arg(ConversionTask::priorityToString(m_tasks.value(taskId)->priority())));
     }
     // Emit signal OUTSIDE mutex to prevent deadlock when connected slot calls back into TaskManager
     emit taskAdded(taskId);
@@ -145,7 +143,7 @@ QString TaskManager::addTask(ConversionTask* task) {
 
 QString TaskManager::addTask(const QString& inputFile, const QString& outputFile,
                              const QVariantMap& params) {
-    ConversionTask* task = new ConversionTask(inputFile, outputFile, params);
+    auto task = std::make_unique<ConversionTask>(inputFile, outputFile, params);
     QString converterName = params.value("converter").toString();
     task->setConverterType(ConversionTask::stringToConverterType(converterName));
     if (params.contains("priority")) {
@@ -153,7 +151,7 @@ QString TaskManager::addTask(const QString& inputFile, const QString& outputFile
         task->setPriority(static_cast<ConversionTask::Priority>(
             qBound(0, priorityVal, static_cast<int>(ConversionTask::Priority::High))));
     }
-    return addTask(task);
+    return addTask(std::move(task));
 }
 
 void TaskManager::removeTask(const QString& taskId) {

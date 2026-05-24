@@ -9,12 +9,7 @@
 #endif
 
 MemoryMonitor* MemoryMonitor::instance() {
-    static MemoryMonitor* s_instance = nullptr;
-    static QMutex s_mutex;
-    QMutexLocker locker(&s_mutex);
-    if (!s_instance) {
-        s_instance = new MemoryMonitor();
-    }
+    static MemoryMonitor* s_instance = new MemoryMonitor();
     return s_instance;
 }
 
