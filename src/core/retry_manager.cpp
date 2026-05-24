@@ -3,10 +3,7 @@
 #include <QThread>
 
 RetryManager* RetryManager::instance() {
-    static RetryManager* s_instance = nullptr;
-    if (!s_instance) {
-        s_instance = new RetryManager();
-    }
+    static RetryManager* s_instance = new RetryManager();
     return s_instance;
 }
 

@@ -12,6 +12,7 @@
 #include "conversion_task.h"
 #include "iconverter.h"
 
+class ConversionTask;
 class TaskRunnable;
 
 class TaskManager : public QObject {
@@ -25,7 +26,7 @@ public:
     QStringList availableConverters() const;
     IConverter* converter(const QString& name) const;
 
-    QString addTask(ConversionTask* task);
+    QString addTask(std::unique_ptr<ConversionTask> task);
     QString addTask(const QString& inputFile, const QString& outputFile,
                     const QVariantMap& params);
     void removeTask(const QString& taskId);

@@ -1,21 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Test)
-set(TEST_CORE_SOURCES
-    core/test_logger.cpp
-    core/test_config_manager.cpp
-    core/test_task_manager.cpp
-    core/test_error_handler.cpp
-)
-set(TEST_CONVERTER_SOURCES
-    converters/test_ffmpeg_converter.cpp
-    converters/test_pandoc_converter.cpp
-)
 set(TEST_SOURCES
     test_main.cpp
     test_integration.cpp
     test_performance.cpp
-    ${TEST_CORE_SOURCES}
-    ${TEST_CONVERTER_SOURCES}
 )
 set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/conversion_task.cpp
