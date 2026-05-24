@@ -1,5 +1,6 @@
 #include "pandoc_converter.h"
 #include "config_manager.h"
+#include "format_registry.h"
 #include "logger.h"
 #include "error_handler.h"
 #include <QFileInfo>
@@ -11,63 +12,18 @@ PandocConverter::PandocConverter(QObject* parent)
     , m_isConverting(false)
 {
     m_pandocPath = ConfigManager::instance().value("pandocPath", "pandoc").toString();
-    initFormatMaps();
+    const auto& reg = FormatRegistry::instance();
+    m_inputFormats = reg.documentInputFormats();
+    m_outputFormats = reg.documentOutputFormats();
 }
 PandocConverter::~PandocConverter() {
     if (m_currentProcess) {
         m_currentProcess->kill();
-        m_currentProcess->deleteLater();
-        m_currentProcess = nullptr;
+        m_currentProcess.reset();
     }
-}
-void PandocConverter::initFormatMaps() {
-    m_inputFormats << "md" << "markdown" << "html" << "htm"
-                   << "tex" << "latex"
-                   << "docx" << "word"
-                   << "rst" << "rest"
-                   << "org"
-                   << "epub"
-                   << "txt" << "plain"
-                   << "odt"
-                   << "csv"
-                   << "json";
-    m_outputFormats << "md" << "markdown" << "html" << "htm"
-                    << "tex" << "latex"
-                    << "docx" << "word"
-                    << "pdf"
-                    << "rst" << "rest"
-                    << "org"
-                    << "epub"
-                    << "pptx"
-                    << "txt" << "plain"
-                    << "odt"
-                    << "json";
-    m_pandocFormatMap["md"] = "markdown";
-    m_pandocFormatMap["markdown"] = "markdown";
-    m_pandocFormatMap["html"] = "html";
-    m_pandocFormatMap["htm"] = "html";
-    m_pandocFormatMap["tex"] = "latex";
-    m_pandocFormatMap["latex"] = "latex";
-    m_pandocFormatMap["docx"] = "docx";
-    m_pandocFormatMap["word"] = "docx";
-    m_pandocFormatMap["pdf"] = "pdf";
-    m_pandocFormatMap["rst"] = "rst";
-    m_pandocFormatMap["rest"] = "rst";
-    m_pandocFormatMap["org"] = "org";
-    m_pandocFormatMap["epub"] = "epub";
-    m_pandocFormatMap["pptx"] = "pptx";
-    m_pandocFormatMap["txt"] = "plain";
-    m_pandocFormatMap["plain"] = "plain";
-    m_pandocFormatMap["odt"] = "odt";
-    m_pandocFormatMap["csv"] = "csv";
-    m_pandocFormatMap["json"] = "json";
 }
 QString PandocConverter::getPandocFormat(const QString& format) const {
-    QString lowerFormat = format.toLower();
-    if (m_pandocFormatMap.contains(lowerFormat)) {
-        return m_pandocFormatMap[lowerFormat];
-    }
-    return lowerFormat;
+    return FormatRegistry::instance().pandocFormatName(format);
 }
 bool PandocConverter::checkPandocAvailable() const {
     QProcess process;
@@ -324,16 +280,16 @@ bool PandocConverter::runPandocAsync(const QString& inputFile,
                                     const QStringList& args) {
     if (m_currentProcess) {
         m_currentProcess->kill();
-        m_currentProcess->deleteLater();
+        m_currentProcess.reset();
     }
-    m_currentProcess = new QProcess(this);
+    m_currentProcess = std::make_unique<QProcess>();
     m_currentOutputFile = outputFile;
     m_isConverting = true;
-    connect(m_currentProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    connect(m_currentProcess.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &PandocConverter::onProcessFinished);
-    connect(m_currentProcess, &QProcess::errorOccurred,
+    connect(m_currentProcess.get(), &QProcess::errorOccurred,
             this, &PandocConverter::onProcessError);
-    connect(m_currentProcess, &QProcess::readyReadStandardError,
+    connect(m_currentProcess.get(), &QProcess::readyReadStandardError,
             this, &PandocConverter::onProcessReadyReadStandardError);
     m_currentProcess->setProgram(m_pandocPath);
     m_currentProcess->setArguments(args);
@@ -342,11 +298,15 @@ bool PandocConverter::runPandocAsync(const QString& inputFile,
     return m_currentProcess->waitForStarted();
 }
 void PandocConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
-    m_isConverting = false;
-    QString output = m_currentProcess->readAllStandardError();
-    if (output.isEmpty()) {
-        output = m_currentProcess->readAllStandardOutput();
+    QString output;
+    if (m_currentProcess) {
+        output = m_currentProcess->readAllStandardError();
+        if (output.isEmpty()) {
+            output = m_currentProcess->readAllStandardOutput();
+        }
     }
+    m_isConverting = false;
+    m_currentProcess.reset();
     bool success = (exitCode == 0 && exitStatus == QProcess::NormalExit);
     if (success) {
         LOG_INFO("Pandoc", QString("异步转换完成: %1").arg(m_currentOutputFile));
@@ -357,13 +317,10 @@ void PandocConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitS
         LOG_ERROR("Pandoc", QString("异步转换失败: %1").arg(output));
         emit conversionFinished(false, output);
     }
-    if (m_currentProcess) {
-        m_currentProcess->deleteLater();
-        m_currentProcess = nullptr;
-    }
 }
 void PandocConverter::onProcessError(QProcess::ProcessError error) {
     m_isConverting = false;
+    m_currentProcess.reset();
     ErrorCode errorCode;
     switch (error) {
         case QProcess::FailedToStart:
@@ -388,10 +345,6 @@ void PandocConverter::onProcessError(QProcess::ProcessError error) {
     ErrorHandler::instance()->handleError(err);
     emit errorOccurred(err);
     emit conversionFinished(false, err.message);
-    if (m_currentProcess) {
-        m_currentProcess->deleteLater();
-        m_currentProcess = nullptr;
-    }
 }
 void PandocConverter::onProcessReadyReadStandardError() {
     if (m_currentProcess) {

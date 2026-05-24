@@ -9,13 +9,12 @@
 #endif
 
 MemoryMonitor* MemoryMonitor::instance() {
-    static MemoryMonitor* s_instance = new MemoryMonitor();
-    return s_instance;
+    static MemoryMonitor s_instance;
+    return &s_instance;
 }
 
 MemoryMonitor::MemoryMonitor()
     : m_checkTimer(new QTimer(this))
-    , m_trackedAllocation(0)
     , m_warningThreshold(0.70)
     , m_criticalThreshold(0.85)
     , m_lastLevel(MemoryLevel::Normal)
@@ -149,20 +148,6 @@ MemoryMonitor::MemoryLevel MemoryMonitor::currentLevel() const {
         return MemoryLevel::Warning;
     }
     return MemoryLevel::Normal;
-}
-
-void MemoryMonitor::recordAllocation(size_t bytes) {
-    QMutexLocker locker(&m_mutex);
-    m_trackedAllocation += bytes;
-}
-
-void MemoryMonitor::recordDeallocation(size_t bytes) {
-    QMutexLocker locker(&m_mutex);
-    if (m_trackedAllocation >= bytes) {
-        m_trackedAllocation -= bytes;
-    } else {
-        m_trackedAllocation = 0;
-    }
 }
 
 void MemoryMonitor::checkMemory() {

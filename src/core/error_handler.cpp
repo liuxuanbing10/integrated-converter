@@ -5,8 +5,8 @@
 #include <algorithm>
 
 ErrorHandler* ErrorHandler::instance() {
-    static ErrorHandler* s_instance = new ErrorHandler();
-    return s_instance;
+    static ErrorHandler s_instance;
+    return &s_instance;
 }
 
 ErrorHandler::ErrorHandler()

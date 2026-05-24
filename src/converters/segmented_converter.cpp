@@ -120,11 +120,7 @@ bool SegmentedConverter::startNextSegment() {
     bool isLastSegment = (m_currentSegment == m_totalSegments - 1);
     QString segmentFile = QString("%1/segment_%2.ts").arg(m_tempDir).arg(m_currentSegment, 3, 10, QChar('0'));
     m_segmentFiles.append(segmentFile);
-    if (m_process) {
-        delete m_process;
-        m_process = nullptr;
-    }
-    m_process = new QProcess(this);
+    m_process = std::make_unique<QProcess>();
     QStringList args;
     args << "-y" << "-ss" << formatTime(startTime);
     if (!isLastSegment) {
@@ -134,8 +130,8 @@ bool SegmentedConverter::startNextSegment() {
          << "-c:a" << "aac" << "-f" << "mpegts" << segmentFile;
     m_process->setProgram(m_ffmpegPath);
     m_process->setArguments(args);
-    connect(m_process, &QProcess::readyReadStandardError, this, &SegmentedConverter::onSegmentReadyRead);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    connect(m_process.get(), &QProcess::readyReadStandardError, this, &SegmentedConverter::onSegmentReadyRead);
+    connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &SegmentedConverter::onSegmentFinished);
     LOG_DEBUG("SegmentedConverter", QString("开始转换分段 %1/%2").arg(m_currentSegment + 1).arg(m_totalSegments));
     emit statusChanged(tr("转换分段 %1/%2...").arg(m_currentSegment + 1).arg(m_totalSegments));
@@ -187,18 +183,14 @@ bool SegmentedConverter::mergeSegments() {
         emit conversionFinished(false, tr("没有分段需要合并"));
         return false;
     }
-    if (m_process) {
-        delete m_process;
-        m_process = nullptr;
-    }
-    m_process = new QProcess(this);
+    m_process = std::make_unique<QProcess>();
     QStringList args;
     args << "-y" << "-i" << "concat:" + m_segmentFiles.join("|");
     QString outputFormat = QFileInfo(m_outputFile).suffix().toLower();
     args << "-c" << "copy" << m_outputFile;
     m_process->setProgram(m_ffmpegPath);
     m_process->setArguments(args);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &SegmentedConverter::onMergeFinished);
     LOG_DEBUG("SegmentedConverter", "开始合并分段");
     m_process->start();
@@ -235,10 +227,11 @@ void SegmentedConverter::cleanupTempFiles() {
 void SegmentedConverter::cancel() {
     if (m_isRunning) {
         m_cancelled = true;
-        if (m_process) {
-            m_process->kill();
-            m_process->waitForFinished(3000);
-        }
+    if (m_process) {
+        m_process->kill();
+        m_process->waitForFinished(3000);
+        m_process.reset();
+    }
         m_isRunning = false;
         cleanupTempFiles();
         emit statusChanged(tr("已取消"));

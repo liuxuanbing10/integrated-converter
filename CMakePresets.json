@@ -4,7 +4,7 @@
         {
             "name": "default",
             "displayName": "Debug (tests enabled)",
-            "description": "Debug build with test suite enabled. Override CMAKE_PREFIX_PATH via -D or CMakeUserPresets.json if your Qt6 installation is elsewhere.",
+            "description": "Debug build with test suite enabled. Set CMAKE_PREFIX_PATH via CMakeUserPresets.json if your Qt6 installation is elsewhere (not hardcoded here).",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/debug",
             "cacheVariables": {
@@ -12,8 +12,7 @@
                 "CMAKE_CXX_STANDARD": "17",
                 "CMAKE_CXX_STANDARD_REQUIRED": "ON",
                 "BUILD_TESTS": "ON",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {
@@ -26,8 +25,7 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_CXX_STANDARD": "17",
                 "CMAKE_CXX_STANDARD_REQUIRED": "ON",
-                "BUILD_TESTS": "OFF",
-                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+                "BUILD_TESTS": "OFF"
             }
         },
         {
@@ -40,8 +38,7 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_CXX_STANDARD": "17",
                 "CMAKE_CXX_STANDARD_REQUIRED": "ON",
-                "BUILD_TESTS": "ON",
-                "CMAKE_PREFIX_PATH": "D:/tools/6.10.3/mingw_64"
+                "BUILD_TESTS": "ON"
             }
         }
     ],

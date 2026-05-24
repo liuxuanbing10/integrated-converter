@@ -163,4 +163,6 @@ private slots:
 private:
     QString m_tempDir;
 };
+
 #include "test_performance.moc"
+

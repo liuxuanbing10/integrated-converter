@@ -18,6 +18,7 @@ set(CORE_SOURCES
     src/core/skill_manager.cpp
     src/core/memory_monitor.cpp
     src/core/large_file_handler.cpp
+    src/core/format_registry.cpp
 )
 set(CORE_HEADERS
     src/core/iconverter.h
@@ -32,6 +33,7 @@ set(CORE_HEADERS
     src/core/skill_manager.h
     src/core/memory_monitor.h
     src/core/large_file_handler.h
+    src/core/format_registry.h
 )
 set(CONVERTER_SOURCES
     src/converters/ffmpeg_converter.cpp
@@ -94,6 +96,13 @@ if(WIN32 AND NOT MINGW)
         WIN32_EXECUTABLE ON
     )
 endif()
+# 每次编译后将可执行文件复制到项目根目录
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:${PROJECT_NAME}>"
+        "${CMAKE_SOURCE_DIR}/${PROJECT_NAME}.exe"
+    COMMENT "复制可执行文件到项目根目录"
+)
 option(BUILD_TESTS "Build test suite" OFF)
 if(BUILD_TESTS)
     enable_testing()

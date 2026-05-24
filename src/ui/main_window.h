@@ -39,6 +39,7 @@ private slots:
     void onFileCountChanged(int count);
     void onShowSummary();
     void onRetryFailed(const QList<QString>& inputPaths);
+    void toggleTheme();
     void onErrorOccurred(const struct ErrorInfo& error);
     void onRetryTriggered(const QString& taskId, int retryCount);
     void updateStatusBar();
@@ -49,11 +50,13 @@ private:
     void setupStatusBar();
     void setupCentralWidget();
     void setupConnections();
-    void applyStyleSheet();
     void submitConversionTasks();
     void showConversionSummary();
     void showErrorDialog(const struct ErrorInfo& error);
     void updateErrorIcon();
+    void applyLightTheme();
+    void applyDarkTheme();
+    bool m_darkMode;
     FileListWidget* m_fileListWidget;
     TaskListWidget* m_taskListWidget;
     ConfigPanel* m_configPanel;

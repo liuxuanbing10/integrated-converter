@@ -3,8 +3,8 @@
 #include <QThread>
 
 RetryManager* RetryManager::instance() {
-    static RetryManager* s_instance = new RetryManager();
-    return s_instance;
+    static RetryManager s_instance;
+    return &s_instance;
 }
 
 RetryManager::RetryManager()

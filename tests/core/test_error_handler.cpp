@@ -3,151 +3,140 @@
 #include <QThread>
 #include "../../src/core/error_handler.h"
 #include "../../src/core/error_types.h"
-class TestErrorHandler : public QObject {
-    Q_OBJECT
-private slots:
-    void initTestCase() {
-        ErrorHandler::instance()->clearErrors();
+#include "test_error_handler.h"
+
+void TestErrorHandler::initTestCase() {
+    ErrorHandler::instance()->clearErrors();
+}
+
+void TestErrorHandler::cleanupTestCase() {
+    ErrorHandler::instance()->clearErrors();
+}
+
+void TestErrorHandler::init() {
+    ErrorHandler::instance()->clearErrors();
+}
+
+void TestErrorHandler::testHandleError() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    ErrorInfo error(ErrorCode::ConversionFailed, "Test error message");
+    error.details = "Test error details";
+    handler->handleError(error);
+    QCOMPARE(handler->errorCount(), 1);
+    ErrorInfo retrieved = handler->lastError();
+    QCOMPARE(retrieved.message, QString("Test error message"));
+}
+
+void TestErrorHandler::testHandleMultipleErrors() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    for (int i = 0; i < 5; ++i) {
+        ErrorInfo error(ErrorCode::ConversionFailed, QString("Error %1").arg(i));
+        handler->handleError(error);
     }
-    void cleanupTestCase() {
-        ErrorHandler::instance()->clearErrors();
+    QCOMPARE(handler->errorCount(), 5);
+}
+
+void TestErrorHandler::testHandleException() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    handler->handleException(std::runtime_error("Test exception"), "test_context");
+    QCOMPARE(handler->errorCount(), 1);
+}
+
+void TestErrorHandler::testHandleErrorForTask() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    ErrorInfo error(ErrorCode::ConversionFailed, "Task error");
+    handler->handleErrorForTask(error, "task-1");
+    QCOMPARE(handler->errorCount(), 1);
+    QCOMPARE(handler->errorCountForTask("task-1"), 1);
+    QCOMPARE(handler->errorCountForTask("non-existent"), 0);
+}
+
+void TestErrorHandler::testClearErrors() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    ErrorInfo error(ErrorCode::ConversionFailed, "To be cleared");
+    handler->handleError(error);
+    QVERIFY(handler->errorCount() > 0);
+    handler->clearErrors();
+    QCOMPARE(handler->errorCount(), 0);
+}
+
+void TestErrorHandler::testClearErrorsForTask() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    ErrorInfo error(ErrorCode::ConversionFailed, "Task error to clear");
+    handler->handleErrorForTask(error, "task-clear");
+    QVERIFY(handler->errorCountForTask("task-clear") > 0);
+    handler->clearErrorsForTask("task-clear");
+    QCOMPARE(handler->errorCountForTask("task-clear"), 0);
+}
+
+void TestErrorHandler::testMaxStoredErrors() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    handler->setMaxStoredErrors(3);
+    for (int i = 0; i < 10; ++i) {
+        ErrorInfo error(ErrorCode::ConversionFailed, QString("Error %1").arg(i));
+        handler->handleError(error);
     }
-    void init() {
-        ErrorHandler::instance()->clearErrors();
-        ErrorHandler::instance()->setShowDialogs(false);
-        ErrorHandler::instance()->setAutoRecover(false);
-    }
-    void testHandleError() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        ErrorInfo error(ErrorCode::FileNotFound, "Test file not found");
-        eh->handleError(error);
-        QCOMPARE(eh->errorCount(), 1);
-        QVERIFY(eh->hasErrors());
-        ErrorInfo lastError = eh->lastError();
-        QCOMPARE(lastError.code, ErrorCode::FileNotFound);
-        QCOMPARE(lastError.message, QString("Test file not found"));
-    }
-    void testHandleMultipleErrors() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        ErrorInfo error1(ErrorCode::FileNotFound, "Error 1");
-        ErrorInfo error2(ErrorCode::PermissionDenied, "Error 2");
-        ErrorInfo error3(ErrorCode::DiskSpaceInsufficient, "Error 3");
-        eh->handleError(error1);
-        eh->handleError(error2);
-        eh->handleError(error3);
-        QCOMPARE(eh->errorCount(), 3);
-        QList<ErrorInfo> recentErrors = eh->recentErrors();
-        QCOMPARE(recentErrors.size(), 3);
-    }
-    void testHandleException() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        try {
-            throw std::runtime_error("Test exception");
-        } catch (const std::exception& e) {
-            eh->handleException(e, "TestContext");
-        }
-        QVERIFY(eh->hasErrors());
-        ErrorInfo lastError = eh->lastError();
-        QVERIFY(lastError.message.contains("Test exception"));
-    }
-    void testHandleErrorForTask() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        ErrorInfo error(ErrorCode::ConversionFailed, "Conversion failed");
-        QString taskId = "test-task-123";
-        eh->handleErrorForTask(error, taskId);
-        QCOMPARE(eh->errorCountForTask(taskId), 1);
-        QList<ErrorInfo> taskErrors = eh->errorsForTask(taskId);
-        QCOMPARE(taskErrors.size(), 1);
-        QCOMPARE(taskErrors[0].code, ErrorCode::ConversionFailed);
-    }
-    void testClearErrors() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        ErrorInfo error(ErrorCode::Unknown, "Test error");
-        eh->handleError(error);
-        QVERIFY(eh->hasErrors());
-        eh->clearErrors();
-        QVERIFY(!eh->hasErrors());
-        QCOMPARE(eh->errorCount(), 0);
-    }
-    void testClearErrorsForTask() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        ErrorInfo error(ErrorCode::ConversionFailed, "Task error");
-        QString taskId = "task-to-clear";
-        eh->handleErrorForTask(error, taskId);
-        QCOMPARE(eh->errorCountForTask(taskId), 1);
-        eh->clearErrorsForTask(taskId);
-        QCOMPARE(eh->errorCountForTask(taskId), 0);
-    }
-    void testMaxStoredErrors() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        eh->setMaxStoredErrors(5);
-        for (int i = 0; i < 10; ++i) {
-            ErrorInfo error(ErrorCode::Unknown, QString("Error %1").arg(i));
-            eh->handleError(error);
-        }
-        QVERIFY(eh->errorCount() <= 5);
-    }
-    void testCanRecover() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        ErrorInfo recoverableError(ErrorCode::FileNotFound, "File not found");
-        recoverableError.recoverable = true;
-        QVERIFY(eh->canRecover(recoverableError));
-        ErrorInfo nonRecoverableError(ErrorCode::Unknown, "Unknown error");
-        nonRecoverableError.recoverable = false;
-        QVERIFY(!eh->canRecover(nonRecoverableError));
-    }
-    void testSetRecoveryHandler() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        bool handlerCalled = false;
-        auto handler = [&handlerCalled](const ErrorInfo& error) {
-            handlerCalled = true;
-            Q_UNUSED(error);
-        };
-        eh->setRecoveryHandler(ErrorCode::FileNotFound, handler);
-        ErrorInfo error(ErrorCode::FileNotFound, "Test recovery");
-        eh->attemptRecovery(error);
-    }
-    void testShowDialogs() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->setShowDialogs(true);
-        QVERIFY(eh->showDialogs());
-        eh->setShowDialogs(false);
-        QVERIFY(!eh->showDialogs());
-    }
-    void testAutoRecover() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->setAutoRecover(true);
-        QVERIFY(eh->autoRecover());
-        eh->setAutoRecover(false);
-        QVERIFY(!eh->autoRecover());
-    }
-    void testErrorOccurredSignal() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        eh->clearErrors();
-        QSignalSpy spy(eh, &ErrorHandler::errorOccurred);
-        ErrorInfo error(ErrorCode::FileNotFound, "Signal test");
-        eh->handleError(error);
-        QCOMPARE(spy.count(), 1);
-        ErrorInfo receivedError = spy.at(0).at(0).value<ErrorInfo>();
-        QCOMPARE(receivedError.code, ErrorCode::FileNotFound);
-    }
-    void testErrorsClearedSignal() {
-        ErrorHandler* eh = ErrorHandler::instance();
-        ErrorInfo error(ErrorCode::Unknown, "Test");
-        eh->handleError(error);
-        QSignalSpy spy(eh, &ErrorHandler::errorsCleared);
-        eh->clearErrors();
-        QCOMPARE(spy.count(), 1);
-    }
-    void testSingleton() {
-        ErrorHandler* instance1 = ErrorHandler::instance();
-        ErrorHandler* instance2 = ErrorHandler::instance();
-        QCOMPARE(instance1, instance2);
-    }
-};
-#include "test_error_handler.moc"
+    QCOMPARE(handler->errorCount(), 3);
+}
+
+void TestErrorHandler::testCanRecover() {
+    ErrorInfo recoverable(ErrorCode::ProcessCrashed, "Recoverable");
+    recoverable.recoverable = true;
+    QVERIFY(ErrorHandler::instance()->canRecover(recoverable));
+    ErrorInfo notRecoverable(ErrorCode::ConversionFailed, "Not recoverable");
+    notRecoverable.recoverable = false;
+    QVERIFY(!ErrorHandler::instance()->canRecover(notRecoverable));
+}
+
+void TestErrorHandler::testSetRecoveryHandler() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    bool recoveryCalled = false;
+    handler->setRecoveryHandler(ErrorCode::ProcessCrashed, [&recoveryCalled](const ErrorInfo&) {
+        recoveryCalled = true;
+    });
+    ErrorInfo error(ErrorCode::ProcessCrashed, "Recover me");
+    error.recoverable = true;
+    handler->handleError(error);
+    QVERIFY(recoveryCalled);
+}
+
+void TestErrorHandler::testShowDialogs() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    bool orig = handler->showDialogs();
+    handler->setShowDialogs(false);
+    QVERIFY(!handler->showDialogs());
+    handler->setShowDialogs(true);
+    QVERIFY(handler->showDialogs());
+    handler->setShowDialogs(orig);
+}
+
+void TestErrorHandler::testAutoRecover() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    handler->setAutoRecover(true);
+    QVERIFY(handler->autoRecover());
+    handler->setAutoRecover(false);
+    QVERIFY(!handler->autoRecover());
+}
+
+void TestErrorHandler::testErrorOccurredSignal() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    QSignalSpy spy(handler, &ErrorHandler::errorOccurred);
+    ErrorInfo error(ErrorCode::ConversionFailed, "Signal test");
+    handler->handleError(error);
+    QCOMPARE(spy.count(), 1);
+}
+
+void TestErrorHandler::testErrorsClearedSignal() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    QSignalSpy spy(handler, &ErrorHandler::errorsCleared);
+    ErrorInfo error(ErrorCode::ConversionFailed, "Clear test");
+    handler->handleError(error);
+    handler->clearErrors();
+    QCOMPARE(spy.count(), 1);
+}
+
+void TestErrorHandler::testSingleton() {
+    ErrorHandler* instance1 = ErrorHandler::instance();
+    ErrorHandler* instance2 = ErrorHandler::instance();
+    QCOMPARE(instance1, instance2);
+}

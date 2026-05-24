@@ -1,5 +1,6 @@
 #include "config_panel.h"
 #include "config_manager.h"
+#include "format_registry.h"
 #include "logger.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -130,21 +131,25 @@ void ConfigPanel::applyStyleSheet() {
 
 void ConfigPanel::updateOutputFormats() {
     m_outputFormatCombo->clear();
-    m_outputFormatCombo->addItem(tr("MP4 (视频)"), "mp4");
-    m_outputFormatCombo->addItem(tr("AVI (视频)"), "avi");
-    m_outputFormatCombo->addItem(tr("MKV (视频)"), "mkv");
-    m_outputFormatCombo->addItem(tr("MOV (视频)"), "mov");
-    m_outputFormatCombo->addItem(tr("WebM (视频)"), "webm");
-    m_outputFormatCombo->addItem(tr("MP3 (音频)"), "mp3");
-    m_outputFormatCombo->addItem(tr("WAV (音频)"), "wav");
-    m_outputFormatCombo->addItem(tr("FLAC (音频)"), "flac");
-    m_outputFormatCombo->addItem(tr("AAC (音频)"), "aac");
-    m_outputFormatCombo->addItem(tr("PDF (文档)"), "pdf");
-    m_outputFormatCombo->addItem(tr("DOCX (文档)"), "docx");
-    m_outputFormatCombo->addItem(tr("HTML (文档)"), "html");
-    m_outputFormatCombo->addItem(tr("Markdown (文档)"), "md");
-    m_outputFormatCombo->addItem(tr("EPUB (文档)"), "epub");
-    m_outputFormatCombo->addItem(tr("TXT (文档)"), "txt");
+    const auto& reg = FormatRegistry::instance();
+    // Video formats
+    for (const QString& fmt : reg.videoFormats()) {
+        m_outputFormatCombo->addItem(
+            tr("%1 (视频)").arg(fmt.toUpper()), fmt);
+    }
+    // Audio formats
+    for (const QString& fmt : reg.audioFormats()) {
+        m_outputFormatCombo->addItem(
+            tr("%1 (音频)").arg(fmt.toUpper()), fmt);
+    }
+    // Document output formats
+    for (const QString& fmt : reg.documentOutputFormats()) {
+        static const QStringList dedupCheck = reg.documentOutputFormats();
+        // Avoid duplicates already added (none overlap, but be safe)
+        if (reg.isVideo(fmt) || reg.isAudio(fmt)) continue;
+        m_outputFormatCombo->addItem(
+            tr("%1 (文档)").arg(fmt.toUpper()), fmt);
+    }
 }
 
 void ConfigPanel::onOutputFormatChanged(int index) {
