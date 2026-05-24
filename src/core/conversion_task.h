@@ -7,6 +7,7 @@
 #include <QUuid>
 #include <QDateTime>
 #include <QAtomicInt>
+#include <QAtomicInteger>
 #include <QList>
 #include <QPair>
 
@@ -43,8 +44,8 @@ public:
     QString inputFile() const { return m_inputFile; }
     QString outputFile() const { return m_outputFile; }
     QVariantMap params() const { return m_params; }
-    Status status() const { return m_status; }
-    int progress() const { return m_progress; }
+    Status status() const { return static_cast<Status>(m_status.loadRelaxed()); }
+    int progress() const { return m_progress.loadRelaxed(); }
     QString errorMessage() const { return m_errorMessage; }
     ConverterType converterType() const { return m_converterType; }
     Priority priority() const { return m_priority; }
@@ -65,7 +66,7 @@ public:
     void setStatus(Status status);
     void setProgress(int progress);
     void setErrorMessage(const QString& message) { m_errorMessage = message; }
-    void requestCancel() { m_cancelled.storeRelaxed(1); }
+    void requestCancel() { m_cancelled.storeRelease(1); }
     void resetCancelFlag() { m_cancelled.storeRelaxed(0); }
     void setFileSize(qint64 size) { m_fileSize = size; }
     void updateEstimatedTime(int currentProgress, qint64 elapsedMs);
@@ -89,8 +90,8 @@ private:
     QString m_inputFile;
     QString m_outputFile;
     QVariantMap m_params;
-    Status m_status;
-    int m_progress;
+    QAtomicInteger<int> m_status;
+    QAtomicInt m_progress;
     QString m_errorMessage;
     ConverterType m_converterType;
     Priority m_priority;

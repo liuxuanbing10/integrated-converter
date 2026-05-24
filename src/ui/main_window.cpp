@@ -8,6 +8,7 @@
 #include "config_manager.h"
 #include "logger.h"
 #include "error_types.h"
+#include "format_registry.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QApplication>
@@ -30,6 +31,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_cancelAction(nullptr)
     , m_summaryAction(nullptr)
     , m_isPaused(false)
+    , m_darkMode(false)
 {
     setWindowTitle(tr("集成格式转换工具 v1.0"));
     resize(1200, 800);
@@ -38,7 +40,7 @@ MainWindow::MainWindow(QWidget* parent)
     setupStatusBar();
     setupCentralWidget();
     setupConnections();
-    applyStyleSheet();
+    applyLightTheme();
     LOG_INFO("MainWindow", "主窗口初始化完成");
 }
 
@@ -80,6 +82,12 @@ void MainWindow::setupMenuBar() {
     m_summaryAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
     m_summaryAction->setEnabled(false);
     connect(m_summaryAction, &QAction::triggered, this, &MainWindow::onShowSummary);
+
+    QMenu* viewMenu = menuBar->addMenu(tr("视图(&V)"));
+    QAction* themeAction = viewMenu->addAction(tr("切换深色模式(&D)"));
+    themeAction->setCheckable(true);
+    themeAction->setChecked(false);
+    connect(themeAction, &QAction::triggered, this, &MainWindow::toggleTheme);
 
     QMenu* helpMenu = menuBar->addMenu(tr("帮助(&H)"));
     QAction* aboutAction = helpMenu->addAction(tr("关于(&A)"));
@@ -172,64 +180,74 @@ void MainWindow::setupConnections() {
     connect(m_fileListWidget, &FileListWidget::fileCountChanged, this, &MainWindow::onFileCountChanged);
 }
 
-void MainWindow::applyStyleSheet() {
-    QString styleSheet = R"(
-        QMainWindow {
-            background-color: #f5f5f5;
-        }
-        QMenuBar {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        QMenuBar::item {
-            padding: 6px 12px;
-            background: transparent;
-        }
-        QMenuBar::item:selected {
-            background-color: #e3f2fd;
-        }
-        QMenu {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-        }
-        QMenu::item {
-            padding: 6px 30px 6px 20px;
-        }
-        QMenu::item:selected {
-            background-color: #e3f2fd;
-        }
-        QToolBar {
-            background-color: #ffffff;
-            border-bottom: 1px solid #e0e0e0;
-            spacing: 5px;
-            padding: 4px;
-        }
-        QToolBar QToolButton {
-            padding: 6px;
-            border-radius: 4px;
-            border: 1px solid transparent;
-        }
-        QToolBar QToolButton:hover {
-            background-color: #e3f2fd;
-        }
-        QStatusBar {
-            background-color: #ffffff;
-            border-top: 1px solid #e0e0e0;
-        }
-        QGroupBox {
-            font-weight: bold;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            margin-top: 8px;
-            padding-top: 8px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px;
-        }
+void MainWindow::toggleTheme() {
+    m_darkMode = !m_darkMode;
+    if (m_darkMode) {
+        applyDarkTheme();
+    } else {
+        applyLightTheme();
+    }
+}
+
+void MainWindow::applyLightTheme() {
+    QString style = R"(
+        QMainWindow { background-color: #f5f5f5; }
+        QMenuBar { background-color: #ffffff; border-bottom: 1px solid #e0e0e0; }
+        QMenuBar::item { padding: 6px 12px; background: transparent; }
+        QMenuBar::item:selected { background-color: #e3f2fd; }
+        QMenu { background-color: #ffffff; border: 1px solid #e0e0e0; }
+        QMenu::item { padding: 6px 30px 6px 20px; }
+        QMenu::item:selected { background-color: #e3f2fd; }
+        QToolBar { background-color: #ffffff; border-bottom: 1px solid #e0e0e0; spacing: 5px; padding: 4px; }
+        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; }
+        QToolBar QToolButton:hover { background-color: #e3f2fd; }
+        QStatusBar { background-color: #ffffff; border-top: 1px solid #e0e0e0; }
+        QGroupBox { font-weight: bold; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; padding-top: 8px; }
+        QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
+        QTableWidget { border: 1px solid #ccc; border-radius: 4px; gridline-color: #e0e0e0; background: #fff; }
+        QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }
+        QHeaderView::section { background-color: #f5f5f5; border: none; border-bottom: 1px solid #ccc; padding: 4px; font-weight: bold; }
+        QPushButton { padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
+        QPushButton:hover { background-color: #f0f0f0; }
+        QPushButton:disabled { background-color: #f5f5f5; color: #999; }
+        QCheckBox { spacing: 6px; }
+        QLabel { color: #333; }
     )";
-    setStyleSheet(styleSheet);
+    setStyleSheet(style);
+}
+
+void MainWindow::applyDarkTheme() {
+    QString style = R"(
+        QMainWindow { background-color: #1e1e1e; }
+        QMenuBar { background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c; color: #e0e0e0; }
+        QMenuBar::item { padding: 6px 12px; background: transparent; color: #e0e0e0; }
+        QMenuBar::item:selected { background-color: #094771; }
+        QMenu { background-color: #2d2d2d; border: 1px solid #3c3c3c; color: #e0e0e0; }
+        QMenu::item { padding: 6px 30px 6px 20px; color: #e0e0e0; }
+        QMenu::item:selected { background-color: #094771; }
+        QToolBar { background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c; spacing: 5px; padding: 4px; }
+        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #e0e0e0; }
+        QToolBar QToolButton:hover { background-color: #094771; }
+        QStatusBar { background-color: #2d2d2d; border-top: 1px solid #3c3c3c; color: #e0e0e0; }
+        QGroupBox { font-weight: bold; border: 1px solid #3c3c3c; border-radius: 4px; margin-top: 8px; padding-top: 8px; color: #e0e0e0; }
+        QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; color: #e0e0e0; }
+        QTableWidget { border: 1px solid #3c3c3c; border-radius: 4px; gridline-color: #3c3c3c; background: #252526; color: #e0e0e0; }
+        QTableWidget::item:selected { background-color: #094771; color: #fff; }
+        QHeaderView::section { background-color: #2d2d2d; border: none; border-bottom: 1px solid #3c3c3c; padding: 4px; font-weight: bold; color: #e0e0e0; }
+        QPushButton { padding: 6px 12px; border: 1px solid #3c3c3c; border-radius: 4px; background-color: #333; color: #e0e0e0; }
+        QPushButton:hover { background-color: #094771; }
+        QPushButton:disabled { background-color: #2d2d2d; color: #666; }
+        QCheckBox { spacing: 6px; color: #e0e0e0; }
+        QLabel { color: #e0e0e0; }
+        QComboBox { padding: 8px 12px; border: 2px solid #0078d4; border-radius: 8px; min-width: 120px; background-color: #333; color: #e0e0e0; font-size: 14px; }
+        QComboBox::drop-down { border: none; width: 32px; }
+        QComboBox QAbstractItemView { border: 1px solid #3c3c3c; border-radius: 4px; background-color: #2d2d2d; color: #e0e0e0; selection-background-color: #094771; font-size: 13px; }
+        QLineEdit { padding: 8px 12px; border: 1px solid #3c3c3c; border-radius: 6px; background-color: #333; color: #e0e0e0; font-size: 13px; }
+        QScrollBar:vertical { background: #2d2d2d; width: 12px; }
+        QScrollBar::handle:vertical { background: #555; border-radius: 6px; min-height: 30px; }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+    )";
+    setStyleSheet(style);
 }
 
 void MainWindow::onAddFiles() {
@@ -441,23 +459,21 @@ void MainWindow::submitConversionTasks() {
     QString outputFormat = m_configPanel->selectedOutputFormat();
     QString outputDir = m_configPanel->outputDirectory();
     QVariantMap baseParams = m_configPanel->conversionParams();
+    const auto& reg = FormatRegistry::instance();
     for (const FileInfo& fileInfo : files) {
         QFileInfo fi(fileInfo.filePath);
         QString baseName = fi.completeBaseName();
         QString outputFile = outputDir + "/" + baseName + "." + outputFormat;
+        // 如果输出路径和输入路径相同（同目录同格式），加 _converted 后缀避免原地覆盖
+        if (QFileInfo(outputFile).absoluteFilePath() == QFileInfo(fileInfo.filePath).absoluteFilePath()) {
+            outputFile = outputDir + "/" + baseName + "_converted." + outputFormat;
+            LOG_WARNING("MainWindow", QString("输出路径与输入相同，自动重命名: %1").arg(outputFile));
+        }
         QVariantMap params = baseParams;
         params["outputFormat"] = outputFormat;
         QString ext = fi.suffix().toLower();
-        QStringList videoFormats = {"mp4", "avi", "mkv", "mov", "flv", "wmv", "webm"};
-        QStringList audioFormats = {"mp3", "wav", "flac", "aac", "ogg", "m4a", "wma"};
-        QStringList docFormats = {"md", "txt", "docx", "pdf", "html", "rtf", "epub", "odt", "tex"};
-        if (videoFormats.contains(ext) || audioFormats.contains(ext)) {
-            params["converter"] = "FFmpeg";
-        } else if (docFormats.contains(ext)) {
-            params["converter"] = "Pandoc";
-        } else {
-            params["converter"] = "FFmpeg";
-        }
+        params["converter"] = (reg.converterForExt(ext) == FormatRegistry::Converter::Pandoc)
+                               ? "Pandoc" : "FFmpeg";
         TaskManager::instance()->addTask(fileInfo.filePath, outputFile, params);
     }
     LOG_INFO("MainWindow", QString("提交 %1 个转换任务").arg(files.size()));

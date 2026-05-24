@@ -40,13 +40,11 @@ QString ConfigManager::findExecutable(const QString& name) {
         if (fi.exists() && fi.isExecutable()) {
             return path;
         }
-        if (QProcess::startDetached(path, QStringList())) {
-            QProcess p;
-            p.start(path, QStringList() << "--version");
-            if (p.waitForStarted(2000)) {
-                p.kill();
-                return path;
-            }
+        // 用 --version 验证可执行文件，等待完成再销毁 QProcess，避免 "Destroyed while process running" 警告
+        QProcess p;
+        p.start(path, QStringList() << "--version");
+        if (p.waitForStarted(3000) && p.waitForFinished(5000)) {
+            return path;
         }
     }
     return name;

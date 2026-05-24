@@ -28,8 +28,7 @@ public:
     double usageRatio() const;
     bool isUnderPressure() const;
     MemoryLevel currentLevel() const;
-    void recordAllocation(size_t bytes);
-    void recordDeallocation(size_t bytes);
+
 
 signals:
     void memoryWarning(size_t current, size_t threshold);
@@ -46,7 +45,6 @@ private:
 
     QTimer* m_checkTimer;
     mutable QMutex m_mutex;
-    size_t m_trackedAllocation;
     double m_warningThreshold;
     double m_criticalThreshold;
     MemoryLevel m_lastLevel;

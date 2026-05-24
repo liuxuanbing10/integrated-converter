@@ -179,4 +179,8 @@ private:
     }
     QString m_tempDir;
 };
+
 #include "test_integration.moc"
+
+
+

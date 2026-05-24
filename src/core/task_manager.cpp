@@ -8,8 +8,8 @@
 #include <QCoreApplication>
 
 TaskManager* TaskManager::instance() {
-    static TaskManager* s_instance = new TaskManager();
-    return s_instance;
+    static TaskManager s_instance;
+    return &s_instance;
 }
 
 TaskManager::TaskManager()
@@ -421,7 +421,8 @@ void TaskManager::processQueue() {
             LOG_ERROR("TaskManager", QString("未找到转换器: %1").arg(converterName));
             continue;
         }
-        TaskRunnable* runnable = new TaskRunnable(task, converterName);
+        auto converterPtr = m_converters.value(converterName);
+        TaskRunnable* runnable = new TaskRunnable(task, converterName, converterPtr);
         m_runningTasks[taskId] = runnable;
         connect(runnable, &TaskRunnable::started,
                 this, &TaskManager::onTaskStarted, Qt::QueuedConnection);

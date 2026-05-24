@@ -1,4 +1,5 @@
 #include "file_list_widget.h"
+#include "format_registry.h"
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QMimeData>
@@ -81,12 +82,16 @@ void FileListWidget::setupUI() {
     m_clearButton = new QPushButton(tr("清空全部"), this);
     m_clearButton->setIcon(style()->standardIcon(QStyle::SP_DialogDiscardButton));
     m_clearButton->setEnabled(false);
+    QPushButton* undoButton = new QPushButton(tr("撤销"), this);
+    undoButton->setEnabled(false);
+    undoButton->setObjectName("undoButton");
     buttonLayout->addWidget(m_addButton);
     buttonLayout->addWidget(m_addFolderButton);
     buttonLayout->addWidget(m_recursiveCheck);
     buttonLayout->addSpacing(10);
     buttonLayout->addWidget(m_removeButton);
     buttonLayout->addWidget(m_clearButton);
+    buttonLayout->addWidget(undoButton);
     buttonLayout->addStretch();
     mainLayout->addLayout(buttonLayout);
     setStyleSheet(
@@ -107,6 +112,13 @@ void FileListWidget::setupConnections() {
     connect(m_addFolderButton, &QPushButton::clicked, this, &FileListWidget::onAddFolderButtonClicked);
     connect(m_removeButton, &QPushButton::clicked, this, &FileListWidget::onRemoveSelected);
     connect(m_clearButton, &QPushButton::clicked, this, &FileListWidget::onClearAll);
+    QPushButton* undoBtn = findChild<QPushButton*>("undoButton");
+    if (undoBtn) {
+        connect(undoBtn, &QPushButton::clicked, this, &FileListWidget::undoLastAction);
+        connect(this, &FileListWidget::fileCountChanged, this, [undoBtn](int count) {
+            undoBtn->setEnabled(count > 0);
+        });
+    }
     connect(m_tableWidget, &QTableWidget::itemSelectionChanged,
             this, &FileListWidget::onItemSelectionChanged);
     connect(m_tableWidget, &QTableWidget::customContextMenuRequested,
@@ -206,7 +218,26 @@ void FileListWidget::addFolder(const QString& folderPath, bool recursive) {
     }
     addFiles(files);
 }
+void FileListWidget::pushUndoState() {
+    m_undoStack.push(m_files);
+    if (m_undoStack.size() > 20) {
+        m_undoStack.removeFirst();
+    }
+}
+
+void FileListWidget::popUndoState() {
+    if (m_undoStack.isEmpty()) return;
+    m_files = m_undoStack.pop();
+    updateTable();
+    emit fileCountChanged(m_files.size());
+}
+
+void FileListWidget::undoLastAction() {
+    popUndoState();
+}
+
 void FileListWidget::addFiles(const QStringList& filePaths) {
+    pushUndoState();
     QList<FileInfo> addedFiles;
     for (const QString& path : filePaths) {
         bool exists = false;
@@ -267,23 +298,17 @@ QString FileListWidget::getFileFormat(const QString& filePath) const {
     return fi.suffix().toLower();
 }
 bool FileListWidget::isFileSupported(const QString& filePath) const {
-    QString ext = getFileFormat(filePath);
-    QStringList supportedFormats = {
-        "mp4", "avi", "mkv", "mov", "flv", "wmv", "webm",
-        "mp3", "wav", "flac", "aac", "ogg", "m4a", "wma",
-        "md", "txt", "docx", "pdf", "html", "rtf", "epub"
-    };
-    return supportedFormats.contains(ext);
+    return FormatRegistry::instance().isSupported(getFileFormat(filePath));
 }
 void FileListWidget::onAddButtonClicked() {
+    const auto& reg = FormatRegistry::instance();
+    QString filter = reg.fileDialogFilter() + ";;"
+                     + reg.fileDialogVideoFilter() + ";;"
+                     + reg.fileDialogAudioFilter() + ";;"
+                     + reg.fileDialogDocumentFilter() + ";;"
+                     + tr("所有文件 (*)");
     QStringList files = QFileDialog::getOpenFileNames(this, tr("选择文件"),
-        QString(),
-        tr("所有支持格式 (*.mp4 *.avi *.mkv *.mp3 *.wav *.md *.txt *.docx);;"
-           "视频文件 (*.mp4 *.avi *.mkv *.mov *.flv);;"
-           "音频文件 (*.mp3 *.wav *.flac *.aac);;"
-           "文档文件 (*.md *.txt *.docx *.pdf);;"
-           "所有文件 (*)")
-    );
+        QString(), filter);
     if (!files.isEmpty()) {
         addFiles(files);
     }
@@ -351,6 +376,8 @@ void FileListWidget::onCustomContextMenu(const QPoint& pos) {
     QMenu menu(this);
     menu.addAction(tr("移除选中"), this, &FileListWidget::onRemoveSelected);
     menu.addAction(tr("清空全部"), this, &FileListWidget::onClearAll);
+    menu.addSeparator();
+    menu.addAction(tr("撤销"), this, &FileListWidget::undoLastAction);
     menu.addSeparator();
     menu.addAction(tr("打开文件位置"), this, &FileListWidget::onOpenFileLocation);
     menu.exec(m_tableWidget->mapToGlobal(pos));

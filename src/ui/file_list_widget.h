@@ -11,6 +11,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QCheckBox>
+#include <QStack>
 struct FileInfo {
     QString filePath;
     QString fileName;
@@ -42,6 +43,7 @@ public slots:
     void removeSelectedFiles();
     void selectAll();
     void deselectAll();
+    void undoLastAction();
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
@@ -64,6 +66,8 @@ private:
     QString getFileFormat(const QString& filePath) const;
     bool isFileSupported(const QString& filePath) const;
     QStringList scanFolderForFiles(const QString& folderPath, bool recursive) const;
+    void pushUndoState();
+    void popUndoState();
     QTableWidget* m_tableWidget;
     QLabel* m_infoLabel;
     QPushButton* m_addButton;
@@ -72,6 +76,7 @@ private:
     QPushButton* m_clearButton;
     QCheckBox* m_recursiveCheck;
     QList<FileInfo> m_files;
+    QStack<QList<FileInfo>> m_undoStack;
     bool m_dragActive;
 };
 #endif // FILE_LIST_WIDGET_H

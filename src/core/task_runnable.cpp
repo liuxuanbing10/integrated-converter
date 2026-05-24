@@ -1,13 +1,12 @@
 #include "task_runnable.h"
 #include "logger.h"
-#include "ffmpeg_converter.h"
-#include "pandoc_converter.h"
-#include "config_manager.h"
 
-TaskRunnable::TaskRunnable(ConversionTask* task, const QString& converterName, QObject* parent)
+TaskRunnable::TaskRunnable(ConversionTask* task, const QString& converterName,
+                           std::shared_ptr<IConverter> converter, QObject* parent)
     : QObject(parent)
     , m_task(task)
     , m_converterName(converterName)
+    , m_converter(std::move(converter))
     , m_taskId(task ? task->id() : QString())
     , m_running(0)
 {
@@ -40,19 +39,7 @@ void TaskRunnable::run() {
     bool success = false;
     QString errorMsg;
 
-    std::unique_ptr<IConverter> converter;
-    if (m_converterName == "FFmpeg") {
-        auto ffmpegConv = std::make_unique<FFmpegConverter>();
-        ffmpegConv->setFFmpegPath(ConfigManager::instance().value("ffmpegPath", "ffmpeg").toString());
-        ffmpegConv->setFFprobePath(ConfigManager::instance().value("ffprobePath", "ffprobe").toString());
-        converter = std::move(ffmpegConv);
-    } else if (m_converterName == "Pandoc") {
-        auto pandocConv = std::make_unique<PandocConverter>();
-        pandocConv->setPandocPath(ConfigManager::instance().value("pandocPath", "pandoc").toString());
-        converter = std::move(pandocConv);
-    }
-
-    if (!converter) {
+    if (!m_converter) {
         m_task->setErrorMessage(tr("未找到转换器: %1").arg(m_converterName));
         m_task->setStatus(ConversionTask::Status::Failed);
         emit finished(m_taskId, false, tr("未找到转换器: %1").arg(m_converterName));
@@ -61,7 +48,7 @@ void TaskRunnable::run() {
     }
 
     try {
-        success = converter->convert(m_task->inputFile(), m_task->outputFile(), m_task->params());
+        success = m_converter->convert(m_task->inputFile(), m_task->outputFile(), m_task->params());
         if (!success) {
             errorMsg = tr("转换失败");
         }

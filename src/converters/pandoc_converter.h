@@ -3,7 +3,7 @@
 #include "iconverter.h"
 #include "error_types.h"
 #include <QProcess>
-#include <QMap>
+#include <memory>
 class PandocConverter : public QObject, public IConverter {
     Q_OBJECT
 public:
@@ -38,12 +38,10 @@ private:
                               const QVariantMap& params);
     QString detectInputFormat(const QString& filePath) const;
     QString detectOutputFormat(const QString& filePath) const;
-    void initFormatMaps();
     QString m_pandocPath;
     QStringList m_inputFormats;
     QStringList m_outputFormats;
-    QMap<QString, QString> m_pandocFormatMap;
-    QProcess* m_currentProcess;
+    std::unique_ptr<QProcess> m_currentProcess;
     QString m_currentInputFile;
     QString m_currentOutputFile;
     bool m_isConverting;

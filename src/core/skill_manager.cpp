@@ -285,10 +285,58 @@ void SkillManager::executeBuiltInSkill(const QString& skillId, const QString& sk
 }
 
 void SkillManager::executeExternalSkill(const QString& skillId, const QString& skillName, const QVariantMap& params) {
-    Q_UNUSED(skillName);
-    Q_UNUSED(params);
+    if (!m_skills.contains(skillName)) {
+        finishSkill(skillId, false, QVariantMap{{"error", QString("未知的Skill: %1").arg(skillName)}});
+        return;
+    }
 
-    finishSkill(skillId, false, QVariantMap{{"error", "外部Skill暂不支持"}});
+    const SkillInfo& info = m_skills[skillName];
+
+    // Determine executable: use "executable" param, fall back to skill name
+    QString executable = info.paramSchema.value("executable").toString();
+    if (executable.isEmpty()) {
+        executable = params.value("executable").toString();
+    }
+    if (executable.isEmpty()) {
+        executable = skillName;
+    }
+
+    // Build arguments from params (exclude "executable" key)
+    QStringList args;
+    for (auto it = params.begin(); it != params.end(); ++it) {
+        if (it.key() == "executable") continue;
+        if (it.value().metaType().id() == QMetaType::QString) {
+            args << it.value().toString();
+        } else if (it.value().metaType().id() == QMetaType::QStringList) {
+            args << it.value().toStringList();
+        }
+    }
+
+    LOG_INFO("SkillManager", QString("执行外部Skill: %1 -> %2 %3")
+             .arg(skillName, executable, args.join(" ")));
+
+    QProcess* process = new QProcess(this);
+    m_processes[skillId] = process;
+    m_runningExecutions[skillId].process = process;
+
+    connect(process, &QProcess::finished, this, &SkillManager::onProcessFinished);
+    connect(process, &QProcess::errorOccurred, this, &SkillManager::onProcessError);
+    connect(process, &QProcess::readyReadStandardOutput,
+            this, &SkillManager::onProcessReadyReadStandardOutput);
+    connect(process, &QProcess::readyReadStandardError,
+            this, &SkillManager::onProcessReadyReadStandardError);
+
+    // Setup timeout
+    QTimer* timer = new QTimer(this);
+    timer->setSingleShot(true);
+    m_timeoutTimers[skillId] = timer;
+    m_runningExecutions[skillId].timeoutTimer = timer;
+    connect(timer, &QTimer::timeout, this, &SkillManager::onTimeout);
+    timer->start(m_defaultTimeout);
+
+    process->setProgram(executable);
+    process->setArguments(args);
+    process->start();
 }
 
 void SkillManager::finishSkill(const QString& skillId, bool success, const QVariant& result) {

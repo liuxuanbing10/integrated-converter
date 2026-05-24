@@ -11,7 +11,8 @@ class TaskRunnable : public QObject, public QRunnable {
     Q_OBJECT
 
 public:
-    explicit TaskRunnable(ConversionTask* task, const QString& converterName, QObject* parent = nullptr);
+    explicit TaskRunnable(ConversionTask* task, const QString& converterName,
+                          std::shared_ptr<IConverter> converter, QObject* parent = nullptr);
     ~TaskRunnable() override;
 
     void run() override;
@@ -26,6 +27,7 @@ signals:
 private:
     ConversionTask* m_task;
     QString m_converterName;
+    std::shared_ptr<IConverter> m_converter;
     QString m_taskId;
     QAtomicInt m_running;
 };

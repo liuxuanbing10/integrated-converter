@@ -8,6 +8,8 @@
 #include <QJsonArray>
 #include <QDateTime>
 
+static constexpr qint64 WAIT_FOR_FINISHED_TIMEOUT_MS = 300000; // 5 min
+
 FFmpegConverter::FFmpegConverter(QObject* parent)
     : QObject(parent)
     , m_ffmpegPath("ffmpeg")
@@ -24,8 +26,9 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
 {
     m_ffmpegPath = ConfigManager::instance().value("ffmpegPath", "ffmpeg").toString();
     m_ffprobePath = ConfigManager::instance().value("ffprobePath", "ffprobe").toString();
-    m_videoFormats << "mp4" << "avi" << "mkv" << "mov" << "wmv" << "flv" << "webm" << "mpeg";
-    m_audioFormats << "mp3" << "wav" << "flac" << "aac" << "ogg" << "m4a" << "wma";
+    const auto& reg = FormatRegistry::instance();
+    m_videoFormats = reg.videoFormats();
+    m_audioFormats = reg.audioFormats();
     m_timeRegex = QRegularExpression(R"(time=(\d{2}):(\d{2}):(\d{2})\.(\d{2}))");
     m_progressRegex = QRegularExpression(R"(progress=(\w+))");
     m_speedRegex = QRegularExpression(R"(speed=\s*([\d.]+)x)");
@@ -35,58 +38,6 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
 
 FFmpegConverter::~FFmpegConverter() {
     cancel();
-}
-
-QMap<QString, QString> FFmpegConverter::videoFormatMap() {
-    static const QMap<QString, QString> formats = {
-        {"mp4", "mp4"},
-        {"avi", "avi"},
-        {"flv", "flv"},
-        {"mkv", "matroska"},
-        {"webm", "webm"},
-        {"mov", "mov"},
-        {"wmv", "asf"},
-        {"mpeg", "mpeg"}
-    };
-    return formats;
-}
-
-QMap<QString, QString> FFmpegConverter::audioFormatMap() {
-    static const QMap<QString, QString> formats = {
-        {"mp3", "mp3"},
-        {"wav", "wav"},
-        {"aac", "adts"},
-        {"flac", "flac"},
-        {"ogg", "ogg"},
-        {"m4a", "mp4"}
-    };
-    return formats;
-}
-
-QMap<QString, QString> FFmpegConverter::videoCodecMap() {
-    static const QMap<QString, QString> codecs = {
-        {"h264", "libx264"},
-        {"h265", "libx265"},
-        {"hevc", "libx265"},
-        {"vp9", "libvpx-vp9"},
-        {"vp8", "libvpx"},
-        {"av1", "libaom-av1"},
-        {"mpeg4", "mpeg4"},
-        {"mpeg2", "mpeg2video"}
-    };
-    return codecs;
-}
-
-QMap<QString, QString> FFmpegConverter::audioCodecMap() {
-    static const QMap<QString, QString> codecs = {
-        {"aac", "aac"},
-        {"mp3", "libmp3lame"},
-        {"opus", "libopus"},
-        {"vorbis", "libvorbis"},
-        {"flac", "flac"},
-        {"pcm", "pcm_s16le"}
-    };
-    return codecs;
 }
 
 bool FFmpegConverter::isVideoFormat(const QString& format) const {
@@ -195,6 +146,14 @@ void FFmpegConverter::parseProgress(const QString& line) {
     }
 }
 
+// Pixel format selection — kept as an internal enum for the FFmpeg converter.
+// Stored in QVariantMap as int: YUV420P=1, YUV422P=2, YUV444P=3.
+enum class PixelFormat : int {
+    Yuv420p = 1,
+    Yuv422p = 2,
+    Yuv444p = 3
+};
+
 QStringList FFmpegConverter::buildVideoArgs(const QVariantMap& params) {
     QStringList args;
     QString codec = params.value("videoCodec").toString();
@@ -202,8 +161,8 @@ QStringList FFmpegConverter::buildVideoArgs(const QVariantMap& params) {
         codec = params.value("codec").toString();
     }
     if (!codec.isEmpty()) {
-        QMap<QString, QString> codecMap = videoCodecMap();
-        QString ffmpegCodec = codecMap.value(codec.toLower(), codec);
+        const auto& reg = FormatRegistry::instance();
+        QString ffmpegCodec = reg.ffmpegVideoCodec(codec);
         args << "-c:v" << ffmpegCodec;
         if (codec.toLower() == "h264" || codec.toLower() == "h265" || codec.toLower() == "hevc") {
             args << "-preset" << params.value("preset", "medium").toString();
@@ -240,13 +199,13 @@ QStringList FFmpegConverter::buildVideoArgs(const QVariantMap& params) {
     if (!aspectRatio.isEmpty()) {
         args << "-aspect" << aspectRatio;
     }
-    int pixelFormat = params.value("pixelFormat", 0).toInt();
-    if (pixelFormat == 1) {
-        args << "-pix_fmt" << "yuv420p";
-    } else if (pixelFormat == 2) {
-        args << "-pix_fmt" << "yuv422p";
-    } else if (pixelFormat == 3) {
-        args << "-pix_fmt" << "yuv444p";
+    int rawPf = params.value("pixelFormat", 0).toInt();
+    auto pf = static_cast<PixelFormat>(rawPf);
+    switch (pf) {
+    case PixelFormat::Yuv420p: args << "-pix_fmt" << "yuv420p"; break;
+    case PixelFormat::Yuv422p: args << "-pix_fmt" << "yuv422p"; break;
+    case PixelFormat::Yuv444p: args << "-pix_fmt" << "yuv444p"; break;
+    default: break;
     }
     return args;
 }
@@ -255,9 +214,8 @@ QStringList FFmpegConverter::buildAudioArgs(const QVariantMap& params) {
     QStringList args;
     QString codec = params.value("audioCodec").toString();
     if (!codec.isEmpty()) {
-        QMap<QString, QString> codecMap = audioCodecMap();
-        QString ffmpegCodec = codecMap.value(codec.toLower(), codec);
-        args << "-c:a" << ffmpegCodec;
+        const auto& reg = FormatRegistry::instance();
+        args << "-c:a" << reg.ffmpegAudioCodec(codec);
     }
     int bitrate = params.value("audioBitrate", 0).toInt();
     if (bitrate > 0) {
@@ -272,6 +230,109 @@ QStringList FFmpegConverter::buildAudioArgs(const QVariantMap& params) {
         args << "-ac" << QString::number(channels);
     }
     return args;
+}
+
+static const QStringList s_validVideoCodecs = {
+    "libx264", "libx265", "libvpx-vp9", "mpeg4", "h264_nvenc", "h264", "h265", "hevc"
+};
+static const QStringList s_validAudioCodecs = {
+    "libmp3lame", "aac", "libvorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus"
+};
+static const QStringList s_validPresets = {
+    "ultrafast", "superfast", "veryfast", "faster", "fast",
+    "medium", "slow", "slower", "veryslow"
+};
+static const QSet<int> s_validSampleRates = {8000, 11025, 16000, 22050, 44100, 48000, 96000};
+static const QSet<int> s_validChannels = {1, 2};
+static const QRegularExpression s_resolutionRe(R"(^\d+x\d+$)");
+
+bool FFmpegConverter::validateParams(const QVariantMap& params, QString& errorMsg) {
+    // Validate video codec
+    QString videoCodec = params.value("videoCodec").toString();
+    if (videoCodec.isEmpty()) {
+        videoCodec = params.value("codec").toString();
+    }
+    if (!videoCodec.isEmpty() && !s_validVideoCodecs.contains(videoCodec.toLower())) {
+        errorMsg = QString("不支持的视频编码器: %1").arg(videoCodec);
+        return false;
+    }
+
+    // Validate audio codec
+    QString audioCodec = params.value("audioCodec").toString();
+    if (!audioCodec.isEmpty() && !s_validAudioCodecs.contains(audioCodec.toLower())) {
+        errorMsg = QString("不支持的音频编码器: %1").arg(audioCodec);
+        return false;
+    }
+
+    // Validate resolution format
+    QString resolution = params.value("resolution").toString();
+    if (!resolution.isEmpty() && !s_resolutionRe.match(resolution).hasMatch()) {
+        errorMsg = QString("无效的分辨率格式: %1 (期望格式: 宽x高，如 1920x1080)").arg(resolution);
+        return false;
+    }
+
+    // Validate video bitrate
+    int videoBitrate = params.value("videoBitrate", 0).toInt();
+    if (videoBitrate < 0) {
+        errorMsg = QString("视频比特率不能为负数: %1").arg(videoBitrate);
+        return false;
+    }
+    if (videoBitrate > 50000) {
+        errorMsg = QString("视频比特率过高: %1 kbps (上限: 50000)").arg(videoBitrate);
+        return false;
+    }
+
+    // Validate audio bitrate
+    int audioBitrate = params.value("audioBitrate", 0).toInt();
+    if (audioBitrate < 0) {
+        errorMsg = QString("音频比特率不能为负数: %1").arg(audioBitrate);
+        return false;
+    }
+    if (audioBitrate > 512) {
+        errorMsg = QString("音频比特率过高: %1 kbps (上限: 512)").arg(audioBitrate);
+        return false;
+    }
+
+    // Validate sample rate
+    int sampleRate = params.value("sampleRate", 0).toInt();
+    if (sampleRate != 0 && !s_validSampleRates.contains(sampleRate)) {
+        errorMsg = QString("无效的采样率: %1 Hz (可选: 8000, 11025, 16000, 22050, 44100, 48000, 96000)").arg(sampleRate);
+        return false;
+    }
+
+    // Validate channels
+    int channels = params.value("channels", 0).toInt();
+    if (channels != 0 && !s_validChannels.contains(channels)) {
+        errorMsg = QString("无效的声道数: %1 (仅支持 1 或 2)").arg(channels);
+        return false;
+    }
+
+    // Validate preset
+    QString preset = params.value("preset").toString();
+    if (!preset.isEmpty() && !s_validPresets.contains(preset.toLower())) {
+        errorMsg = QString("无效的编码预设: %1").arg(preset);
+        return false;
+    }
+
+    // Validate pixel format
+    int pixelFormat = params.value("pixelFormat", 0).toInt();
+    if (pixelFormat < 0 || pixelFormat > 3) {
+        errorMsg = QString("无效的像素格式: %1").arg(pixelFormat);
+        return false;
+    }
+
+    // Validate frame rate
+    int fps = params.value("fps", 0).toInt();
+    if (fps < 0) {
+        errorMsg = QString("帧率不能为负数: %1").arg(fps);
+        return false;
+    }
+    if (fps > 120) {
+        errorMsg = QString("帧率过高: %1 (上限: 120)").arg(fps);
+        return false;
+    }
+
+    return true;
 }
 
 double FFmpegConverter::getDuration(const QString& filePath) {
@@ -374,6 +435,21 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
         emit conversionFinished(false, error.message);
         return false;
     }
+    // Validate parameters before proceeding
+    QString paramError;
+    if (!validateParams(params, paramError)) {
+        ErrorInfo error = ErrorTypes::createError(
+            ErrorCode::InvalidParameter, paramError, "FFmpeg::convert");
+        error.inputFile = inputFile;
+        error.outputFile = outputFile;
+        m_lastError = error;
+        LOG_ERROR("FFmpeg", paramError);
+        ErrorHandler::instance()->handleError(error);
+        emit errorOccurred(error);
+        emit conversionFinished(false, paramError);
+        return false;
+    }
+
     m_totalDuration = getDuration(inputFile);
     m_currentOutputFile = outputFile;
     m_currentInputFile = inputFile;
@@ -423,18 +499,16 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         LOG_ERROR("FFmpeg", tr("已有转换任务在运行"));
         return false;
     }
-    if (m_process) {
-        delete m_process;
-        m_process = nullptr;
-    }
-    m_process = new QProcess(this);
+    // Re-create the process to ensure clean state and fresh connections.
+    // Managed by unique_ptr — no Qt parent to avoid double-delete.
+    m_process = std::make_unique<QProcess>();
     m_process->setProgram(m_ffmpegPath);
     m_process->setArguments(args);
-    connect(m_process, &QProcess::readyReadStandardError,
+    connect(m_process.get(), &QProcess::readyReadStandardError,
             this, &FFmpegConverter::onProcessReadyReadStandardError);
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+    connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &FFmpegConverter::onProcessFinished);
-    connect(m_process, &QProcess::errorOccurred,
+    connect(m_process.get(), &QProcess::errorOccurred,
             this, &FFmpegConverter::onProcessError);
     LOG_DEBUG("FFmpeg", QString("执行命令: %1 %2").arg(m_ffmpegPath, args.join(" ")));
     m_isRunning = true;
@@ -455,10 +529,26 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         return false;
     }
     emit statusChanged(tr("正在转换..."));
-    // Wait for the process to actually finish before returning.
-    // `waitForFinished` processes QProcess events internally even without an event loop,
-    // so onProcessReadyReadStandardError and onProcessFinished will fire correctly.
-    m_process->waitForFinished(-1);
+    // Wait for the process with a timeout so a hung ffmpeg does not
+    // permanently block the worker thread.
+    if (!m_process->waitForFinished(WAIT_FOR_FINISHED_TIMEOUT_MS)) {
+        LOG_WARNING("FFmpeg", tr("FFmpeg 进程超时，正在终止"));
+        m_process->kill();
+        m_process->waitForFinished(5000);
+        m_isRunning = false;
+        ErrorInfo error = ErrorTypes::createError(
+            ErrorCode::TaskTimeout,
+            tr("FFmpeg 转换超时"),
+            "FFmpeg::runFFmpeg");
+        error.inputFile = m_currentInputFile;
+        error.outputFile = m_currentOutputFile;
+        m_lastError = error;
+        LOG_ERROR("FFmpeg", error.message);
+        ErrorHandler::instance()->handleError(error);
+        emit errorOccurred(error);
+        emit conversionFinished(false, error.message);
+        return false;
+    }
     return m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
 }
 

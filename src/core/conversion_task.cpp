@@ -3,7 +3,7 @@
 ConversionTask::ConversionTask(QObject* parent)
     : QObject(parent)
     , m_id(QUuid::createUuid().toString(QUuid::WithoutBraces))
-    , m_status(Status::Pending)
+    , m_status(static_cast<int>(Status::Pending))
     , m_progress(0)
     , m_converterType(ConverterType::Unknown)
     , m_priority(Priority::Normal)
@@ -22,7 +22,7 @@ ConversionTask::ConversionTask(const QString& inputFile, const QString& outputFi
     , m_inputFile(inputFile)
     , m_outputFile(outputFile)
     , m_params(params)
-    , m_status(Status::Pending)
+    , m_status(static_cast<int>(Status::Pending))
     , m_progress(0)
     , m_converterType(ConverterType::Unknown)
     , m_priority(Priority::Normal)
@@ -43,8 +43,9 @@ qint64 ConversionTask::durationMs() const {
 }
 
 void ConversionTask::setStatus(Status status) {
-    if (m_status != status) {
-        m_status = status;
+    Status oldStatus = static_cast<Status>(m_status.loadRelaxed());
+    if (oldStatus != status) {
+        m_status.storeRelaxed(static_cast<int>(status));
         if (status == Status::Running) {
             m_startTime = QDateTime::currentDateTime();
             m_endTime = QDateTime();
@@ -65,8 +66,8 @@ void ConversionTask::setStatus(Status status) {
 
 void ConversionTask::setProgress(int progress) {
     int clampedProgress = qBound(0, progress, 100);
-    if (m_progress != clampedProgress) {
-        m_progress = clampedProgress;
+    if (m_progress.loadRelaxed() != clampedProgress) {
+        m_progress.storeRelaxed(clampedProgress);
         emit progressChanged(clampedProgress);
     }
 }

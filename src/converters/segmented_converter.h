@@ -6,6 +6,7 @@
 #include <QTimer>
 #include <QVariantMap>
 #include <QTemporaryFile>
+#include <memory>
 
 class SegmentedConverter : public QObject {
     Q_OBJECT
@@ -49,7 +50,7 @@ private:
     QString m_inputFile;
     QString m_outputFile;
     QVariantMap m_params;
-    QProcess* m_process;
+    std::unique_ptr<QProcess> m_process;
     QTimer* m_timeoutTimer;
     bool m_isRunning;
     bool m_cancelled;

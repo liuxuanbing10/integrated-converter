@@ -3,10 +3,12 @@
 
 #include "iconverter.h"
 #include "error_types.h"
+#include "format_registry.h"
 #include <QProcess>
 #include <QTimer>
 #include <QMap>
 #include <QRegularExpression>
+#include <memory>
 
 class FFmpegConverter : public QObject, public IConverter {
     Q_OBJECT
@@ -40,6 +42,7 @@ public:
     double currentBitrate() const { return m_currentBitrate; }
     qint64 processedBytes() const { return m_processedBytes; }
 
+    static bool validateParams(const QVariantMap& params, QString& errorMsg);
     static QMap<QString, QString> videoFormatMap();
     static QMap<QString, QString> audioFormatMap();
     static QMap<QString, QString> videoCodecMap();
@@ -73,7 +76,7 @@ private:
     QString m_ffprobePath;
     QStringList m_videoFormats;
     QStringList m_audioFormats;
-    QProcess* m_process;
+    std::unique_ptr<QProcess> m_process;
     QTimer* m_timeoutTimer;
     bool m_isRunning;
     double m_totalDuration;

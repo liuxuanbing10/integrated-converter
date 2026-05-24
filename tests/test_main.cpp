@@ -1,11 +1,11 @@
 #include <QTest>
 #include <QApplication>
-#include "core/test_logger.cpp"
-#include "core/test_config_manager.cpp"
-#include "core/test_task_manager.cpp"
-#include "core/test_error_handler.cpp"
-#include "converters/test_ffmpeg_converter.cpp"
-#include "converters/test_pandoc_converter.cpp"
+#include "core/test_logger.h"
+#include "core/test_config_manager.h"
+#include "core/test_task_manager.h"
+#include "core/test_error_handler.h"
+#include "converters/test_ffmpeg_converter.h"
+#include "converters/test_pandoc_converter.h"
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     int status = 0;
