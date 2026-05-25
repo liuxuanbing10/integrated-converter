@@ -185,7 +185,7 @@ void MainWindow::setupCentralWidget() {
     // -- Config panel (right, fixed width) --
     m_configPanel = new QFrame();
     m_configPanel->setObjectName("configPanel");
-    m_configPanel->setFixedWidth(280);
+    m_configPanel->setFixedWidth(220);
     m_configPanel->setStyleSheet(
         "#configPanel { border: 1px solid #bbb; border-radius: 8px; "
         "background-color: #ffffff; }"
