@@ -6,6 +6,7 @@
 #include "core/test_error_handler.h"
 #include "converters/test_ffmpeg_converter.h"
 #include "converters/test_pandoc_converter.h"
+#include "converters/test_imagemagick_converter.h"
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     int status = 0;
@@ -32,6 +33,10 @@ int main(int argc, char *argv[]) {
     {
         TestPandocConverter testPandoc;
         status |= QTest::qExec(&testPandoc, argc, argv);
+    }
+    {
+        TestImageMagickConverter testImageMagick;
+        status |= QTest::qExec(&testImageMagick, argc, argv);
     }
     return status;
 }
