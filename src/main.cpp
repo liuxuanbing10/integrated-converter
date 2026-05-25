@@ -77,6 +77,16 @@ int main(int argc, char* argv[]) {
     MainWindow mainWindow;
     mainWindow.show();
     int result = app.exec();
+
+    // Requirement 5: ensure console closes with the GUI application
+#ifdef Q_OS_WIN
+    // On MinGW builds, WIN32_EXECUTABLE is OFF, so a console is allocated.
+    // FreeConsole detaches the process from its console.
+    // If the console was created specifically for this process (not inherited
+    // from an existing cmd.exe), the console window will close automatically.
+    FreeConsole();
+#endif
+
     ConfigManager::instance().saveConfig(configPath);
     LOG_INFO("Main", QString("应用程序退出，返回码: %1").arg(result));
     return result;
