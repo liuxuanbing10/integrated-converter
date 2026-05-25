@@ -2,6 +2,8 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#include <QMutex>
+#include <iostream>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
@@ -13,9 +15,39 @@
 #include "converters/pandoc_converter.h"
 #include "converters/imagemagick_converter.h"
 #include <memory>
+
+#ifdef Q_OS_WIN
+// Custom Qt message handler that writes UTF-16 directly to the Windows console,
+// bypassing code page conversion issues that cause garbled Chinese text.
+static QMutex g_consoleMutex;
+static void winConsoleMessageHandler(QtMsgType type, const QMessageLogContext& ctx,
+                                       const QString& msg) {
+    QMutexLocker locker(&g_consoleMutex);
+    QString prefix;
+    switch (type) {
+        case QtDebugMsg:    prefix = "[DEBUG] "; break;
+        case QtInfoMsg:     prefix = "[INFO] ";  break;
+        case QtWarningMsg:  prefix = "[WARN] ";  break;
+        case QtCriticalMsg: prefix = "[ERROR] "; break;
+        case QtFatalMsg:    prefix = "[FATAL] "; break;
+    }
+    QString fullMsg = prefix + msg + "\n";
+    HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE);
+    DWORD written;
+    WriteConsoleW(hConsole, fullMsg.utf16(), fullMsg.size(), &written, nullptr);
+    if (type == QtFatalMsg) {
+        // Let the default handler deal with abort
+        fflush(stderr);
+        abort();
+    }
+}
+#endif
+
 int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
-    // Set console output to UTF-8 to prevent garbled Chinese text
+    // Install custom handler that uses WriteConsoleW (UTF-16 native) to avoid
+    // garbled Chinese output caused by Qt's default GBK-to-console encoding.
+    qInstallMessageHandler(winConsoleMessageHandler);
     SetConsoleOutputCP(CP_UTF8);
 #endif
     QApplication app(argc, argv);
