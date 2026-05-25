@@ -114,10 +114,11 @@ QString ConversionTask::statusToString(Status status) {
 
 QString ConversionTask::converterTypeToString(ConverterType type) {
     switch (type) {
-        case ConverterType::FFmpeg:  return tr("FFmpeg");
-        case ConverterType::Pandoc:  return tr("Pandoc");
-        case ConverterType::Unknown: return tr("未知");
-        default:                     return tr("未知");
+        case ConverterType::FFmpeg:      return tr("FFmpeg");
+        case ConverterType::Pandoc:      return tr("Pandoc");
+        case ConverterType::ImageMagick: return tr("ImageMagick");
+        case ConverterType::Unknown:     return tr("未知");
+        default:                         return tr("未知");
     }
 }
 
@@ -136,6 +137,8 @@ ConversionTask::ConverterType ConversionTask::stringToConverterType(const QStrin
         return ConverterType::FFmpeg;
     } else if (lower == "pandoc") {
         return ConverterType::Pandoc;
+    } else if (lower == "imagemagick") {
+        return ConverterType::ImageMagick;
     }
     return ConverterType::Unknown;
 }

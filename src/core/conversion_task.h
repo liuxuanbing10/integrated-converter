@@ -26,7 +26,8 @@ public:
     enum class ConverterType {
         Unknown,
         FFmpeg,
-        Pandoc
+        Pandoc,
+        ImageMagick
     };
 
     enum class Priority {

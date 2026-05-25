@@ -29,6 +29,7 @@ private:
     QString findExecutable(const QString& name);
     void detectFFmpegPath();
     void detectPandocPath();
+    void detectImageMagickPath();
     QVariantMap m_config;
     QString m_configFilePath;
 };

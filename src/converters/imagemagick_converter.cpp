@@ -57,6 +57,9 @@ QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
     // Input file
     args << inputFile;
 
+    // Enable progress monitoring via stderr output
+    args << "-monitor";
+
     // Optional resize
     QString resize = params.value("resize").toString();
     if (!resize.isEmpty()) {
@@ -301,6 +304,9 @@ void ImageMagickConverter::onProcessReadyReadStandardError() {
 }
 
 void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    // Guard: if already marked not running (e.g. cancel() already handled this),
+    // do nothing to avoid double-emission of completion signals.
+    if (!m_isRunning) return;
     m_isRunning = false;
     bool success = (exitCode == 0 && exitStatus == QProcess::NormalExit);
 
@@ -343,6 +349,8 @@ void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus 
 }
 
 void ImageMagickConverter::onProcessError(QProcess::ProcessError error) {
+    // Guard: if already handled, skip to avoid double-emission
+    if (!m_isRunning) return;
     m_isRunning = false;
     ErrorCode errorCode;
     switch (error) {
