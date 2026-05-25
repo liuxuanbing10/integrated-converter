@@ -8,6 +8,7 @@
 #include "core/task_manager.h"
 #include "converters/ffmpeg_converter.h"
 #include "converters/pandoc_converter.h"
+#include "converters/imagemagick_converter.h"
 #include <memory>
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
@@ -29,8 +30,10 @@ int main(int argc, char* argv[]) {
     Logger::instance().setLevel(static_cast<Logger::Level>(logLevel));
     auto ffmpegConverter = std::make_shared<FFmpegConverter>();
     auto pandocConverter = std::make_shared<PandocConverter>();
+    auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
     TaskManager::instance()->registerConverter("FFmpeg", ffmpegConverter);
     TaskManager::instance()->registerConverter("Pandoc", pandocConverter);
+    TaskManager::instance()->registerConverter("ImageMagick", imagemagickConverter);
     LOG_INFO("Main", "转换器注册完成");
     MainWindow mainWindow;
     mainWindow.show();

@@ -132,6 +132,11 @@ void ConfigPanel::applyStyleSheet() {
 void ConfigPanel::updateOutputFormats() {
     m_outputFormatCombo->clear();
     const auto& reg = FormatRegistry::instance();
+    // Image formats
+    for (const QString& fmt : reg.imageOutputFormats()) {
+        m_outputFormatCombo->addItem(
+            tr("%1 (图片)").arg(fmt.toUpper()), fmt);
+    }
     // Video formats
     for (const QString& fmt : reg.videoFormats()) {
         m_outputFormatCombo->addItem(
@@ -144,9 +149,8 @@ void ConfigPanel::updateOutputFormats() {
     }
     // Document output formats
     for (const QString& fmt : reg.documentOutputFormats()) {
-        static const QStringList dedupCheck = reg.documentOutputFormats();
         // Avoid duplicates already added (none overlap, but be safe)
-        if (reg.isVideo(fmt) || reg.isAudio(fmt)) continue;
+        if (reg.isVideo(fmt) || reg.isAudio(fmt) || reg.isImage(fmt)) continue;
         m_outputFormatCombo->addItem(
             tr("%1 (文档)").arg(fmt.toUpper()), fmt);
     }
