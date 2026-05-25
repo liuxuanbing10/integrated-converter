@@ -14,6 +14,7 @@ ConfigManager::ConfigManager() {
     initDefaultConfig();
     detectFFmpegPath();
     detectPandocPath();
+    detectImageMagickPath();
 }
 ConfigManager::~ConfigManager() {
 }
@@ -26,6 +27,7 @@ void ConfigManager::initDefaultConfig() {
     m_config["showNotification"] = true;
     m_config["ffmpegPath"] = "ffmpeg";
     m_config["pandocPath"] = "pandoc";
+    m_config["imagemagickPath"] = "magick";
 }
 QString ConfigManager::findExecutable(const QString& name) {
     QStringList possiblePaths;
@@ -61,6 +63,21 @@ void ConfigManager::detectPandocPath() {
     if (detected != "pandoc") {
         m_config["pandocPath"] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到Pandoc路径: %1").arg(detected));
+    }
+}
+void ConfigManager::detectImageMagickPath() {
+    // ImageMagick 7+ uses 'magick', IM6 uses 'convert'
+    QString detected = findExecutable("magick");
+    if (detected == "magick") {
+        // magick not found on PATH, try 'convert' for ImageMagick 6
+        detected = findExecutable("convert");
+        if (detected != "convert") {
+            m_config["imagemagickPath"] = detected;
+            LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(convert)路径: %1").arg(detected));
+        }
+    } else {
+        m_config["imagemagickPath"] = detected;
+        LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(magick)路径: %1").arg(detected));
     }
 }
 bool ConfigManager::loadConfig(const QString& filePath) {

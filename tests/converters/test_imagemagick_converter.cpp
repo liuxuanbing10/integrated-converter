@@ -39,10 +39,15 @@ void TestImageMagickConverter::testName() {
 
 void TestImageMagickConverter::testIsConversionSupported() {
     ImageMagickConverter converter;
-    bool supported = converter.isConversionSupported("png", "jpg");
-    QVERIFY(supported || !supported);
-    supported = converter.isConversionSupported("gif", "png");
-    QVERIFY(supported || !supported);
+    // Common image-to-image conversions should be supported
+    QVERIFY(converter.isConversionSupported("png", "jpg"));
+    QVERIFY(converter.isConversionSupported("gif", "png"));
+    QVERIFY(converter.isConversionSupported("bmp", "tiff"));
+    QVERIFY(converter.isConversionSupported("webp", "ico"));
+    // Unsupported input/output should fail
+    QVERIFY(!converter.isConversionSupported("xxx", "png"));
+    QVERIFY(!converter.isConversionSupported("png", "xxx"));
+    QVERIFY(!converter.isConversionSupported("", "png"));
 }
 
 void TestImageMagickConverter::testSetMagickPath() {
