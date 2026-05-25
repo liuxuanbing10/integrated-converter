@@ -7,14 +7,16 @@
 
 class FormatRegistry {
 public:
-    enum class Category { Video, Audio, Document, Unknown };
-    enum class Converter { FFmpeg, Pandoc, Unknown };
+    enum class Category { Video, Audio, Image, Document, Unknown };
+    enum class Converter { FFmpeg, Pandoc, ImageMagick, Unknown };
 
     static FormatRegistry& instance();
 
     // ── Format lists ──────────────────────────────────────────────
     const QStringList& videoFormats() const;
     const QStringList& audioFormats() const;
+    const QStringList& imageInputFormats() const;
+    const QStringList& imageOutputFormats() const;
     const QStringList& documentFormats() const;
     const QStringList& documentInputFormats() const;
     const QStringList& documentOutputFormats() const;
@@ -25,6 +27,7 @@ public:
     Converter converterForExt(const QString& format) const;
     bool isVideo(const QString& format) const;
     bool isAudio(const QString& format) const;
+    bool isImage(const QString& format) const;
     bool isDocument(const QString& format) const;
     bool isSupported(const QString& format) const;
 
@@ -36,10 +39,14 @@ public:
     // ── Pandoc lookups ────────────────────────────────────────────
     QString pandocFormatName(const QString& ext) const;
 
+    // ── ImageMagick lookups ───────────────────────────────────────
+    QString imagemagickFormatName(const QString& ext) const;
+
     // ── UI helpers ────────────────────────────────────────────────
     QString fileDialogFilter() const;
     QString fileDialogVideoFilter() const;
     QString fileDialogAudioFilter() const;
+    QString fileDialogImageFilter() const;
     QString fileDialogDocumentFilter() const;
 
 private:
@@ -52,6 +59,8 @@ private:
 
     QStringList m_videoFormats;
     QStringList m_audioFormats;
+    QStringList m_imageInputFormats;
+    QStringList m_imageOutputFormats;
     QStringList m_documentInputFormats;
     QStringList m_documentOutputFormats;
 
@@ -59,6 +68,7 @@ private:
     QMap<QString, QString> m_videoCodecMap;
     QMap<QString, QString> m_audioCodecMap;
     QMap<QString, QString> m_pandocFormatMap;
+    QMap<QString, QString> m_imagemagickFormatMap;
 };
 
 #endif // FORMAT_REGISTRY_H
