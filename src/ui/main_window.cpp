@@ -251,13 +251,20 @@ void MainWindow::applyDarkTheme() {
 }
 
 void MainWindow::onAddFiles() {
+    const auto& reg = FormatRegistry::instance();
     QStringList files = QFileDialog::getOpenFileNames(this, tr("选择文件"),
         QString(),
-        tr("所有支持格式 (*.mp4 *.avi *.mkv *.mp3 *.wav *.md *.txt *.docx);;"
-           "视频文件 (*.mp4 *.avi *.mkv *.mov *.flv);;"
-           "音频文件 (*.mp3 *.wav *.flac *.aac);;"
-           "文档文件 (*.md *.txt *.docx *.pdf);;"
+        tr("所有支持格式 (%1);;"
+           "%2;;"
+           "%3;;"
+           "%4;;"
+           "%5;;"
            "所有文件 (*)")
+        .arg(reg.fileDialogFilter())
+        .arg(reg.fileDialogImageFilter())
+        .arg(reg.fileDialogVideoFilter())
+        .arg(reg.fileDialogAudioFilter())
+        .arg(reg.fileDialogDocumentFilter())
     );
     if (!files.isEmpty()) {
         m_fileListWidget->addFiles(files);
@@ -324,11 +331,12 @@ void MainWindow::onCancelAll() {
 void MainWindow::onAbout() {
     QMessageBox::about(this, tr("关于"),
         tr("<h3>集成格式转换工具 v1.0.0</h3>"
-           "<p>基于FFmpeg和Pandoc的多功能文件转换工具</p>"
+           "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
            "<p>支持功能：</p>"
            "<ul>"
            "<li>视频格式转换（MP4, AVI, MKV等）</li>"
            "<li>音频格式转换（MP3, WAV, FLAC等）</li>"
+           "<li>图片格式转换（PNG, JPG, GIF, WebP等）</li>"
            "<li>文档格式转换（Markdown, DOCX, PDF等）</li>"
            "</ul>"
            "<p> 2024 ConverterTools</p>"));
@@ -472,8 +480,14 @@ void MainWindow::submitConversionTasks() {
         QVariantMap params = baseParams;
         params["outputFormat"] = outputFormat;
         QString ext = fi.suffix().toLower();
-        params["converter"] = (reg.converterForExt(ext) == FormatRegistry::Converter::Pandoc)
-                               ? "Pandoc" : "FFmpeg";
+        auto converterType = reg.converterForExt(ext);
+        if (converterType == FormatRegistry::Converter::Pandoc) {
+            params["converter"] = "Pandoc";
+        } else if (converterType == FormatRegistry::Converter::ImageMagick) {
+            params["converter"] = "ImageMagick";
+        } else {
+            params["converter"] = "FFmpeg";
+        }
         TaskManager::instance()->addTask(fileInfo.filePath, outputFile, params);
     }
     LOG_INFO("MainWindow", QString("提交 %1 个转换任务").arg(files.size()));
