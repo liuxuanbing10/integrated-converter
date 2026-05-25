@@ -39,11 +39,13 @@ set(CONVERTER_SOURCES
     src/converters/ffmpeg_converter.cpp
     src/converters/pandoc_converter.cpp
     src/converters/segmented_converter.cpp
+    src/converters/imagemagick_converter.cpp
 )
 set(CONVERTER_HEADERS
     src/converters/ffmpeg_converter.h
     src/converters/pandoc_converter.h
     src/converters/segmented_converter.h
+    src/converters/imagemagick_converter.h
 )
 set(UI_SOURCES
     src/ui/main_window.cpp

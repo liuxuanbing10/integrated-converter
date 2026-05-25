@@ -10,6 +10,7 @@ set(TEST_SOURCES
     core/test_error_handler.cpp
     converters/test_ffmpeg_converter.cpp
     converters/test_pandoc_converter.cpp
+    converters/test_imagemagick_converter.cpp
 )
 set(CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/conversion_task.cpp
@@ -29,6 +30,7 @@ set(CONVERTER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/ffmpeg_converter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/pandoc_converter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/segmented_converter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/imagemagick_converter.cpp
 )
 add_executable(test_runner ${TEST_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES})
 target_include_directories(test_runner PRIVATE
