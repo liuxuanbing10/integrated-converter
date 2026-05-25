@@ -50,8 +50,8 @@ set(CONVERTER_HEADERS
 set(UI_SOURCES
     src/ui/main_window.cpp
     src/ui/task_list_widget.cpp
-    src/ui/config_panel.cpp
     src/ui/file_list_widget.cpp
+    src/ui/file_category_widget.cpp
     src/ui/progress_widget.cpp
     src/ui/batch_conversion_summary.cpp
     src/ui/batch_convert_dialog.cpp
@@ -61,8 +61,8 @@ set(UI_SOURCES
 set(UI_HEADERS
     src/ui/main_window.h
     src/ui/task_list_widget.h
-    src/ui/config_panel.h
     src/ui/file_list_widget.h
+    src/ui/file_category_widget.h
     src/ui/progress_widget.h
     src/ui/batch_conversion_summary.h
     src/ui/batch_convert_dialog.h
