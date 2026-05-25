@@ -2,6 +2,9 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
 #include "ui/main_window.h"
 #include "core/logger.h"
 #include "core/config_manager.h"
@@ -11,6 +14,10 @@
 #include "converters/imagemagick_converter.h"
 #include <memory>
 int main(int argc, char* argv[]) {
+#ifdef Q_OS_WIN
+    // Set console output to UTF-8 to prevent garbled Chinese text
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     QApplication app(argc, argv);
     app.setApplicationName("IntegratedConverter");
     app.setApplicationVersion("1.0.0");
