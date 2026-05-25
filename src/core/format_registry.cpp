@@ -18,6 +18,22 @@ void FormatRegistry::init() {
     m_audioFormats << "mp3" << "wav" << "flac" << "aac" << "ogg"
                    << "m4a" << "wma";
 
+    // ── Image (input - ImageMagick can read many formats) ─────────
+    m_imageInputFormats << "png" << "jpg" << "jpeg" << "gif" << "bmp"
+                        << "tiff" << "tif" << "webp" << "svg" << "svgz"
+                        << "ico" << "cur" << "heic" << "heif" << "avif"
+                        << "psd" << "xcf" << "cr2" << "nef" << "arw"
+                        << "dng" << "raw" << "orf" << "rw2" << "ppm"
+                        << "pgm" << "pbm" << "xbm" << "xpm" << "jp2"
+                        << "j2k" << "pcx" << "tga";
+
+    // ── Image (output - most common writable formats) ─────────────
+    m_imageOutputFormats << "png" << "jpg" << "jpeg" << "gif" << "bmp"
+                         << "tiff" << "tif" << "webp" << "ico"
+                         << "heic" << "avif"
+                         << "ppm" << "pgm" << "pbm" << "xbm" << "xpm"
+                         << "jp2" << "pcx" << "tga";
+
     // ── Document (input) ──────────────────────────────────────────
     m_documentInputFormats << "md" << "markdown" << "html" << "htm"
                            << "tex" << "latex"
@@ -90,6 +106,41 @@ void FormatRegistry::init() {
     m_pandocFormatMap["odt"]      = "odt";
     m_pandocFormatMap["csv"]      = "csv";
     m_pandocFormatMap["json"]     = "json";
+
+    // ── ImageMagick format mapping ────────────────────────────────
+    m_imagemagickFormatMap["png"]  = "png";
+    m_imagemagickFormatMap["jpg"]  = "jpeg";
+    m_imagemagickFormatMap["jpeg"] = "jpeg";
+    m_imagemagickFormatMap["gif"]  = "gif";
+    m_imagemagickFormatMap["bmp"]  = "bmp";
+    m_imagemagickFormatMap["tiff"] = "tiff";
+    m_imagemagickFormatMap["tif"]  = "tiff";
+    m_imagemagickFormatMap["webp"] = "webp";
+    m_imagemagickFormatMap["svg"]  = "svg";
+    m_imagemagickFormatMap["svgz"] = "svg";
+    m_imagemagickFormatMap["ico"]  = "ico";
+    m_imagemagickFormatMap["cur"]  = "cur";
+    m_imagemagickFormatMap["heic"] = "heic";
+    m_imagemagickFormatMap["heif"] = "heif";
+    m_imagemagickFormatMap["avif"] = "avif";
+    m_imagemagickFormatMap["psd"]  = "psd";
+    m_imagemagickFormatMap["xcf"]  = "xcf";
+    m_imagemagickFormatMap["cr2"]  = "dng";
+    m_imagemagickFormatMap["nef"]  = "dng";
+    m_imagemagickFormatMap["arw"]  = "dng";
+    m_imagemagickFormatMap["dng"]  = "dng";
+    m_imagemagickFormatMap["raw"]  = "raw";
+    m_imagemagickFormatMap["orf"]  = "orf";
+    m_imagemagickFormatMap["rw2"]  = "rw2";
+    m_imagemagickFormatMap["ppm"]  = "ppm";
+    m_imagemagickFormatMap["pgm"]  = "pgm";
+    m_imagemagickFormatMap["pbm"]  = "pbm";
+    m_imagemagickFormatMap["xbm"]  = "xbm";
+    m_imagemagickFormatMap["xpm"]  = "xpm";
+    m_imagemagickFormatMap["jp2"]  = "jp2";
+    m_imagemagickFormatMap["j2k"]  = "jp2";
+    m_imagemagickFormatMap["pcx"]  = "pcx";
+    m_imagemagickFormatMap["tga"]  = "tga";
 }
 
 // ── Format lists ─────────────────────────────────────────────────
@@ -99,6 +150,14 @@ const QStringList& FormatRegistry::videoFormats() const {
 
 const QStringList& FormatRegistry::audioFormats() const {
     return m_audioFormats;
+}
+
+const QStringList& FormatRegistry::imageInputFormats() const {
+    return m_imageInputFormats;
+}
+
+const QStringList& FormatRegistry::imageOutputFormats() const {
+    return m_imageOutputFormats;
 }
 
 const QStringList& FormatRegistry::documentFormats() const {
@@ -114,19 +173,21 @@ const QStringList& FormatRegistry::documentOutputFormats() const {
 }
 
 QStringList FormatRegistry::allFormats() const {
-    return m_videoFormats + m_audioFormats + m_documentInputFormats;
+    return m_videoFormats + m_audioFormats + m_imageInputFormats + m_documentInputFormats;
 }
 
 // ── Classification ───────────────────────────────────────────────
 FormatRegistry::Category FormatRegistry::category(const QString& format) const {
     if (isVideo(format)) return Category::Video;
     if (isAudio(format)) return Category::Audio;
+    if (isImage(format)) return Category::Image;
     if (isDocument(format)) return Category::Document;
     return Category::Unknown;
 }
 
 FormatRegistry::Converter FormatRegistry::converterForExt(const QString& format) const {
     if (isVideo(format) || isAudio(format)) return Converter::FFmpeg;
+    if (isImage(format)) return Converter::ImageMagick;
     if (isDocument(format)) return Converter::Pandoc;
     return Converter::Unknown;
 }
@@ -139,12 +200,16 @@ bool FormatRegistry::isAudio(const QString& format) const {
     return m_audioFormats.contains(format.toLower());
 }
 
+bool FormatRegistry::isImage(const QString& format) const {
+    return m_imageInputFormats.contains(format.toLower());
+}
+
 bool FormatRegistry::isDocument(const QString& format) const {
     return m_documentInputFormats.contains(format.toLower());
 }
 
 bool FormatRegistry::isSupported(const QString& format) const {
-    return isVideo(format) || isAudio(format) || isDocument(format);
+    return isVideo(format) || isAudio(format) || isImage(format) || isDocument(format);
 }
 
 // ── FFmpeg lookups ───────────────────────────────────────────────
@@ -163,6 +228,11 @@ QString FormatRegistry::ffmpegAudioCodec(const QString& codec) const {
 // ── Pandoc lookups ───────────────────────────────────────────────
 QString FormatRegistry::pandocFormatName(const QString& ext) const {
     return m_pandocFormatMap.value(ext.toLower(), ext.toLower());
+}
+
+// ── ImageMagick lookups ──────────────────────────────────────────
+QString FormatRegistry::imagemagickFormatName(const QString& ext) const {
+    return m_imagemagickFormatMap.value(ext.toLower(), ext.toLower());
 }
 
 // ── UI helpers ───────────────────────────────────────────────────
@@ -189,6 +259,10 @@ QString FormatRegistry::fileDialogVideoFilter() const {
 
 QString FormatRegistry::fileDialogAudioFilter() const {
     return QString("Audio Files (%1)").arg(joinExts(m_audioFormats));
+}
+
+QString FormatRegistry::fileDialogImageFilter() const {
+    return QString("Image Files (%1)").arg(joinExts(m_imageInputFormats));
 }
 
 QString FormatRegistry::fileDialogDocumentFilter() const {
