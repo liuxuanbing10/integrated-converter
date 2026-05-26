@@ -26,6 +26,7 @@ public:
 
     void setConsoleOutput(bool enabled);
     void setFileOutput(bool enabled);
+    void closeLogFile();
 
     void setMaxFileSize(qint64 maxSize);
     qint64 maxFileSize() const;
@@ -57,6 +58,8 @@ private:
     void writeToFile(const QString& formattedMessage);
     void cleanupOldBackups();
     QString generateBackupFileName() const;
+
+    friend class TestLogger;
 
     QFile m_logFile;
     QTextStream m_stream;

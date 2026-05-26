@@ -60,6 +60,15 @@ Logger::Level Logger::level() const {
     return m_level;
 }
 
+void Logger::closeLogFile() {
+    QMutexLocker locker(&m_mutex);
+    if (m_logFile.isOpen()) {
+        m_stream.flush();
+        m_logFile.close();
+    }
+    m_fileOutput = false;
+}
+
 void Logger::setConsoleOutput(bool enabled) {
     QMutexLocker locker(&m_mutex);
     m_consoleOutput = enabled;
@@ -203,8 +212,9 @@ void Logger::writeToFile(const QString& formattedMessage) {
         rotateLog();
     }
     if (m_logFile.isOpen()) {
-        m_stream << formattedMessage << "\n";
-        m_stream.flush();
+        QByteArray line = (formattedMessage + '\n').toUtf8();
+        m_logFile.write(line);
+        m_logFile.flush();
     }
 }
 
