@@ -284,7 +284,7 @@ integrated_converter/
 │   └── ui/                       # Qt Widgets frontend
 │       ├── main_window.h/cpp          # Main window
 │       ├── file_list_widget.h/cpp     # File list
-│       ├── config_panel.h/cpp         # Config panel
+│       ├── batch_conversion_summary.h/cpp  # Batch summary
 │       ├── task_list_widget.h/cpp     # Task table
 │       ├── progress_widget.h/cpp      # Progress bar
 │       ├── batch_convert_dialog.h/cpp   # Batch dialog

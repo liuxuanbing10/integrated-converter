@@ -129,7 +129,7 @@ void ImageParamsWidget::setupUI() {
         "border-radius: 6px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
         "font-size: 12px; color: #333; }"
     );
-    m_previewLabel->setMinimumHeight(120);
+    m_previewLabel->setMinimumHeight(200);
     previewLayout->addWidget(m_previewLabel);
     mainLayout->addWidget(previewGroup);
 
