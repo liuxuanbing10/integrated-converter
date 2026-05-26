@@ -288,7 +288,7 @@ integrated_converter/
 │       ├── task_list_widget.h/cpp     # Task table
 │       ├── progress_widget.h/cpp      # Progress bar
 │       ├── batch_convert_dialog.h/cpp   # Batch dialog
-│       ├── batch_conversion_summary.h/cpp # Result summary
+│       ├── conversion_params_dialog.h/cpp # Conversion params
 │       ├── error_dialog.h/cpp         # Error dialog
 │       └── skill_invoke_dialog.h/cpp  # Skill dialog
 │
