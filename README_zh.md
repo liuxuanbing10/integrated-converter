@@ -284,7 +284,7 @@ integrated_converter/
 │   └── ui/                       # Qt 界面
 │       ├── main_window.h/cpp          # 主窗口
 │       ├── file_list_widget.h/cpp     # 文件列表
-│       ├── config_panel.h/cpp         # 配置面板
+│       ├── conversion_params_dialog.h/cpp  # 转换参数对话框
 │       ├── task_list_widget.h/cpp     # 任务表格
 │       ├── progress_widget.h/cpp      # 进度条
 │       ├── batch_convert_dialog.h/cpp   # 批量转换对话框

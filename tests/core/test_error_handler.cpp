@@ -80,12 +80,15 @@ void TestErrorHandler::testMaxStoredErrors() {
 }
 
 void TestErrorHandler::testCanRecover() {
+    ErrorHandler* handler = ErrorHandler::instance();
+    // canRecover requires both recoverable==true AND a registered handler
+    handler->setRecoveryHandler(ErrorCode::ProcessCrashed, [](const ErrorInfo&){});
     ErrorInfo recoverable(ErrorCode::ProcessCrashed, "Recoverable");
     recoverable.recoverable = true;
-    QVERIFY(ErrorHandler::instance()->canRecover(recoverable));
+    QVERIFY(handler->canRecover(recoverable));
     ErrorInfo notRecoverable(ErrorCode::ConversionFailed, "Not recoverable");
     notRecoverable.recoverable = false;
-    QVERIFY(!ErrorHandler::instance()->canRecover(notRecoverable));
+    QVERIFY(!handler->canRecover(notRecoverable));
 }
 
 void TestErrorHandler::testSetRecoveryHandler() {
@@ -97,6 +100,10 @@ void TestErrorHandler::testSetRecoveryHandler() {
     ErrorInfo error(ErrorCode::ProcessCrashed, "Recover me");
     error.recoverable = true;
     handler->handleError(error);
+    // handleError does NOT automatically attempt recovery (that requires
+    // autoRecover=true + timer delay); explicitly call attemptRecovery instead.
+    QVERIFY(handler->canRecover(error));
+    handler->attemptRecovery(error);
     QVERIFY(recoveryCalled);
 }
 
@@ -140,3 +147,4 @@ void TestErrorHandler::testSingleton() {
     ErrorHandler* instance2 = ErrorHandler::instance();
     QCOMPARE(instance1, instance2);
 }
+

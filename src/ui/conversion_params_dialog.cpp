@@ -116,7 +116,7 @@ void ConversionParamsDialog::setupUI() {
     m_resetBtn->setCursor(Qt::PointingHandCursor);
     m_resetBtn->setStyleSheet(
         "QPushButton { padding: 8px 20px; border: 1px solid #bbb; border-radius: 5px; "
-        "background-color: #f0f0f0; color: #333; font-size: 12px; font-weight: bold; }"
+        "background-color: #f5f5f5; color: #555; font-size: 12px; font-weight: bold; }"
         "QPushButton:hover { background-color: #e0e0e0; }"
         "QPushButton:pressed { background-color: #d0d0d0; }"
     );
@@ -141,10 +141,10 @@ void ConversionParamsDialog::setupUI() {
     m_cancelBtn->setMinimumWidth(100);
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
     m_cancelBtn->setStyleSheet(
-        "QPushButton { padding: 8px 24px; border: 1px solid #bbb; border-radius: 5px; "
-        "background-color: #fff; color: #333; font-size: 13px; }"
-        "QPushButton:hover { background-color: #f5f5f5; }"
-        "QPushButton:pressed { background-color: #e8e8e8; }"
+        "QPushButton { padding: 8px 24px; border: 1px solid #64B5F6; border-radius: 5px; "
+        "background-color: #E3F2FD; color: #1565C0; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #BBDEFB; }"
+        "QPushButton:pressed { background-color: #90CAF9; }"
     );
     btnLayout->addWidget(m_cancelBtn);
 
@@ -282,6 +282,9 @@ void ConversionParamsDialog::onValidateAndAccept() {
         QMessageBox::warning(this, tr("参数验证错误"), errorMsg);
         return;
     }
+
+    // Reset status label to default style on success
+    m_statusLabel->setStyleSheet("color: #666; font-size: 12px; padding: 2px 0;");
 
     // Save params for all categories
     m_savedParams[FormatRegistry::Category::Image] = m_imageParams->getParams();
