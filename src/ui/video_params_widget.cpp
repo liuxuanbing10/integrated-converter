@@ -79,7 +79,7 @@ void VideoParamsWidget::setupUI() {
     m_crfSpinBox = new QSpinBox();
     m_crfSpinBox->setRange(0, 51);
     m_crfSpinBox->setValue(23);
-    m_crfSpinBox->setFixedWidth(60);
+    m_crfSpinBox->setFixedWidth(70);
     crfRow->addWidget(m_crfSpinBox);
 
     qualityLayout->addLayout(crfRow);

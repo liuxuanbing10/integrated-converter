@@ -66,7 +66,7 @@ void DocumentParamsWidget::setupUI() {
         sp->setDecimals(1);
         sp->setMinimumHeight(30);
         sp->setStyleSheet(
-            "QDoubleSpinBox { padding: 4px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }"
+            "QDoubleSpinBox { padding: 4px 18px 4px 4px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }"
         );
         return sp;
     };

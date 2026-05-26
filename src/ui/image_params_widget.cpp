@@ -46,7 +46,7 @@ void ImageParamsWidget::setupUI() {
     m_qualitySpinBox = new QSpinBox();
     m_qualitySpinBox->setRange(1, 100);
     m_qualitySpinBox->setValue(85);
-    m_qualitySpinBox->setFixedWidth(60);
+    m_qualitySpinBox->setFixedWidth(80);
     m_qualitySpinBox->setSuffix(tr("%"));
     qualityRow->addWidget(m_qualitySpinBox);
 
