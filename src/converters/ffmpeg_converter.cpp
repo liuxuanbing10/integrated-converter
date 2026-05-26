@@ -160,7 +160,7 @@ QStringList FFmpegConverter::buildVideoArgs(const QVariantMap& params) {
     if (codec.isEmpty()) {
         codec = params.value("codec").toString();
     }
-    if (!codec.isEmpty()) {
+    if (!codec.isEmpty() && codec.toLower() != "auto") {
         const auto& reg = FormatRegistry::instance();
         QString ffmpegCodec = reg.ffmpegVideoCodec(codec);
         args << "-c:v" << ffmpegCodec;
@@ -229,14 +229,29 @@ QStringList FFmpegConverter::buildAudioArgs(const QVariantMap& params) {
     if (channels > 0) {
         args << "-ac" << QString::number(channels);
     }
+    // VBR quality for MP3/Vorbis/Opus (0=best, 9=worst for MP3; -1=auto)
+    // For AAC, map to -vbr flag instead
+    int vbrQuality = params.value("vbrQuality", -1).toInt();
+    if (vbrQuality >= 0 && vbrQuality <= 9) {
+        QString acodec = params.value("audioCodec").toString().toLower();
+        if (acodec == "mp3" || acodec == "libmp3lame") {
+            args << "-qscale:a" << QString::number(vbrQuality);
+        } else if (acodec == "vorbis" || acodec == "libvorbis") {
+            args << "-qscale:a" << QString::number(vbrQuality);
+        } else if (acodec == "opus" || acodec == "libopus") {
+            // Opus: 0-10 in 0.5 increments, map 0-9 → 0-10
+            double opusQuality = qBound(0.0, vbrQuality * 10.0 / 9.0, 10.0);
+            args << "-qscale:a" << QString::number(opusQuality, 'f', 1);
+        }
+    }
     return args;
 }
 
 static const QStringList s_validVideoCodecs = {
-    "libx264", "libx265", "libvpx-vp9", "mpeg4", "h264_nvenc", "h264", "h265", "hevc"
+    "libx264", "libx265", "libvpx-vp9", "mpeg4", "h264_nvenc", "h264", "h265", "hevc", "vp9", "av1", "auto"
 };
 static const QStringList s_validAudioCodecs = {
-    "libmp3lame", "aac", "libvorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus"
+    "libmp3lame", "aac", "libvorbis", "vorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus"
 };
 static const QStringList s_validPresets = {
     "ultrafast", "superfast", "veryfast", "faster", "fast",
@@ -468,9 +483,48 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
     bool outputIsAudio = isAudioFormat(outputFormat);
     QStringList args;
     args << "-y" << "-i" << inputFile;
+    bool twoPass = params.value("twoPass", false).toBool() && inputIsVideo && outputIsVideo;
+
     if (inputIsVideo && outputIsVideo) {
-        args << buildVideoArgs(params);
-        args << buildAudioArgs(params);
+        QStringList videoArgs = buildVideoArgs(params);
+        QStringList audioArgs = buildAudioArgs(params);
+        if (twoPass) {
+            // Pass 1: video only, no audio, output to null
+            QStringList pass1Args;
+            pass1Args << "-y" << "-i" << inputFile
+                      << videoArgs
+                      << "-an" << "-pass" << "1"
+                      << "-f" << "null";
+#ifdef Q_OS_WIN
+            pass1Args << "NUL";
+#else
+            pass1Args << "/dev/null";
+#endif
+            LOG_INFO("FFmpeg", "开始二遍编码第一遍 (分析)");
+            if (!runFFmpeg(pass1Args)) {
+                return false;
+            }
+            // Reset state for second pass (runFFmpeg resets m_isRunning etc.)
+            m_errorBuffer.clear();
+            m_conversionStartTime = QDateTime::currentMSecsSinceEpoch();
+            m_progressHistory.clear();
+            m_currentSpeed = 0.0;
+            m_estimatedRemainingMs = 0;
+            m_currentBitrate = 0.0;
+            m_processedBytes = 0;
+            m_totalDuration = getDuration(inputFile);
+            // Pass 2: video + audio with actual output
+            args.clear();
+            args << "-y" << "-i" << inputFile
+                 << videoArgs
+                 << audioArgs
+                 << "-pass" << "2"
+                 << outputFile;
+            LOG_INFO("FFmpeg", "开始二遍编码第二遍 (输出)");
+            return runFFmpeg(args);
+        }
+        args << videoArgs;
+        args << audioArgs;
     } else if (inputIsVideo && outputIsAudio) {
         args << "-vn";
         args << buildAudioArgs(params);

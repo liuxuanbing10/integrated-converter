@@ -84,6 +84,12 @@ QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
         args << "-density" << QString::number(density);
     }
 
+    // Depth (bit depth)
+    QString depth = params.value("depth").toString();
+    if (!depth.isEmpty()) {
+        args << "-depth" << depth;
+    }
+
     // Strip metadata
     bool strip = params.value("strip", false).toBool();
     if (strip) {
