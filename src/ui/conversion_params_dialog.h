@@ -45,7 +45,6 @@ signals:
 
 private slots:
     void onCategoryChanged(int index);
-    void onAccept();
     void onValidateAndAccept();
     void onResetToDefaults();
     void onAnyParamsChanged();

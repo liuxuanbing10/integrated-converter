@@ -298,10 +298,6 @@ void ConversionParamsDialog::onValidateAndAccept() {
     accept();
 }
 
-void ConversionParamsDialog::onAccept() {
-    onValidateAndAccept();
-}
-
 void ConversionParamsDialog::onResetToDefaults() {
     QMessageBox::StandardButton reply = QMessageBox::question(this, tr("确认"),
         tr("确定要恢复所有参数到默认值吗？"),
