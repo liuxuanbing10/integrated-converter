@@ -94,7 +94,7 @@ void AudioParamsWidget::setupUI() {
     m_vbrQualitySpinBox = new QSpinBox();
     m_vbrQualitySpinBox->setRange(0, 9);
     m_vbrQualitySpinBox->setValue(5);
-    m_vbrQualitySpinBox->setFixedWidth(60);
+    m_vbrQualitySpinBox->setFixedWidth(70);
     m_vbrQualitySpinBox->setToolTip(tr("0=最高质量, 9=最高压缩"));
     vbrLayout->addWidget(m_vbrQualitySpinBox);
 

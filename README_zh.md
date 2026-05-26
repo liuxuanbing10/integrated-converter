@@ -295,8 +295,6 @@ integrated_converter/
 ├── tests/                        # 测试套件
 │   ├── CMakeLists.txt
 │   ├── test_main.cpp
-│   ├── test_integration.cpp
-│   ├── test_performance.cpp
 │   ├── core/
 │   │   ├── test_logger.cpp
 │   │   ├── test_config_manager.cpp
