@@ -57,6 +57,11 @@ set(UI_SOURCES
     src/ui/batch_convert_dialog.cpp
     src/ui/error_dialog.cpp
     src/ui/skill_invoke_dialog.cpp
+    src/ui/conversion_params_dialog.cpp
+    src/ui/image_params_widget.cpp
+    src/ui/document_params_widget.cpp
+    src/ui/audio_params_widget.cpp
+    src/ui/video_params_widget.cpp
 )
 set(UI_HEADERS
     src/ui/main_window.h
@@ -68,6 +73,11 @@ set(UI_HEADERS
     src/ui/batch_convert_dialog.h
     src/ui/error_dialog.h
     src/ui/skill_invoke_dialog.h
+    src/ui/conversion_params_dialog.h
+    src/ui/image_params_widget.h
+    src/ui/document_params_widget.h
+    src/ui/audio_params_widget.h
+    src/ui/video_params_widget.h
 )
 set(SOURCES
     src/main.cpp

@@ -23,6 +23,7 @@ class TaskListWidget;
 class ProgressWidget;
 class BatchConversionSummary;
 class FileCategoryWidget;
+class ConversionParamsDialog;
 struct ConversionResult;
 
 class MainWindow : public QMainWindow {
@@ -52,6 +53,7 @@ private slots:
     void updateStatusBar();
     void updateProgressWidget();
     void onTabChanged(int index);
+    void onConversionParams();
 
 private:
     void setupMenuBar();
@@ -86,10 +88,15 @@ private:
     QFrame* m_configPanel;
     QComboBox* m_formatCombo;
     QLineEdit* m_outputDirEdit;
+    QPushButton* m_paramsBtn;
     QPushButton* m_convertBtn;
 
     // Per-category format selection tracking
     QMap<FormatRegistry::Category, QVariant> m_savedFormats;
+    // Track last active tab category (replaces static local in onTabChanged)
+    FormatRegistry::Category m_lastActiveCategory;
+    // Per-category conversion parameters
+    QMap<FormatRegistry::Category, QVariantMap> m_conversionParams;
 
     TaskListWidget* m_taskListWidget;
     ProgressWidget* m_progressWidget;

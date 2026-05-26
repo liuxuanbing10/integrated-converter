@@ -4,6 +4,7 @@
 #include "file_category_widget.h"
 #include "progress_widget.h"
 #include "batch_conversion_summary.h"
+#include "conversion_params_dialog.h"
 #include "task_manager.h"
 #include "config_manager.h"
 #include "logger.h"
@@ -31,6 +32,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_formatCombo(nullptr)
     , m_outputDirEdit(nullptr)
     , m_convertBtn(nullptr)
+    , m_paramsBtn(nullptr)
     , m_taskListWidget(nullptr)
     , m_progressWidget(nullptr)
     , m_mainSplitter(nullptr)
@@ -43,6 +45,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_summaryAction(nullptr)
     , m_isPaused(false)
     , m_darkMode(false)
+    , m_lastActiveCategory(FormatRegistry::Category::Image)
 {
     setWindowTitle(tr("集成格式转换工具 v1.2.0"));
     resize(1200, 800);
@@ -185,18 +188,18 @@ void MainWindow::setupCentralWidget() {
     // -- Config panel (right, fixed width) --
     m_configPanel = new QFrame();
     m_configPanel->setObjectName("configPanel");
-    m_configPanel->setFixedWidth(220);
+    m_configPanel->setFixedWidth(280);
     m_configPanel->setStyleSheet(
         "#configPanel { border: 1px solid #bbb; border-radius: 8px; "
         "background-color: #ffffff; }"
         "#configPanel QLabel { color: #333; background: transparent; border: none; }"
-        "#configTitleTxt { color: #1565C0; font-size: 16px; font-weight: bold; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: bold; }"
+        "#configTitleTxt { color: #1565C0; font-size: 14px; font-weight: bold; }"
+        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: bold; }"
     );
 
     QVBoxLayout* configLayout = new QVBoxLayout(m_configPanel);
-    configLayout->setContentsMargins(16, 20, 16, 16);
-    configLayout->setSpacing(12);
+    configLayout->setContentsMargins(12, 14, 12, 12);
+    configLayout->setSpacing(8);
 
     // Title
     QLabel* configTitle = new QLabel(tr("⚙ 转换设置"));
@@ -219,17 +222,17 @@ void MainWindow::setupCentralWidget() {
 
     // Format combo — solid background explicitly
     m_formatCombo = new QComboBox();
-    m_formatCombo->setMinimumHeight(36);
+    m_formatCombo->setMinimumHeight(28);
     m_formatCombo->setStyleSheet(
-        "QComboBox { padding: 6px 10px; border: 2px solid #1976D2; border-radius: 6px; "
-        "background-color: #ffffff; color: #333; font-size: 14px; min-width: 100px; }"
-        "QComboBox::drop-down { border: none; width: 28px; "
+        "QComboBox { padding: 3px 8px; border: 2px solid #1976D2; border-radius: 5px; "
+        "background-color: #ffffff; color: #333; font-size: 12px; min-width: 100px; }"
+        "QComboBox::drop-down { border: none; width: 22px; "
         "background-color: #ffffff; }"
-        "QComboBox::down-arrow { width: 12px; height: 12px; }"
+        "QComboBox::down-arrow { width: 10px; height: 10px; }"
         "QComboBox QAbstractItemView { "
         "border: 1px solid #ccc; border-radius: 4px; background-color: #ffffff; "
         "color: #333; selection-background-color: #e3f2fd; selection-color: #000; "
-        "font-size: 13px; }"
+        "font-size: 12px; }"
     );
     configLayout->addWidget(m_formatCombo);
 
@@ -241,22 +244,23 @@ void MainWindow::setupCentralWidget() {
 
     // Output directory input + browse button
     QHBoxLayout* dirRow = new QHBoxLayout();
-    dirRow->setSpacing(6);
+    dirRow->setSpacing(5);
 
     m_outputDirEdit = new QLineEdit();
     m_outputDirEdit->setPlaceholderText(tr("留空则使用源文件所在目录"));
-    m_outputDirEdit->setMinimumHeight(36);
+    m_outputDirEdit->setMinimumHeight(28);
     m_outputDirEdit->setStyleSheet(
-        "QLineEdit { padding: 6px 10px; border: 1px solid #bbb; border-radius: 6px; "
-        "background-color: #ffffff; color: #333; font-size: 13px; }"
+        "QLineEdit { padding: 3px 8px; border: 1px solid #bbb; border-radius: 5px; "
+        "background-color: #ffffff; color: #333; font-size: 12px; }"
     );
     dirRow->addWidget(m_outputDirEdit, 1);
 
     QPushButton* browseBtn = new QPushButton(tr("浏览"));
-    browseBtn->setMinimumHeight(36);
+    browseBtn->setMinimumHeight(28);
+    browseBtn->setFixedWidth(50);
     browseBtn->setStyleSheet(
-        "QPushButton { padding: 6px 12px; border: 1px solid #bbb; border-radius: 6px; "
-        "background-color: #f0f0f0; color: #333; font-size: 13px; }"
+        "QPushButton { padding: 3px 8px; border: 1px solid #bbb; border-radius: 5px; "
+        "background-color: #f0f0f0; color: #333; font-size: 12px; }"
         "QPushButton:hover { background-color: #e0e0e0; }"
     );
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
@@ -273,19 +277,33 @@ void MainWindow::setupCentralWidget() {
     // Spacer
     configLayout->addStretch(1);
 
+    // ── Parameter settings button ─────────────────────────────────
+    m_paramsBtn = new QPushButton(style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+        tr(" 参数设置"));
+    m_paramsBtn->setMinimumHeight(28);
+    m_paramsBtn->setCursor(Qt::PointingHandCursor);
+    m_paramsBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #64B5F6; border-radius: 5px; "
+        "background-color: #E3F2FD; color: #1565C0; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #BBDEFB; }"
+        "QPushButton:pressed { background-color: #90CAF9; }"
+    );
+    m_paramsBtn->setIconSize(QSize(14, 14));
+    configLayout->addWidget(m_paramsBtn);
+
     // Convert button
     m_convertBtn = new QPushButton(style()->standardIcon(QStyle::SP_MediaPlay),
         tr(" 开始转换"));
-    m_convertBtn->setMinimumHeight(38);
+    m_convertBtn->setMinimumHeight(30);
     m_convertBtn->setCursor(Qt::PointingHandCursor);
     m_convertBtn->setStyleSheet(
-        "QPushButton { border: none; border-radius: 6px; "
-        "background-color: #1976D2; color: white; font-size: 14px; font-weight: bold; }"
+        "QPushButton { border: none; border-radius: 5px; "
+        "background-color: #1976D2; color: white; font-size: 13px; font-weight: bold; }"
         "QPushButton:hover { background-color: #1565C0; }"
         "QPushButton:pressed { background-color: #0D47A1; }"
         "QPushButton:disabled { background-color: #ccc; color: #888; }"
     );
-    m_convertBtn->setIconSize(QSize(16, 16));
+    m_convertBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_convertBtn);
 
     contentLayout->addWidget(m_configPanel);
@@ -325,6 +343,9 @@ void MainWindow::setupConnections() {
 
     // Convert button → start conversion
     connect(m_convertBtn, &QPushButton::clicked, this, &MainWindow::onStartConversion);
+
+    // Parameter settings button → open dialog
+    connect(m_paramsBtn, &QPushButton::clicked, this, &MainWindow::onConversionParams);
 
     // When files are added to the current tab, auto-populate output dir
     auto updateDirOnAdd = [this](FileCategoryWidget* tab) {
@@ -383,17 +404,9 @@ void MainWindow::populateFormatCombo(FormatRegistry::Category cat) {
 }
 
 void MainWindow::onTabChanged(int index) {
-    // Save current format selection for the old tab (before switching)
-    FileCategoryWidget* currentTab = nullptr;
-    int oldIndex = m_tabWidget->currentIndex();  // This is the NEW index actually — currentChanged fires before currentIndex updates
-    // Actually need to figure out which tab we're leaving. We can track the last index.
-    // Simpler: just save for all tabs on tab switch, but the timing is tricky.
-    // Let me use a static variable to hold the "last active" category
-    static FormatRegistry::Category lastActiveCat = FormatRegistry::Category::Image;
-
-    // Save current format for last active category
+    // Save current format for last active category (before switching)
     if (m_formatCombo->count() > 0 && m_formatCombo->currentIndex() >= 0) {
-        m_savedFormats[lastActiveCat] = m_formatCombo->currentData();
+        m_savedFormats[m_lastActiveCategory] = m_formatCombo->currentData();
     }
 
     // Determine new category from the new index
@@ -423,7 +436,65 @@ void MainWindow::onTabChanged(int index) {
         m_outputDirEdit->setText(fi.absolutePath());
     }
 
-    lastActiveCat = newCat;
+    m_lastActiveCategory = newCat;
+}
+
+void MainWindow::onConversionParams() {
+    // Determine current category from active tab
+    FormatRegistry::Category currentCat = FormatRegistry::Category::Image;
+    int idx = m_tabWidget->currentIndex();
+    switch (idx) {
+        case 0: currentCat = FormatRegistry::Category::Image; break;
+        case 1: currentCat = FormatRegistry::Category::Document; break;
+        case 2: currentCat = FormatRegistry::Category::Audio; break;
+        case 3: currentCat = FormatRegistry::Category::Video; break;
+        default: break;
+    }
+
+    // Reset button style before opening dialog
+    m_paramsBtn->setStyleSheet(
+        "QPushButton { border: 1px solid #64B5F6; border-radius: 6px; "
+        "background-color: #E3F2FD; color: #1565C0; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #BBDEFB; }"
+        "QPushButton:pressed { background-color: #90CAF9; }"
+    );
+
+    ConversionParamsDialog dialog(this);
+    dialog.setDarkMode(m_darkMode);
+    dialog.setActiveCategory(currentCat);
+
+    // Restore previously saved params for each category
+    auto restoreCat = [&](FormatRegistry::Category cat) {
+        if (m_conversionParams.contains(cat)) {
+            dialog.setParamsForCategory(cat, m_conversionParams[cat]);
+        }
+    };
+    restoreCat(FormatRegistry::Category::Image);
+    restoreCat(FormatRegistry::Category::Document);
+    restoreCat(FormatRegistry::Category::Audio);
+    restoreCat(FormatRegistry::Category::Video);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // Store params from dialog for all categories
+        m_conversionParams[FormatRegistry::Category::Image] =
+            dialog.getParamsForCategory(FormatRegistry::Category::Image);
+        m_conversionParams[FormatRegistry::Category::Document] =
+            dialog.getParamsForCategory(FormatRegistry::Category::Document);
+        m_conversionParams[FormatRegistry::Category::Audio] =
+            dialog.getParamsForCategory(FormatRegistry::Category::Audio);
+        m_conversionParams[FormatRegistry::Category::Video] =
+            dialog.getParamsForCategory(FormatRegistry::Category::Video);
+
+        LOG_INFO("MainWindow", "转换参数设置已更新");
+
+        // Visual feedback
+        m_paramsBtn->setStyleSheet(
+            "QPushButton { border: 2px solid #4CAF50; border-radius: 6px; "
+            "background-color: #E8F5E9; color: #2E7D32; font-size: 13px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #C8E6C9; }"
+        );
+        m_statusLabel->setText(tr("转换参数已设置"));
+    }
 }
 
 void MainWindow::toggleTheme() {
@@ -468,6 +539,16 @@ void MainWindow::applyLightTheme() {
         "#configTitleTxt { color: #1565C0; font-size: 16px; font-weight: bold; }"
         "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: bold; }"
     );
+    // Reset params button to light style unless it was customized (green for accepted)
+    QString currentBtnStyle = m_paramsBtn->styleSheet();
+    if (!currentBtnStyle.contains("#4CAF50")) {
+        m_paramsBtn->setStyleSheet(
+            "QPushButton { border: 1px solid #64B5F6; border-radius: 6px; "
+            "background-color: #E3F2FD; color: #1565C0; font-size: 13px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #BBDEFB; }"
+            "QPushButton:pressed { background-color: #90CAF9; }"
+        );
+    }
 }
 
 void MainWindow::applyDarkTheme() {
@@ -505,6 +586,16 @@ void MainWindow::applyDarkTheme() {
         "#configTitleTxt { color: #64B5F6; font-size: 16px; font-weight: bold; }"
         "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: bold; }"
     );
+    // Reset params button to dark style unless it was customized (green for accepted)
+    QString currentBtnStyle = m_paramsBtn->styleSheet();
+    if (!currentBtnStyle.contains("#4CAF50")) {
+        m_paramsBtn->setStyleSheet(
+            "QPushButton { border: 1px solid #1565C0; border-radius: 6px; "
+            "background-color: #0D47A1; color: #90CAF9; font-size: 13px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #1565C0; }"
+            "QPushButton:pressed { background-color: #1976D2; }"
+        );
+    }
 }
 
 // ── File handling ────────────────────────────────────────────────
@@ -738,6 +829,125 @@ void MainWindow::updateProgressWidget() {
     );
 }
 
+/// Convert bitrate string like "500k", "1M" to int kbps. Returns 0 if auto/empty.
+static int parseBitrateToKbps(const QString& bitrateStr) {
+    if (bitrateStr.isEmpty()) return 0;
+    QString str = bitrateStr.trimmed().toLower();
+    if (str == "auto") return 0;
+    if (str.endsWith("k")) {
+        bool ok;
+        int val = str.left(str.length() - 1).toInt(&ok);
+        return ok ? val : 0;
+    }
+    if (str.endsWith("m")) {
+        bool ok;
+        int val = str.left(str.length() - 1).toInt(&ok);
+        return ok ? val * 1000 : 0;
+    }
+    bool ok;
+    int val = str.toInt(&ok);
+    return ok ? val : 0;
+}
+
+/// Merge saved conversion params into the task param map, normalizing keys for the converter.
+static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
+                                          const QVariantMap& dialogParams,
+                                          FormatRegistry::Category cat) {
+    QVariantMap merged = baseParams;
+
+    for (auto it = dialogParams.begin(); it != dialogParams.end(); ++it) {
+        const QString& key = it.key();
+        const QVariant& value = it.value();
+
+        // Skip empty/default values to avoid overwriting base params
+        if (!value.isValid()) continue;
+
+        if (cat == FormatRegistry::Category::Audio || cat == FormatRegistry::Category::Video) {
+            // Normalize resolution to lowercase (FFmpeg requires lowercase 'x')
+            if (key == "resolution") {
+                QString res = value.toString().trimmed().toLower();
+                if (!res.isEmpty()) {
+                    merged["resolution"] = res;
+                }
+                continue;
+            }
+            if (key == "videoBitrate" || key == "audioBitrate") {
+                QString bs = value.toString();
+                if (bs.isEmpty()) continue;
+                int kbps = parseBitrateToKbps(bs);
+                if (kbps > 0) {
+                    merged[key] = kbps;
+                }
+                continue;
+            }
+            if (key == "framerate") {
+                QString fps = value.toString();
+                if (!fps.isEmpty()) {
+                    bool ok;
+                    int fpsInt = fps.toInt(&ok);
+                    if (ok) {
+                        merged["frameRate"] = fpsInt;
+                    }
+                }
+                continue;
+            }
+            if (key == "twoPass") {
+                merged["twoPass"] = value;
+                continue;
+            }
+        }
+
+        if (cat == FormatRegistry::Category::Document) {
+            if (key == "pageSize" || key == "orientation" || key == "marginTop" ||
+                key == "marginBottom" || key == "marginLeft" || key == "marginRight") {
+                // Collect geometry variables for pandoc
+                continue; // Handled below
+            }
+        }
+
+        // Pass through all other values
+        merged[key] = value;
+    }
+
+    // Build pandoc geometry variables
+    if (cat == FormatRegistry::Category::Document) {
+        QStringList geoParts;
+        QString pageSize = dialogParams.value("pageSize").toString();
+        if (!pageSize.isEmpty() && pageSize != "custom") {
+            geoParts << pageSize;
+        }
+        QString orientation = dialogParams.value("orientation").toString();
+        if (orientation == "landscape") {
+            geoParts << "landscape";
+        }
+        auto addMargin = [&](const QString& key, const QString& side) {
+            double val = dialogParams.value(key, 1.0).toDouble();
+            if (val > 0) {
+                geoParts << QString("%1=%2in").arg(side).arg(val, 0, 'f', 1);
+            }
+        };
+        addMargin("marginTop", "top");
+        addMargin("marginBottom", "bottom");
+        addMargin("marginLeft", "left");
+        addMargin("marginRight", "right");
+
+        if (!geoParts.isEmpty()) {
+            QVariantMap varMap = merged.value("variableMap").toMap();
+            varMap["geometry"] = geoParts.join(",");
+            merged["variableMap"] = varMap;
+        }
+
+        // Number sections
+        if (dialogParams.value("numberSections", false).toBool()) {
+            QStringList extraArgs = merged.value("extraArgs").toStringList();
+            extraArgs << "--number-sections";
+            merged["extraArgs"] = extraArgs;
+        }
+    }
+
+    return merged;
+}
+
 void MainWindow::submitConversionTasks() {
     const auto& reg = FormatRegistry::instance();
     QString outputDir = m_outputDirEdit->text();
@@ -759,6 +969,9 @@ void MainWindow::submitConversionTasks() {
         } else {
             outputFormat = m_formatCombo->currentData().toString();
         }
+
+        // Get saved conversion params for this category (from dialog)
+        QVariantMap dialogParams = m_conversionParams.value(cat);
 
         for (const FileInfo& fileInfo : files) {
             QFileInfo fi(fileInfo.filePath);
@@ -782,6 +995,12 @@ void MainWindow::submitConversionTasks() {
             } else {
                 params["converter"] = "FFmpeg";
             }
+
+            // Merge dialog conversion params
+            if (!dialogParams.isEmpty()) {
+                params = mergeConversionParams(params, dialogParams, cat);
+            }
+
             TaskManager::instance()->addTask(fileInfo.filePath, outputFile, params);
         }
     };
