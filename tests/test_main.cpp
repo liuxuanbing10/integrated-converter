@@ -11,6 +11,7 @@
 #include "converters/test_ffmpeg_converter.h"
 #include "converters/test_pandoc_converter.h"
 #include "converters/test_imagemagick_converter.h"
+
 int main(int argc, char *argv[]) {
     int status = 0;
     {

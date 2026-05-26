@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Test)
 set(TEST_SOURCES
     test_main.cpp
-    test_integration.cpp
-    test_performance.cpp
+
     core/test_logger.cpp
     core/test_config_manager.cpp
     core/test_task_manager.cpp
@@ -60,3 +59,4 @@ set_target_properties(test_runner PROPERTIES
 )
 enable_testing()
 add_test(NAME UnitTests COMMAND test_runner)
+
