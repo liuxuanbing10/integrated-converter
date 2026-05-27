@@ -603,7 +603,13 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         emit conversionFinished(false, error.message);
         return false;
     }
-    return m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
+    bool success = m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
+    m_isRunning = false;
+    // Destroy the finished QProcess to close OS pipe handles and prevent stale
+    // queued signal events (readyReadStandardError, finished) from firing during
+    // the nested event loop of QDialog::exec() in the completion flow.
+    m_process.reset();
+    return success;
 }
 
 bool FFmpegConverter::runFFprobe(const QStringList& args, QString& output) {
@@ -635,6 +641,9 @@ void FFmpegConverter::onProcessReadyReadStandardError() {
 }
 
 void FFmpegConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    // Guard: if already marked not running (e.g. runFFmpeg already reset after
+    // waitForFinished), skip to avoid double-emission of completion signals.
+    if (!m_isRunning) return;
     m_isRunning = false;
     bool success = (exitCode == 0 && exitStatus == QProcess::NormalExit);
     if (success) {
@@ -676,6 +685,9 @@ void FFmpegConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitS
 }
 
 void FFmpegConverter::onProcessError(QProcess::ProcessError error) {
+    // Guard: if already handled (e.g. runFFmpeg already reset after waitForFinished),
+    // skip to avoid double-emission of completion signals.
+    if (!m_isRunning) return;
     m_isRunning = false;
     ErrorCode errorCode;
     switch (error) {
@@ -709,6 +721,7 @@ void FFmpegConverter::cancel() {
         LOG_INFO("FFmpeg", tr("取消转换任务"));
         m_process->kill();
         m_process->waitForFinished(3000);
+        m_process.reset();
         m_isRunning = false;
         emit statusChanged(tr("已取消"));
         emit conversionFinished(false, tr("用户取消"));

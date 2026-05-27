@@ -202,7 +202,13 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
         return false;
     }
 
-    return m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
+    bool success = m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
+    m_isRunning = false;
+    // Destroy the finished QProcess to close OS pipe handles and prevent stale
+    // queued signal events (readyReadStandardError, finished) from firing during
+    // the nested event loop of QDialog::exec() in the completion flow.
+    m_process.reset();
+    return success;
 }
 
 void ImageMagickConverter::cancel() {
@@ -210,6 +216,7 @@ void ImageMagickConverter::cancel() {
         LOG_INFO("ImageMagick", tr("取消转换任务"));
         m_process->kill();
         m_process->waitForFinished(3000);
+        m_process.reset();
         m_isRunning = false;
         emit statusChanged(tr("已取消"));
         emit conversionFinished(false, tr("用户取消"));
