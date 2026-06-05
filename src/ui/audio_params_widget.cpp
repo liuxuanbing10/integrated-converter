@@ -36,10 +36,15 @@ void AudioParamsWidget::setupUI() {
     m_codecCombo->addItem("WAV (PCM)", "pcm_s16le");
     m_codecCombo->setMinimumHeight(32);
     m_codecCombo->setStyleSheet(
-        "QComboBox { padding: 4px 8px; border: 2px solid #2196F3; border-radius: 6px; font-size: 14px; }"
-        "QComboBox::drop-down { border: none; width: 28px; }"
-        "QComboBox QAbstractItemView { border: 1px solid #ccc; border-radius: 4px; "
-        "selection-background-color: #e3f2fd; font-size: 13px; }"
+        "QComboBox { padding: 3px 8px; border: 2px solid #1976D2; border-radius: 5px; "
+        "background-color: #ffffff; color: #333; font-size: 12px; min-width: 100px; }"
+        "QComboBox::drop-down { border: none; width: 22px; "
+        "background-color: #ffffff; }"
+        "QComboBox::down-arrow { width: 10px; height: 10px; }"
+        "QComboBox QAbstractItemView { "
+        "border: 1px solid #ccc; border-radius: 4px; background-color: #ffffff; "
+        "color: #333; selection-background-color: #e3f2fd; selection-color: #000; "
+        "font-size: 12px; }"
     );
     codecLayout->addWidget(m_codecCombo, 1);
     mainLayout->addWidget(codecGroup);
