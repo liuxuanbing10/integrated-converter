@@ -1,0 +1,44 @@
+name: build
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  linux-gcc:
+    name: linux / GCC / Qt6
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Qt6 + build tools
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.7.2'
+          host: 'linux'
+          target: 'desktop'
+          arch: 'gcc_64'
+          modules: ''
+          cache: true
+
+      - name: Install ffmpeg / pandoc / imagemagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              ffmpeg pandoc imagemagick ninja-build
+
+      - name: Configure (Debug, with tests)
+        run: |
+          cmake -S . -B build/debug -G Ninja \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build/debug --parallel
+
+      - name: ctest
+        working-directory: build/debug
+        run: ctest --output-on-failure
