@@ -51,7 +51,7 @@ MainWindow::MainWindow(QWidget* parent)
     , m_darkMode(false)
     , m_lastActiveCategory(FormatRegistry::Category::Image)
 {
-    setWindowTitle(tr("集成格式转换工具 v1.2.0"));
+    setWindowTitle(tr("集成格式转换工具 v1.3.1"));
     resize(1200, 800);
     setAcceptDrops(true);  // Enable drag-and-drop of files onto the main window
     setupMenuBar();
@@ -715,7 +715,7 @@ void MainWindow::onCancelAll() {
 
 void MainWindow::onAbout() {
     QMessageBox::about(this, tr("关于"),
-        tr("<h3>集成格式转换工具 v1.0.0</h3>"
+        tr("<h3>集成格式转换工具 v1.3.1</h3>"
            "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
            "<p>支持功能：</p>"
            "<ul>"

@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
         // QCoreApplication is sufficient — converters don't need GUI.
         QCoreApplication coreApp(argc, argv);
         coreApp.setApplicationName("IntegratedConverter");
-        coreApp.setApplicationVersion("1.0.0");
+        coreApp.setApplicationVersion("1.3.1");
         coreApp.setOrganizationName("ConverterTools");
 
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
     // ----------------------------------------------------------------
     QApplication app(argc, argv);
     app.setApplicationName("IntegratedConverter");
-    app.setApplicationVersion("1.0.0");
+    app.setApplicationVersion("1.3.1");
     app.setOrganizationName("ConverterTools");
     QString configDir = QStandardPaths::writableLocation(
         QStandardPaths::AppConfigLocation);
