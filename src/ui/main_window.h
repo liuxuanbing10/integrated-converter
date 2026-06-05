@@ -72,6 +72,12 @@ private:
     /// then auto-routes each file to the correct category tab.
     void addFilesAndAutoRoute(const QStringList& filePaths);
 
+protected:
+    // Drag-and-drop support: accept files dropped from Explorer / Finder etc.
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+
     /// Populate the format combo for the given category and restore its saved selection.
     void populateFormatCombo(FormatRegistry::Category cat);
 
