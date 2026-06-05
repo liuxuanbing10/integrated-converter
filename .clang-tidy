@@ -1,0 +1,112 @@
+# clang-tidy configuration for integrated_converter.
+#
+# Goals:
+# - catch correctness bugs (use-after-move, dangling references, null deref)
+# - modernize QObject/QObject::connect usage and Qt container patterns
+# - enforce consistent naming
+# - don't drown developers in cosmetic noise on first adoption
+#
+# Run with:
+#   clang-tidy -p build/debug src/**/*.cpp
+# Filter Qt-only checks with:
+#   clang-tidy -p build/debug --checks='-*,clang-analyzer-*,bugprone-*' src/**/*.cpp
+
+# Treat this project as C++17 (matches set(CMAKE_CXX_STANDARD 17)).
+# The parser refactor uses a few C++17 idioms; Qt6.10 build env on
+# MinGW doesn't have C++20 yet.
+# (Reserved for a future C++20+ project.)
+
+# Use a fixed set of headers so clang-tidy doesn't try to expand every
+# system include and inflate memory / wall time.
+HeaderFilterRegex: '.*integrated_converter/src/.*\.(h|hpp)$'
+
+# ---- Checks ----
+# Default: modernize + bugprone + cert (with noisy rules removed) + a
+# handful of performance/cert ones that catch real bugs.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-integer-division,
+  cert-*,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -cert-err58-cpp,
+  -cert-msc32-c,
+  -cert-msc51-cpp,
+  -cert-oop11-cpp,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-cstyle-cast,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-special-member-functions,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-owning-memory,
+  modernize-*,
+  -modernize-avoid-bind,
+  -modernize-avoid-c-arrays,
+  -modernize-concat-nested-namespaces,
+  -modernize-deprecated-headers,
+  -modernize-make-shared,
+  -modernize-make-unique,
+  -modernize-pass-by-value,
+  -modernize-replace-auto-ptr,
+  -modernize-replace-disallow-copy-and-assign-memcpy,
+  -modernize-replace-random-shuffle,
+  -modernize-return-braced-init-list,
+  -modernize-unary-static-assert,
+  -modernize-use-auto,
+  -modernize-use-bool-literals,
+  -modernize-use-default-member-init,
+  -modernize-use-equals-default,
+  -modernize-use-equals-delete,
+  -modernize-use-nodiscard,
+  -modernize-use-nullptr,
+  -modernize-use-override,
+  -modernize-use-std-print,
+  -modernize-use-trailing-return-type,
+  -modernize-use-transparent-functors,
+  -modernize-raw-string-literal,
+  performance-*,
+  -performance-avoid-endl,
+  -performance-noexcept-swap,
+  -performance-noexcept-move-constructor,
+  -performance-unnecessary-value-param,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-convert-member-functions-to-static,
+  -readability-else-after-return,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-isolate-declaration,
+  -readability-magic-numbers,
+  -readability-named-parameter,
+  -readability-redundant-access-specifiers,
+  -readability-redundant-member-init,
+  -readability-suspicious-call-argument,
+  -readability-use-anyofnew,
+  qt-*,
+  -qt-default-functions,
+  -qt-header-cleanup
+
+# Some checks need an explicit list of known Qt types; telling the
+# analyzer that the entire project uses Qt6 helps it avoid false
+# positives on Q_OBJECT classes and connect() arguments.
+ExtraArgs:
+  - -DQT_NO_KEYWORDS
+  - -std=c++17
+  - -isystem/usr/include/x86_64-linux-gnu/qt6
+  - -isystem/usr/include/x86_64-linux-gnu/qt6/QtCore
+  - -isystem/usr/include/x86_64-linux-gnu/qt6/QtGui
+  - -isystem/usr/include/x86_64-linux-gnu/qt6/QtWidgets
+
+# Don't report issues in third-party headers (catch.hpp, gtest, etc.).
+SystemHeaders: false
