@@ -79,16 +79,24 @@ set(UI_HEADERS
     src/ui/audio_params_widget.h
     src/ui/video_params_widget.h
 )
+set(CLI_SOURCES
+    src/cli/cli_runner.cpp
+)
+set(CLI_HEADERS
+    src/cli/cli_runner.h
+)
 set(SOURCES
     src/main.cpp
     ${CORE_SOURCES}
     ${CONVERTER_SOURCES}
     ${UI_SOURCES}
+    ${CLI_SOURCES}
 )
 set(HEADERS
     ${CORE_HEADERS}
     ${CONVERTER_HEADERS}
     ${UI_HEADERS}
+    ${CLI_HEADERS}
 )
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -96,6 +104,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
     ${CMAKE_CURRENT_SOURCE_DIR}/src/converters
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cli
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core

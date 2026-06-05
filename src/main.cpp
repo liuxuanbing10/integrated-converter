@@ -1,8 +1,11 @@
 #include <QApplication>
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QHash>
 #include <QStandardPaths>
 #include <QMutex>
+#include <QStringList>
 #include <iostream>
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -14,6 +17,7 @@
 #include "converters/ffmpeg_converter.h"
 #include "converters/pandoc_converter.h"
 #include "converters/imagemagick_converter.h"
+#include "cli/cli_runner.h"
 #include <memory>
 
 #ifdef Q_OS_WIN
@@ -61,6 +65,67 @@ int main(int argc, char* argv[]) {
     // would only affect narrow writes (printf/fprintf) which we don't use.
     qInstallMessageHandler(winConsoleMessageHandler);
 #endif
+
+    // ----------------------------------------------------------------
+    // CLI mode: detect --cli / --help / --list-formats BEFORE creating
+    // QApplication and BEFORE bringing up the heavy singletons
+    // (MemoryMonitor, TaskManager, ConfigManager). Those spin up QTimer-
+    // backed threads that complicate clean exit on `return`.
+    // ----------------------------------------------------------------
+    bool isCli = false;
+    for (int i = 1; i < argc; ++i) {
+        QString a = QString::fromLocal8Bit(argv[i]);
+        if (a == "--cli" || a == "--help" || a == "-h" || a == "--list-formats") {
+            isCli = true;
+            break;
+        }
+    }
+
+    if (isCli) {
+        // QCoreApplication is sufficient — converters don't need GUI.
+        QCoreApplication coreApp(argc, argv);
+        coreApp.setApplicationName("IntegratedConverter");
+        coreApp.setApplicationVersion("1.0.0");
+        coreApp.setOrganizationName("ConverterTools");
+
+        auto ffmpegConverter = std::make_shared<FFmpegConverter>();
+        auto pandocConverter = std::make_shared<PandocConverter>();
+        auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
+        QHash<QString, void*> byName;
+        byName.insert("FFmpeg",      ffmpegConverter.get());
+        byName.insert("Pandoc",      pandocConverter.get());
+        byName.insert("ImageMagick", imagemagickConverter.get());
+
+        QStringList cliArgs = coreApp.arguments().mid(1);
+        // Strip the "--cli" sentinel that triggered this branch — the parser
+        // treats it as positional and would miscount it as an input.
+        cliArgs.removeAll("--cli");
+        QString err;
+        CliRunner::Options opts = CliRunner::parseArgs(cliArgs, &err);
+        if (!err.isEmpty()) {
+            QTextStream(stderr) << err << "\n\n";
+            CliRunner::printHelp();
+            return 2;
+        }
+        if (opts.showHelp) {
+            CliRunner::printHelp();
+            return 0;
+        }
+        if (opts.listFormats) {
+            CliRunner::printFormats();
+            return 0;
+        }
+        QString runErr;
+        int rc = CliRunner::run(opts, byName, &runErr);
+        if (!runErr.isEmpty()) {
+            QTextStream(stderr) << runErr << "\n";
+        }
+        return rc;
+    }
+
+    // ----------------------------------------------------------------
+    // GUI mode: full initialization.
+    // ----------------------------------------------------------------
     QApplication app(argc, argv);
     app.setApplicationName("IntegratedConverter");
     app.setApplicationVersion("1.0.0");
