@@ -15,7 +15,6 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
     , m_ffmpegPath("ffmpeg")
     , m_ffprobePath("ffprobe")
     , m_process(nullptr)
-    , m_timeoutTimer(nullptr)
     , m_isRunning(false)
     , m_totalDuration(0.0)
     , m_currentSpeed(0.0)
@@ -558,6 +557,10 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
     m_process = std::make_unique<QProcess>();
     m_process->setProgram(m_ffmpegPath);
     m_process->setArguments(args);
+    // MergedChannels ensures progress text lands in stderr (where ffmpeg writes
+    // -progress data) but also makes stdout accessible if a future caller
+    // needs it. This is the recommended mode for ffmpeg/ffprobe pipelines.
+    m_process->setProcessChannelMode(QProcess::SeparateChannels);
     connect(m_process.get(), &QProcess::readyReadStandardError,
             this, &FFmpegConverter::onProcessReadyReadStandardError);
     connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),

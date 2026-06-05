@@ -77,7 +77,9 @@ private:
     QStringList m_videoFormats;
     QStringList m_audioFormats;
     std::unique_ptr<QProcess> m_process;
-    QTimer* m_timeoutTimer;
+    // Reserved for future use; kept as a smart pointer to avoid ownership
+    // ambiguity if a feature that needs it is added later.
+    std::unique_ptr<QTimer> m_timeoutTimer;
     bool m_isRunning;
     double m_totalDuration;
     QString m_currentOutputFile;
