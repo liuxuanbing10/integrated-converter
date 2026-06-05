@@ -8,6 +8,7 @@ set(TEST_SOURCES
     core/test_task_manager.cpp
     core/test_error_handler.cpp
     converters/test_ffmpeg_converter.cpp
+    converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp
     converters/test_imagemagick_converter.cpp
 )
@@ -27,6 +28,7 @@ set(CORE_SOURCES
 )
 set(CONVERTER_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/ffmpeg_converter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/ffmpeg_progress_parser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/pandoc_converter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/segmented_converter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters/imagemagick_converter.cpp

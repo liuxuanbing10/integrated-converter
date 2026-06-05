@@ -37,12 +37,14 @@ set(CORE_HEADERS
 )
 set(CONVERTER_SOURCES
     src/converters/ffmpeg_converter.cpp
+    src/converters/ffmpeg_progress_parser.cpp
     src/converters/pandoc_converter.cpp
     src/converters/segmented_converter.cpp
     src/converters/imagemagick_converter.cpp
 )
 set(CONVERTER_HEADERS
     src/converters/ffmpeg_converter.h
+    src/converters/ffmpeg_progress_parser.h
     src/converters/pandoc_converter.h
     src/converters/segmented_converter.h
     src/converters/imagemagick_converter.h
