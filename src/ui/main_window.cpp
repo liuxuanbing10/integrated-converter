@@ -20,6 +20,10 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStyle>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QUrl>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
@@ -49,6 +53,7 @@ MainWindow::MainWindow(QWidget* parent)
 {
     setWindowTitle(tr("集成格式转换工具 v1.2.0"));
     resize(1200, 800);
+    setAcceptDrops(true);  // Enable drag-and-drop of files onto the main window
     setupMenuBar();
     setupToolBar();
     setupStatusBar();
@@ -1028,4 +1033,59 @@ void MainWindow::onErrorOccurred(const ErrorInfo& error) {
 void MainWindow::onRetryTriggered(const QString& taskId, int retryCount) {
     Q_UNUSED(taskId);
     Q_UNUSED(retryCount);
+}
+
+// ---------------------------------------------------------------------------
+// Drag-and-drop
+// ---------------------------------------------------------------------------
+void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
+    // Accept the drop only if the drag payload contains at least one local
+    // file URL. Other MIME types (text, images, etc.) are ignored so we
+    // don't show the "no entry" cursor for things we can't handle.
+    if (event->mimeData()->hasUrls() &&
+        std::any_of(event->mimeData()->urls().cbegin(),
+                    event->mimeData()->urls().cend(),
+                    [](const QUrl& u) { return u.isLocalFile(); })) {
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dragMoveEvent(QDragMoveEvent* event) {
+    // Mirror dragEnterEvent — without this the cursor reverts to "no entry"
+    // while the user moves the file around the window.
+    if (event->mimeData()->hasUrls()) {
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dropEvent(QDropEvent* event) {
+    if (!event->mimeData()->hasUrls()) {
+        return;
+    }
+    QStringList paths;
+    for (const QUrl& url : event->mimeData()->urls()) {
+        if (url.isLocalFile()) {
+            const QString localPath = url.toLocalFile();
+            QFileInfo info(localPath);
+            // Drop a folder → expand to its immediate children. This matches
+            // what most users expect (dragging a folder in should add the
+            // folder's contents, not just one "path/to/folder" string).
+            if (info.isDir()) {
+                QDir dir(localPath);
+                const QStringList entries = dir.entryList(QDir::Files);
+                for (const QString& name : entries) {
+                    paths << dir.absoluteFilePath(name);
+                }
+            } else if (info.isFile()) {
+                paths << localPath;
+            }
+        }
+    }
+    if (paths.isEmpty()) {
+        return;
+    }
+    event->acceptProposedAction();
+    addFilesAndAutoRoute(paths);
+    LOG_INFO("MainWindow",
+             QString("Dropped %1 file(s) onto main window").arg(paths.size()));
 }
