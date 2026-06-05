@@ -34,10 +34,19 @@ static void winConsoleMessageHandler(QtMsgType type, const QMessageLogContext& c
     QString fullMsg = prefix + msg + "\n";
     HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE);
     DWORD written;
-    WriteConsoleW(hConsole, fullMsg.utf16(), fullMsg.size(), &written, nullptr);
+    if (hConsole != INVALID_HANDLE_VALUE && hConsole != nullptr) {
+        // WriteConsoleW requires a real console handle. If stderr is redirected
+        // to a file/pipe, fall back to a UTF-8 narrow write.
+        if (GetFileType(hConsole) == FILE_TYPE_CHAR) {
+            WriteConsoleW(hConsole, fullMsg.utf16(), fullMsg.size(), &written, nullptr);
+        } else {
+            const QByteArray utf8 = fullMsg.toUtf8();
+            fwrite(utf8.constData(), 1, utf8.size(), stderr);
+            fflush(stderr);
+        }
+    }
     if (type == QtFatalMsg) {
         // Let the default handler deal with abort
-        fflush(stderr);
         abort();
     }
 }
@@ -47,8 +56,10 @@ int main(int argc, char* argv[]) {
 #ifdef Q_OS_WIN
     // Install custom handler that uses WriteConsoleW (UTF-16 native) to avoid
     // garbled Chinese output caused by Qt's default GBK-to-console encoding.
+    // Note: we deliberately do NOT call SetConsoleOutputCP(CP_UTF8) here —
+    // WriteConsoleW bypasses the console code page entirely, so changing CP
+    // would only affect narrow writes (printf/fprintf) which we don't use.
     qInstallMessageHandler(winConsoleMessageHandler);
-    SetConsoleOutputCP(CP_UTF8);
 #endif
     QApplication app(argc, argv);
     app.setApplicationName("IntegratedConverter");
