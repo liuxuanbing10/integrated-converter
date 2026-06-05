@@ -4,10 +4,10 @@
 #include "iconverter.h"
 #include "error_types.h"
 #include "format_registry.h"
+#include "ffmpeg_progress_parser.h"
 #include <QProcess>
 #include <QTimer>
 #include <QMap>
-#include <QRegularExpression>
 #include <memory>
 
 class FFmpegConverter : public QObject, public IConverter {
@@ -66,8 +66,7 @@ private:
     QString getFormatFromExtension(const QString& filePath) const;
     QStringList buildVideoArgs(const QVariantMap& params);
     QStringList buildAudioArgs(const QVariantMap& params);
-    void parseProgress(const QString& line);
-    int parseTimeToMs(const QString& timeStr);
+    void handleProgressLine(const FfmpegProgressInfo& info);
     bool isVideoFormat(const QString& format) const;
     bool isAudioFormat(const QString& format) const;
     void updateEstimatedTime(int currentProgress);
@@ -85,11 +84,7 @@ private:
     QString m_currentOutputFile;
     QString m_currentInputFile;
     QString m_errorBuffer;
-    QRegularExpression m_timeRegex;
-    QRegularExpression m_progressRegex;
-    QRegularExpression m_speedRegex;
-    QRegularExpression m_bitrateRegex;
-    QRegularExpression m_sizeRegex;
+    FfmpegProgressParser m_progressParser;
     ErrorInfo m_lastError;
     double m_currentSpeed;
     qint64 m_estimatedRemainingMs;

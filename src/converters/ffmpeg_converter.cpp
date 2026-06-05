@@ -28,11 +28,6 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
     const auto& reg = FormatRegistry::instance();
     m_videoFormats = reg.videoFormats();
     m_audioFormats = reg.audioFormats();
-    m_timeRegex = QRegularExpression(R"(time=(\d{2}):(\d{2}):(\d{2})\.(\d{2}))");
-    m_progressRegex = QRegularExpression(R"(progress=(\w+))");
-    m_speedRegex = QRegularExpression(R"(speed=\s*([\d.]+)x)");
-    m_bitrateRegex = QRegularExpression(R"(bitrate=\s*([\d.]+)kbits/s)");
-    m_sizeRegex = QRegularExpression(R"(size=\s*(\d+)kB)");
 }
 
 FFmpegConverter::~FFmpegConverter() {
@@ -68,18 +63,6 @@ QString FFmpegConverter::getFormatFromExtension(const QString& filePath) const {
     return QFileInfo(filePath).suffix().toLower();
 }
 
-int FFmpegConverter::parseTimeToMs(const QString& timeStr) {
-    QRegularExpressionMatch match = m_timeRegex.match(timeStr);
-    if (!match.hasMatch()) {
-        return -1;
-    }
-    int hours = match.captured(1).toInt();
-    int minutes = match.captured(2).toInt();
-    int seconds = match.captured(3).toInt();
-    int centiseconds = match.captured(4).toInt();
-    return hours * 3600000 + minutes * 60000 + seconds * 1000 + centiseconds * 10;
-}
-
 void FFmpegConverter::updateEstimatedTime(int currentProgress) {
     if (currentProgress <= 0 || currentProgress >= 100) {
         m_estimatedRemainingMs = 0;
@@ -103,30 +86,20 @@ void FFmpegConverter::updateEstimatedTime(int currentProgress) {
     }
 }
 
-void FFmpegConverter::parseProgress(const QString& line) {
+void FFmpegConverter::handleProgressLine(const FfmpegProgressInfo& info) {
     if (m_totalDuration <= 0) {
         return;
     }
-    int timeMs = parseTimeToMs(line);
     int progress = 0;
-    if (timeMs > 0) {
-        double currentSeconds = timeMs / 1000.0;
+    if (info.timeMs > 0) {
+        double currentSeconds = info.timeMs / 1000.0;
         progress = static_cast<int>((currentSeconds / m_totalDuration) * 100.0);
         progress = qBound(0, progress, 100);
         emit progressChanged(progress);
     }
-    QRegularExpressionMatch speedMatch = m_speedRegex.match(line);
-    if (speedMatch.hasMatch()) {
-        m_currentSpeed = speedMatch.captured(1).toDouble();
-    }
-    QRegularExpressionMatch bitrateMatch = m_bitrateRegex.match(line);
-    if (bitrateMatch.hasMatch()) {
-        m_currentBitrate = bitrateMatch.captured(1).toDouble();
-    }
-    QRegularExpressionMatch sizeMatch = m_sizeRegex.match(line);
-    if (sizeMatch.hasMatch()) {
-        m_processedBytes = sizeMatch.captured(1).toLongLong() * 1024;
-    }
+    if (info.hasSpeed())   m_currentSpeed   = info.speed;
+    if (info.hasBitrate()) m_currentBitrate = info.bitrateKbps;
+    if (info.hasSize())    m_processedBytes = info.sizeBytes;
     if (m_currentSpeed > 0 && progress > 0 && progress < 100) {
         double remainingSeconds = (m_totalDuration * (100 - progress) / 100.0) / m_currentSpeed;
         m_estimatedRemainingMs = static_cast<qint64>(remainingSeconds * 1000);
@@ -134,14 +107,15 @@ void FFmpegConverter::parseProgress(const QString& line) {
         updateEstimatedTime(progress);
     }
     emit detailedProgress(progress, m_currentSpeed, m_estimatedRemainingMs, m_currentBitrate);
-    QRegularExpressionMatch progressMatch = m_progressRegex.match(line);
-    if (progressMatch.hasMatch()) {
-        QString status = progressMatch.captured(1);
-        if (status == "continue") {
-            emit statusChanged(tr("正在转换..."));
-        } else if (status == "end") {
-            emit statusChanged(tr("转换完成"));
-        }
+    switch (info.status) {
+    case FfmpegProgressInfo::Status::Continue:
+        emit statusChanged(tr("正在转换..."));
+        break;
+    case FfmpegProgressInfo::Status::End:
+        emit statusChanged(tr("转换完成"));
+        break;
+    case FfmpegProgressInfo::Status::Unknown:
+        break;
     }
 }
 
@@ -639,7 +613,7 @@ void FFmpegConverter::onProcessReadyReadStandardError() {
     m_errorBuffer += output;
     QStringList lines = output.split('\n', Qt::SkipEmptyParts);
     for (const QString& line : lines) {
-        parseProgress(line);
+        handleProgressLine(m_progressParser.parseLine(line));
     }
 }
 

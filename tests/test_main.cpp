@@ -9,6 +9,7 @@
 #include "core/task_manager.h"
 #include "core/logger.h"
 #include "converters/test_ffmpeg_converter.h"
+#include "converters/test_ffmpeg_progress_parser.h"
 #include "converters/test_pandoc_converter.h"
 #include "converters/test_imagemagick_converter.h"
 
@@ -26,6 +27,8 @@ int main(int argc, char *argv[]) {
         status |= QTest::qExec(&testErrorHandler, argc, argv);
         TestFFmpegConverter testFFmpeg;
         status |= QTest::qExec(&testFFmpeg, argc, argv);
+        TestFfmpegProgressParser testParser;
+        status |= QTest::qExec(&testParser, argc, argv);
         TestPandocConverter testPandoc;
         status |= QTest::qExec(&testPandoc, argc, argv);
         TestImageMagickConverter testImageMagick;
