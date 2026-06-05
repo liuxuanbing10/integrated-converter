@@ -388,6 +388,10 @@ A: `~/.integrated_converter/converter.log` (rotated automatically).
 
 ## Changelog
 
+### v1.3.1 (2026-06-05)
+- Fix shadowed/translucent appearance of combo boxes inside the "Conversion Parameter Settings" dialog; align them with the main window "Output Format" combo (solid white background, 2px blue border, 5px radius)
+- Unify version number across CMake project VERSION, QApplication version, window title, and About dialog
+
 ### v1.0.1 (2025)
 - Fix fullscreen: config panel text no longer obstructed
 - Fix conversion freeze: mutex deadlock and ffmpeg async bug
