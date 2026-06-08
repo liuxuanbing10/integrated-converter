@@ -100,18 +100,18 @@ void TestPandocConverter::testConvertWithoutPandoc() {
     }
     PandocConverter converter;
     converter.setPandocPath("/nonexistent/pandoc");
-    bool result = converter.convert("input.md", "output.html", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("input.md", "output.html", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestPandocConverter::testConvertWithInvalidInput() {
     PandocConverter converter;
-    bool result = converter.convert("/nonexistent/input.md", "output.html", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("/nonexistent/input.md", "output.html", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestPandocConverter::testConvertWithEmptyInput() {
     PandocConverter converter;
-    bool result = converter.convert("", "output.html", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("", "output.html", QVariantMap());
+    QVERIFY(result.has_value());
 }

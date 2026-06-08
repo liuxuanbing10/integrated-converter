@@ -181,13 +181,14 @@ int run(const Options& opts,
             QDir().mkpath(outInfo.absolutePath());
         }
 
-        bool ok = converter->convert(input, output, opts.conversionParams);
-        if (ok) {
+        auto result = converter->convert(input, output, opts.conversionParams);
+        if (!result.has_value()) {
             printOutLine(QStringLiteral("  [ok]"));
             LOG_INFO("CLI", QString("OK: %1 -> %2").arg(input, output));
         } else {
-            printOutLine(QStringLiteral("  [FAILED]"));
-            LOG_ERROR("CLI", QString("FAIL: %1 -> %2").arg(input, output));
+            QString msg = result->fullMessage();
+            printOutLine(QStringLiteral("  [FAILED] %1").arg(msg));
+            LOG_ERROR("CLI", QString("FAIL: %1 -> %2 - %3").arg(input, output, msg));
             ++failures;
         }
     }

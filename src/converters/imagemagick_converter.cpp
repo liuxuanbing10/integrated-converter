@@ -102,8 +102,8 @@ QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
     return args;
 }
 
-bool ImageMagickConverter::convert(const QString& inputFile, const QString& outputFile,
-                                    const QVariantMap& params) {
+std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile, const QString& outputFile,
+                                                        const QVariantMap& params) {
     LOG_INFO("ImageMagick", QString("开始转换: %1 -> %2").arg(inputFile, outputFile));
 
     QFileInfo inputInfo(inputFile);
@@ -115,7 +115,7 @@ bool ImageMagickConverter::convert(const QString& inputFile, const QString& outp
         ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
-        return false;
+        return error;
     }
 
     // Validate parameters
@@ -130,7 +130,7 @@ bool ImageMagickConverter::convert(const QString& inputFile, const QString& outp
         ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, paramError);
-        return false;
+        return error;
     }
 
     m_currentInputFile = inputFile;
@@ -139,7 +139,10 @@ bool ImageMagickConverter::convert(const QString& inputFile, const QString& outp
     m_currentProgress = 0.0;
 
     QStringList args = buildArguments(inputFile, outputFile, params);
-    return runMagick(args);
+    if (runMagick(args)) return std::nullopt;
+    if (m_lastError.isValid()) return m_lastError;
+    return ErrorTypes::createConversionFailedError(
+        tr("ImageMagick 转换失败"), "ImageMagick", "ImageMagick::convert");
 }
 
 bool ImageMagickConverter::runMagick(const QStringList& args) {

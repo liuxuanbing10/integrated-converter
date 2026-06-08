@@ -102,14 +102,14 @@ void TestImageMagickConverter::testConvertWithoutImageMagick() {
     }
     ImageMagickConverter converter;
     converter.setMagickPath("/nonexistent/magick");
-    bool result = converter.convert("input.png", "output.jpg", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("input.png", "output.jpg", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestImageMagickConverter::testConvertWithInvalidInput() {
     ImageMagickConverter converter;
-    bool result = converter.convert("/nonexistent/input.png", "output.jpg", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("/nonexistent/input.png", "output.jpg", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestImageMagickConverter::testCancel() {

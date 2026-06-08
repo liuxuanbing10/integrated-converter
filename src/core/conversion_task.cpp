@@ -1,9 +1,10 @@
 #include "conversion_task.h"
+#include <utility>
 
 ConversionTask::ConversionTask(QObject* parent)
     : QObject(parent)
     , m_id(QUuid::createUuid().toString(QUuid::WithoutBraces))
-    , m_status(static_cast<int>(Status::Pending))
+    , m_status(std::to_underlying(Status::Pending))
     , m_progress(0)
     , m_converterType(ConverterType::Unknown)
     , m_priority(Priority::Normal)
@@ -22,7 +23,7 @@ ConversionTask::ConversionTask(const QString& inputFile, const QString& outputFi
     , m_inputFile(inputFile)
     , m_outputFile(outputFile)
     , m_params(params)
-    , m_status(static_cast<int>(Status::Pending))
+    , m_status(std::to_underlying(Status::Pending))
     , m_progress(0)
     , m_converterType(ConverterType::Unknown)
     , m_priority(Priority::Normal)
@@ -45,7 +46,7 @@ qint64 ConversionTask::durationMs() const {
 void ConversionTask::setStatus(Status status) {
     Status oldStatus = static_cast<Status>(m_status.loadRelaxed());
     if (oldStatus != status) {
-        m_status.storeRelaxed(static_cast<int>(status));
+        m_status.storeRelaxed(std::to_underlying(status));
         if (status == Status::Running) {
             m_startTime = QDateTime::currentDateTime();
             m_endTime = QDateTime();

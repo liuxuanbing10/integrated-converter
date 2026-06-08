@@ -48,9 +48,12 @@ void TaskRunnable::run() {
     }
 
     try {
-        success = m_converter->convert(m_task->inputFile(), m_task->outputFile(), m_task->params());
-        if (!success) {
-            errorMsg = tr("转换失败");
+        auto result = m_converter->convert(m_task->inputFile(), m_task->outputFile(), m_task->params());
+        if (result.has_value()) {
+            success = false;
+            errorMsg = result->fullMessage();
+        } else {
+            success = true;
         }
     } catch (const std::exception& e) {
         success = false;

@@ -17,8 +17,8 @@ public:
     explicit FFmpegConverter(QObject* parent = nullptr);
     ~FFmpegConverter() override;
 
-    bool convert(const QString& inputFile, const QString& outputFile,
-                const QVariantMap& params) override;
+    std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
+                                      const QVariantMap& params) override;
     QStringList supportedInputFormats() const override;
     QStringList supportedOutputFormats() const override;
     QString name() const override { return QStringLiteral("FFmpeg"); }

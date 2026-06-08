@@ -15,12 +15,12 @@ public:
     QString name() const override { return "MockConverter"; }
     QStringList supportedInputFormats() const override { return {"mock_in"}; }
     QStringList supportedOutputFormats() const override { return {"mock_out"}; }
-    bool convert(const QString& inputFile, const QString& outputFile,
-                const QVariantMap& params) override {
+    std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
+                                     const QVariantMap& params) override {
         Q_UNUSED(inputFile);
         Q_UNUSED(outputFile);
         Q_UNUSED(params);
-        return true;
+        return std::nullopt;
     }
     bool isConversionSupported(const QString& inputFormat,
                               const QString& outputFormat) const override {

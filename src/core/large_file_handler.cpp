@@ -2,6 +2,11 @@
 #include "memory_monitor.h"
 #include <QFileInfo>
 
+constexpr qint64 KB = 1024;
+constexpr qint64 MB = KB * 1024;
+constexpr qint64 GB = MB * 1024;
+constexpr qint64 TB = GB * 1024;
+
 bool LargeFileHandler::isLargeFile(const QString& filePath, qint64 threshold) {
     return getFileSize(filePath) >= threshold;
 }
@@ -35,16 +40,16 @@ QString LargeFileHandler::formatFileSize(qint64 bytes) {
     if (bytes < 0) {
         return QString("未知");
     }
-    if (bytes < 1024) {
+    if (bytes < KB) {
         return QString("%1 B").arg(bytes);
-    } else if (bytes < 1024 * 1024) {
-        return QString("%1 KB").arg(bytes / 1024.0, 0, 'f', 1);
-    } else if (bytes < 1024LL * 1024LL * 1024LL) {
-        return QString("%1 MB").arg(bytes / (1024.0 * 1024.0), 0, 'f', 1);
-    } else if (bytes < 1024LL * 1024LL * 1024LL * 1024LL) {
-        return QString("%1 GB").arg(bytes / (1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
+    } else if (bytes < MB) {
+        return QString("%1 KB").arg(bytes / static_cast<double>(KB), 0, 'f', 1);
+    } else if (bytes < GB) {
+        return QString("%1 MB").arg(bytes / static_cast<double>(MB), 0, 'f', 1);
+    } else if (bytes < TB) {
+        return QString("%1 GB").arg(bytes / static_cast<double>(GB), 0, 'f', 2);
     } else {
-        return QString("%1 TB").arg(bytes / (1024.0 * 1024.0 * 1024.0 * 1024.0), 0, 'f', 2);
+        return QString("%1 TB").arg(bytes / static_cast<double>(TB), 0, 'f', 2);
     }
 }
 
@@ -121,7 +126,7 @@ int LargeFileHandler::recommendedSegmentCount(const QString& filePath) {
     if (size < VERY_LARGE_THRESHOLD) {
         return 1;
     }
-    int segments = static_cast<int>(size / (500LL * 1024LL * 1024LL));
+    int segments = static_cast<int>(size / (500 * MB));
     return qBound(2, segments, 10);
 }
 

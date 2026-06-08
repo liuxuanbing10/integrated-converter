@@ -409,8 +409,8 @@ bool FFmpegConverter::extractAudio(const QString& inputFile, const QString& outp
     return runFFmpeg(args);
 }
 
-bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFile,
-                             const QVariantMap& params) {
+std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, const QString& outputFile,
+                                                   const QVariantMap& params) {
     LOG_INFO("FFmpeg", QString("开始转换: %1 -> %2").arg(inputFile, outputFile));
     QFileInfo inputInfo(inputFile);
     if (!inputInfo.exists()) {
@@ -421,7 +421,7 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
         ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
-        return false;
+        return error;
     }
     // Validate parameters before proceeding
     QString paramError;
@@ -435,7 +435,7 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
         ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, paramError);
-        return false;
+        return error;
     }
 
     m_totalDuration = getDuration(inputFile);
@@ -475,7 +475,9 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
 #endif
             LOG_INFO("FFmpeg", "开始二遍编码第一遍 (分析)");
             if (!runFFmpeg(pass1Args)) {
-                return false;
+                if (m_lastError.isValid()) return m_lastError;
+                return ErrorTypes::createConversionFailedError(
+                    tr("FFmpeg 二遍编码第一遍失败"), "FFmpeg", "FFmpeg::convert");
             }
             // Reset state for second pass (runFFmpeg resets m_isRunning etc.)
             m_errorBuffer.clear();
@@ -494,7 +496,10 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
                  << "-pass" << "2"
                  << outputFile;
             LOG_INFO("FFmpeg", "开始二遍编码第二遍 (输出)");
-            return runFFmpeg(args);
+            if (runFFmpeg(args)) return std::nullopt;
+            if (m_lastError.isValid()) return m_lastError;
+            return ErrorTypes::createConversionFailedError(
+                tr("FFmpeg 二遍编码第二遍失败"), "FFmpeg", "FFmpeg::convert");
         }
         args << videoArgs;
         args << audioArgs;
@@ -518,7 +523,10 @@ bool FFmpegConverter::convert(const QString& inputFile, const QString& outputFil
         args << buildVideoArgs(params);
     }
     args << outputFile;
-    return runFFmpeg(args);
+    if (runFFmpeg(args)) return std::nullopt;
+    if (m_lastError.isValid()) return m_lastError;
+    return ErrorTypes::createConversionFailedError(
+        tr("FFmpeg 转换失败"), "FFmpeg", "FFmpeg::convert");
 }
 
 bool FFmpegConverter::runFFmpeg(const QStringList& args) {

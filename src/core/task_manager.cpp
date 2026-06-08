@@ -229,9 +229,10 @@ QList<ConversionTask*> TaskManager::getAllTasks() const {
 QList<ConversionTask*> TaskManager::getPendingTasks() const {
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Pending) {
-            result.append(it.value());
+    result.reserve(m_pendingQueue.size());
+    for (const auto& id : m_pendingQueue) {
+        if (auto* task = m_tasks.value(id)) {
+            result.append(task);
         }
     }
     return result;
@@ -240,9 +241,10 @@ QList<ConversionTask*> TaskManager::getPendingTasks() const {
 QList<ConversionTask*> TaskManager::getRunningTasks() const {
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Running) {
-            result.append(it.value());
+    result.reserve(m_runningTasks.size());
+    for (auto it = m_runningTasks.begin(); it != m_runningTasks.end(); ++it) {
+        if (auto* task = m_tasks.value(it.key())) {
+            result.append(task);
         }
     }
     return result;
@@ -335,24 +337,12 @@ int TaskManager::totalTaskCount() const {
 
 int TaskManager::pendingCount() const {
     QMutexLocker locker(&m_mutex);
-    int count = 0;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Pending) {
-            ++count;
-        }
-    }
-    return count;
+    return m_pendingQueue.size();
 }
 
 int TaskManager::runningCount() const {
     QMutexLocker locker(&m_mutex);
-    int count = 0;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Running) {
-            ++count;
-        }
-    }
-    return count;
+    return m_runningTasks.size();
 }
 
 int TaskManager::completedCount() const {
@@ -451,14 +441,7 @@ void TaskManager::onTaskFinished(const QString& taskId, bool success, const QStr
         QMutexLocker locker(&m_mutex);
         m_runningTasks.remove(taskId);
         LOG_INFO("TaskManager", QString("任务完成: %1, 成功: %2").arg(taskId).arg(success));
-        bool hasPending = false;
-        for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-            if (it.value() && it.value()->status() == ConversionTask::Status::Pending) {
-                hasPending = true;
-                break;
-            }
-        }
-        allDone = m_runningTasks.isEmpty() && !hasPending;
+        allDone = m_runningTasks.isEmpty() && m_pendingQueue.isEmpty();
     }
     // Emit signals OUTSIDE mutex
     emit taskCompleted(taskId, success);

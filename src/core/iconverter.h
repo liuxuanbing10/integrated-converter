@@ -3,11 +3,13 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include <optional>
+#include "error_types.h"
 class IConverter {
 public:
     virtual ~IConverter() = default;
-    virtual bool convert(const QString& inputFile, const QString& outputFile,
-                        const QVariantMap& params) = 0;
+    virtual std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
+                                              const QVariantMap& params) = 0;
     virtual QStringList supportedInputFormats() const = 0;
     virtual QStringList supportedOutputFormats() const = 0;
     virtual QString name() const = 0;

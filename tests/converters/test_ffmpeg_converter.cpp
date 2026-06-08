@@ -107,14 +107,14 @@ void TestFFmpegConverter::testConvertWithoutFFmpeg() {
     }
     FFmpegConverter converter;
     converter.setFFmpegPath("/nonexistent/ffmpeg");
-    bool result = converter.convert("input.mp4", "output.mkv", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("input.mp4", "output.mkv", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestFFmpegConverter::testConvertWithInvalidInput() {
     FFmpegConverter converter;
-    bool result = converter.convert("/nonexistent/input.mp4", "output.mkv", QVariantMap());
-    QVERIFY(!result);
+    auto result = converter.convert("/nonexistent/input.mp4", "output.mkv", QVariantMap());
+    QVERIFY(result.has_value());
 }
 
 void TestFFmpegConverter::testGetMediaInfoWithoutFFmpeg() {

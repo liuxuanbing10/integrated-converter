@@ -5,6 +5,7 @@
 #include "core/test_config_manager.h"
 #include "core/test_task_manager.h"
 #include "core/test_error_handler.h"
+#include "core/test_error_types.h"
 #include "core/memory_monitor.h"
 #include "core/task_manager.h"
 #include "core/logger.h"
@@ -25,6 +26,8 @@ int main(int argc, char *argv[]) {
         status |= QTest::qExec(&testTaskManager, argc, argv);
         TestErrorHandler testErrorHandler;
         status |= QTest::qExec(&testErrorHandler, argc, argv);
+        TestErrorTypes testErrorTypes;
+        status |= QTest::qExec(&testErrorTypes, argc, argv);
         TestFFmpegConverter testFFmpeg;
         status |= QTest::qExec(&testFFmpeg, argc, argv);
         TestFfmpegProgressParser testParser;

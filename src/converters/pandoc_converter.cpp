@@ -192,13 +192,14 @@ QStringList PandocConverter::buildArguments(const QString& inputFile,
     args << extraArgs;
     return args;
 }
-bool PandocConverter::convert(const QString& inputFile, const QString& outputFile,
-                             const QVariantMap& params) {
+std::optional<ErrorInfo> PandocConverter::convert(const QString& inputFile, const QString& outputFile,
+                                                   const QVariantMap& params) {
     LOG_INFO("Pandoc", QString("开始转换: %1 -> %2").arg(inputFile, outputFile));
     if (m_isConverting) {
         LOG_WARNING("Pandoc", "已有转换任务正在执行");
         emit conversionFinished(false, tr("已有转换任务正在执行"));
-        return false;
+        return ErrorTypes::createError(ErrorCode::ConverterNotAvailable,
+                                       tr("已有转换任务正在执行"), "Pandoc::convert");
     }
     QFileInfo inputInfo(inputFile);
     if (!inputInfo.exists()) {
@@ -209,7 +210,7 @@ bool PandocConverter::convert(const QString& inputFile, const QString& outputFil
         ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
-        return false;
+        return error;
     }
     m_currentInputFile = inputFile;
     m_currentOutputFile = outputFile;
@@ -229,7 +230,7 @@ bool PandocConverter::convert(const QString& inputFile, const QString& outputFil
             ErrorHandler::instance()->handleError(error);
             emit errorOccurred(error);
             emit conversionFinished(false, error.message);
-            return false;
+            return error;
         }
     }
     QStringList args = buildArguments(inputFile, outputFile, params);
@@ -238,19 +239,19 @@ bool PandocConverter::convert(const QString& inputFile, const QString& outputFil
     if (success) {
         LOG_INFO("Pandoc", QString("转换完成: %1").arg(outputFile));
         emit conversionFinished(true, tr("转换成功"));
-    } else {
-        ErrorInfo error = ErrorTypes::createConversionFailedError(
-            output, "Pandoc", "Pandoc::convert"
-        );
-        error.inputFile = inputFile;
-        error.outputFile = outputFile;
-        m_lastError = error;
-        LOG_ERROR("Pandoc", QString("转换失败: %1").arg(output));
-        ErrorHandler::instance()->handleError(error);
-        emit errorOccurred(error);
-        emit conversionFinished(false, error.message);
+        return std::nullopt;
     }
-    return success;
+    ErrorInfo error = ErrorTypes::createConversionFailedError(
+        output, "Pandoc", "Pandoc::convert"
+    );
+    error.inputFile = inputFile;
+    error.outputFile = outputFile;
+    m_lastError = error;
+    LOG_ERROR("Pandoc", QString("转换失败: %1").arg(output));
+    ErrorHandler::instance()->handleError(error);
+    emit errorOccurred(error);
+    emit conversionFinished(false, error.message);
+    return error;
 }
 bool PandocConverter::runPandoc(const QStringList& args, QString& output) {
     QProcess process;

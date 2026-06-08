@@ -1,4 +1,7 @@
 #include "error_types.h"
+#include <algorithm>
+#include <array>
+#include <ranges>
 
 namespace ErrorTypes {
 
@@ -24,22 +27,29 @@ QString errorCodeToString(ErrorCode code) {
 }
 
 ErrorCode stringToErrorCode(const QString& str) {
-    if (str == "Unknown") return ErrorCode::Unknown;
-    if (str == "InvalidParameter") return ErrorCode::InvalidParameter;
-    if (str == "FileNotFound") return ErrorCode::FileNotFound;
-    if (str == "PermissionDenied") return ErrorCode::PermissionDenied;
-    if (str == "DiskSpaceInsufficient") return ErrorCode::DiskSpaceInsufficient;
-    if (str == "ConverterNotFound") return ErrorCode::ConverterNotFound;
-    if (str == "ConverterNotAvailable") return ErrorCode::ConverterNotAvailable;
-    if (str == "UnsupportedFormat") return ErrorCode::UnsupportedFormat;
-    if (str == "ConversionFailed") return ErrorCode::ConversionFailed;
-    if (str == "TaskCancelled") return ErrorCode::TaskCancelled;
-    if (str == "TaskTimeout") return ErrorCode::TaskTimeout;
-    if (str == "TaskDependencyFailed") return ErrorCode::TaskDependencyFailed;
-    if (str == "ProcessCrashed") return ErrorCode::ProcessCrashed;
-    if (str == "OutOfMemory") return ErrorCode::OutOfMemory;
-    if (str == "ProcessFailedToStart") return ErrorCode::ProcessFailedToStart;
-    return ErrorCode::Unknown;
+    // C++23: constexpr lookup table using CTAD + ranges
+    static constexpr std::array table = {
+        std::pair{"ConversionFailed", ErrorCode::ConversionFailed},
+        std::pair{"ConverterNotAvailable", ErrorCode::ConverterNotAvailable},
+        std::pair{"ConverterNotFound", ErrorCode::ConverterNotFound},
+        std::pair{"DiskSpaceInsufficient", ErrorCode::DiskSpaceInsufficient},
+        std::pair{"FileNotFound", ErrorCode::FileNotFound},
+        std::pair{"InvalidParameter", ErrorCode::InvalidParameter},
+        std::pair{"OutOfMemory", ErrorCode::OutOfMemory},
+        std::pair{"PermissionDenied", ErrorCode::PermissionDenied},
+        std::pair{"ProcessCrashed", ErrorCode::ProcessCrashed},
+        std::pair{"ProcessFailedToStart", ErrorCode::ProcessFailedToStart},
+        std::pair{"TaskCancelled", ErrorCode::TaskCancelled},
+        std::pair{"TaskDependencyFailed", ErrorCode::TaskDependencyFailed},
+        std::pair{"TaskTimeout", ErrorCode::TaskTimeout},
+        std::pair{"Unknown", ErrorCode::Unknown},
+        std::pair{"UnsupportedFormat", ErrorCode::UnsupportedFormat},
+    };
+
+    auto it = std::ranges::find_if(table, [&str](const auto& pair) {
+        return str == pair.first;
+    });
+    return it != table.end() ? it->second : ErrorCode::Unknown;
 }
 
 QString defaultSuggestion(ErrorCode code) {

@@ -332,8 +332,10 @@ void SkillManager::executeExternalSkill(const QString& skillId, const QString& s
     m_timeoutTimers[skillId] = timer;
     m_runningExecutions[skillId].timeoutTimer = timer;
     connect(timer, &QTimer::timeout, this, &SkillManager::onTimeout);
+    timer->setProperty("skillId", skillId);
     timer->start(m_defaultTimeout);
 
+    process->setProperty("skillId", skillId);
     process->setProgram(executable);
     process->setArguments(args);
     process->start();
@@ -367,14 +369,7 @@ void SkillManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStat
     QProcess* process = qobject_cast<QProcess*>(sender());
     if (!process) return;
 
-    QString skillId;
-    for (auto it = m_processes.begin(); it != m_processes.end(); ++it) {
-        if (it.value() == process) {
-            skillId = it.key();
-            break;
-        }
-    }
-
+    QString skillId = process->property("skillId").toString();
     if (skillId.isEmpty()) return;
 
     QString output = process->readAllStandardOutput();
@@ -402,14 +397,7 @@ void SkillManager::onProcessError(QProcess::ProcessError error) {
     QProcess* process = qobject_cast<QProcess*>(sender());
     if (!process) return;
 
-    QString skillId;
-    for (auto it = m_processes.begin(); it != m_processes.end(); ++it) {
-        if (it.value() == process) {
-            skillId = it.key();
-            break;
-        }
-    }
-
+    QString skillId = process->property("skillId").toString();
     if (skillId.isEmpty()) return;
 
     QString errorMsg;
@@ -429,14 +417,7 @@ void SkillManager::onProcessReadyReadStandardOutput() {
     QProcess* process = qobject_cast<QProcess*>(sender());
     if (!process) return;
 
-    QString skillId;
-    for (auto it = m_processes.begin(); it != m_processes.end(); ++it) {
-        if (it.value() == process) {
-            skillId = it.key();
-            break;
-        }
-    }
-
+    QString skillId = process->property("skillId").toString();
     if (skillId.isEmpty()) return;
 
     QString output = process->readAllStandardOutput();
@@ -449,14 +430,7 @@ void SkillManager::onProcessReadyReadStandardError() {
     QProcess* process = qobject_cast<QProcess*>(sender());
     if (!process) return;
 
-    QString skillId;
-    for (auto it = m_processes.begin(); it != m_processes.end(); ++it) {
-        if (it.value() == process) {
-            skillId = it.key();
-            break;
-        }
-    }
-
+    QString skillId = process->property("skillId").toString();
     if (skillId.isEmpty()) return;
 
     QString error = process->readAllStandardError();
@@ -467,14 +441,7 @@ void SkillManager::onTimeout() {
     QTimer* timer = qobject_cast<QTimer*>(sender());
     if (!timer) return;
 
-    QString skillId;
-    for (auto it = m_timeoutTimers.begin(); it != m_timeoutTimers.end(); ++it) {
-        if (it.value() == timer) {
-            skillId = it.key();
-            break;
-        }
-    }
-
+    QString skillId = timer->property("skillId").toString();
     if (skillId.isEmpty()) return;
 
     LOG_WARNING("SkillManager", QString("Skill执行超时: %1").arg(skillId));
@@ -507,13 +474,11 @@ QStringList SkillManager::skillsByCategory(const QString& category) const {
 }
 
 QStringList SkillManager::categories() const {
-    QStringList result;
+    QSet<QString> result;
     for (const SkillInfo& info : m_skills) {
-        if (!result.contains(info.category)) {
-            result.append(info.category);
-        }
+        result.insert(info.category);
     }
-    return result;
+    return result.values();
 }
 
 SkillInfo SkillManager::skillInfo(const QString& skillName) const {

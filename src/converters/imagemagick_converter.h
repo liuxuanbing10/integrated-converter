@@ -13,8 +13,8 @@ public:
     explicit ImageMagickConverter(QObject* parent = nullptr);
     ~ImageMagickConverter() override;
 
-    bool convert(const QString& inputFile, const QString& outputFile,
-                 const QVariantMap& params) override;
+    std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
+                                      const QVariantMap& params) override;
     QStringList supportedInputFormats() const override;
     QStringList supportedOutputFormats() const override;
     QString name() const override { return QStringLiteral("ImageMagick"); }
