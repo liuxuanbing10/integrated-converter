@@ -76,6 +76,7 @@ void RetryManager::scheduleRetry(const QString& taskId, const ErrorInfo& error, 
     } else {
         QTimer* timer = new QTimer(this);
         timer->setSingleShot(true);
+        timer->setProperty("taskId", taskId);
         connect(timer, &QTimer::timeout, this, &RetryManager::onRetryTimer);
         m_retryTimers[taskId] = timer;
     }
@@ -175,16 +176,7 @@ void RetryManager::setEnabled(bool enabled) {
 void RetryManager::onRetryTimer() {
     QTimer* timer = qobject_cast<QTimer*>(sender());
     if (!timer) return;
-    QString taskId;
-    {
-        QMutexLocker locker(&m_mutex);
-        for (auto it = m_retryTimers.begin(); it != m_retryTimers.end(); ++it) {
-            if (it.value() == timer) {
-                taskId = it.key();
-                break;
-            }
-        }
-    }
+    QString taskId = timer->property("taskId").toString();
     if (taskId.isEmpty()) return;
     int retryCountVal = 0;
     {
