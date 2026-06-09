@@ -8,8 +8,6 @@
 #include <QJsonArray>
 #include <QDateTime>
 
-static constexpr qint64 WAIT_FOR_FINISHED_TIMEOUT_MS = 300000; // 5 min
-
 FFmpegConverter::FFmpegConverter(QObject* parent)
     : QObject(parent)
     , m_ffmpegPath("ffmpeg")
@@ -26,8 +24,8 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
     m_ffmpegPath = ConfigManager::instance().value("ffmpegPath", "ffmpeg").toString();
     m_ffprobePath = ConfigManager::instance().value("ffprobePath", "ffprobe").toString();
     const auto& reg = FormatRegistry::instance();
-    m_videoFormats = reg.videoFormats();
-    m_audioFormats = reg.audioFormats();
+    m_videoFormats = QSet<QString>(reg.videoFormats().begin(), reg.videoFormats().end());
+    m_audioFormats = QSet<QString>(reg.audioFormats().begin(), reg.audioFormats().end());
 }
 
 FFmpegConverter::~FFmpegConverter() {
@@ -43,11 +41,17 @@ bool FFmpegConverter::isAudioFormat(const QString& format) const {
 }
 
 QStringList FFmpegConverter::supportedInputFormats() const {
-    return m_videoFormats + m_audioFormats;
+    QStringList result;
+    for (const auto& fmt : m_videoFormats) result.append(fmt);
+    for (const auto& fmt : m_audioFormats) result.append(fmt);
+    return result;
 }
 
 QStringList FFmpegConverter::supportedOutputFormats() const {
-    return m_videoFormats + m_audioFormats;
+    QStringList result;
+    for (const auto& fmt : m_videoFormats) result.append(fmt);
+    for (const auto& fmt : m_audioFormats) result.append(fmt);
+    return result;
 }
 
 bool FFmpegConverter::isConversionSupported(const QString& inputFormat,
@@ -220,13 +224,13 @@ QStringList FFmpegConverter::buildAudioArgs(const QVariantMap& params) {
     return args;
 }
 
-static const QStringList s_validVideoCodecs = {
+static const QSet<QString> s_validVideoCodecs = {
     "libx264", "libx265", "libvpx-vp9", "mpeg4", "h264_nvenc", "h264", "h265", "hevc", "vp9", "av1", "auto"
 };
-static const QStringList s_validAudioCodecs = {
+static const QSet<QString> s_validAudioCodecs = {
     "libmp3lame", "aac", "libvorbis", "vorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus"
 };
-static const QStringList s_validPresets = {
+static const QSet<QString> s_validPresets = {
     "ultrafast", "superfast", "veryfast", "faster", "fast",
     "medium", "slow", "slower", "veryslow"
 };
@@ -568,26 +572,10 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         return false;
     }
     emit statusChanged(tr("正在转换..."));
-    // Wait for the process with a timeout so a hung ffmpeg does not
-    // permanently block the worker thread.
-    if (!m_process->waitForFinished(WAIT_FOR_FINISHED_TIMEOUT_MS)) {
-        LOG_WARNING("FFmpeg", tr("FFmpeg 进程超时，正在终止"));
-        m_process->kill();
-        m_process->waitForFinished(5000);
-        m_isRunning = false;
-        ErrorInfo error = ErrorTypes::createError(
-            ErrorCode::TaskTimeout,
-            tr("FFmpeg 转换超时"),
-            "FFmpeg::runFFmpeg");
-        error.inputFile = m_currentInputFile;
-        error.outputFile = m_currentOutputFile;
-        m_lastError = error;
-        LOG_ERROR("FFmpeg", error.message);
-        ErrorHandler::instance()->handleError(error);
-        emit errorOccurred(error);
-        emit conversionFinished(false, error.message);
-        return false;
-    }
+    // Wait until the process actually finishes (no artificial timeout).
+    // If ffmpeg hangs, the user can cancel via the cancel button, which
+    // kills the process and causes waitForFinished to return immediately.
+    m_process->waitForFinished(-1);
     bool success = m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
     m_isRunning = false;
     // Destroy the finished QProcess to close OS pipe handles and prevent stale

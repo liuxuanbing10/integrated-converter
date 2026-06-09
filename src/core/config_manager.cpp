@@ -1,5 +1,6 @@
 #include "config_manager.h"
 #include <QFile>
+#include <QSaveFile>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QDir>
@@ -105,13 +106,16 @@ bool ConfigManager::loadConfig(const QString& filePath) {
 }
 bool ConfigManager::saveConfig(const QString& filePath) {
     QJsonDocument doc(QJsonObject::fromVariantMap(m_config));
-    QFile file(filePath);
+    QSaveFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         LOG_ERROR("ConfigManager", QString("无法写入配置文件: %1").arg(filePath));
         return false;
     }
     file.write(doc.toJson(QJsonDocument::Indented));
-    file.close();
+    if (!file.commit()) {
+        LOG_ERROR("ConfigManager", QString("无法写入配置文件: %1").arg(filePath));
+        return false;
+    }
     m_configFilePath = filePath;
     LOG_INFO("ConfigManager", QString("配置已保存: %1").arg(filePath));
     return true;

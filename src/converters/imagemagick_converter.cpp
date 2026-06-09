@@ -19,8 +19,8 @@ ImageMagickConverter::ImageMagickConverter(QObject* parent)
 {
     m_magickPath = ConfigManager::instance().value("imagemagickPath", "magick").toString();
     const auto& reg = FormatRegistry::instance();
-    m_inputFormats = reg.imageInputFormats();
-    m_outputFormats = reg.imageOutputFormats();
+    m_inputFormats = QSet<QString>(reg.imageInputFormats().begin(), reg.imageInputFormats().end());
+    m_outputFormats = QSet<QString>(reg.imageOutputFormats().begin(), reg.imageOutputFormats().end());
 }
 
 ImageMagickConverter::~ImageMagickConverter() {
@@ -28,11 +28,11 @@ ImageMagickConverter::~ImageMagickConverter() {
 }
 
 QStringList ImageMagickConverter::supportedInputFormats() const {
-    return m_inputFormats;
+    return QStringList(m_inputFormats.cbegin(), m_inputFormats.cend());
 }
 
 QStringList ImageMagickConverter::supportedOutputFormats() const {
-    return m_outputFormats;
+    return QStringList(m_outputFormats.cbegin(), m_outputFormats.cend());
 }
 
 bool ImageMagickConverter::isConversionSupported(const QString& inputFormat,

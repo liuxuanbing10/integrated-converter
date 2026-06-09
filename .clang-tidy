@@ -11,10 +11,9 @@
 # Filter Qt-only checks with:
 #   clang-tidy -p build/debug --checks='-*,clang-analyzer-*,bugprone-*' src/**/*.cpp
 
-# Treat this project as C++17 (matches set(CMAKE_CXX_STANDARD 17)).
-# The parser refactor uses a few C++17 idioms; Qt6.10 build env on
-# MinGW doesn't have C++20 yet.
-# (Reserved for a future C++20+ project.)
+# Treat this project as C++23 (matches set(CMAKE_CXX_STANDARD 23)).
+# The parser refactor uses a few C++17 idioms; Qt6.11 build env on
+# MinGW has C++23 support.
 
 # Use a fixed set of headers so clang-tidy doesn't try to expand every
 # system include and inflate memory / wall time.
@@ -102,7 +101,8 @@ Checks: >
 # positives on Q_OBJECT classes and connect() arguments.
 ExtraArgs:
   - -DQT_NO_KEYWORDS
-  - -std=c++17
+  - -std=c++23
+  # Linux-only: Qt6 system include paths (not used on Windows/MinGW)
   - -isystem/usr/include/x86_64-linux-gnu/qt6
   - -isystem/usr/include/x86_64-linux-gnu/qt6/QtCore
   - -isystem/usr/include/x86_64-linux-gnu/qt6/QtGui

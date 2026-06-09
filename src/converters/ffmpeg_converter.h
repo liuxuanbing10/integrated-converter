@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QTimer>
 #include <QMap>
+#include <QSet>
 #include <memory>
 
 class FFmpegConverter : public QObject, public IConverter {
@@ -73,8 +74,8 @@ private:
 
     QString m_ffmpegPath;
     QString m_ffprobePath;
-    QStringList m_videoFormats;
-    QStringList m_audioFormats;
+    QSet<QString> m_videoFormats;
+    QSet<QString> m_audioFormats;
     std::unique_ptr<QProcess> m_process;
     // Reserved for future use; kept as a smart pointer to avoid ownership
     // ambiguity if a feature that needs it is added later.

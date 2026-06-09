@@ -4,6 +4,7 @@
 #include "iconverter.h"
 #include "error_types.h"
 #include <QProcess>
+#include <QSet>
 #include <memory>
 
 class ImageMagickConverter : public QObject, public IConverter {
@@ -49,8 +50,8 @@ private:
     QString getFormatFromExtension(const QString& filePath) const;
 
     QString m_magickPath;
-    QStringList m_inputFormats;
-    QStringList m_outputFormats;
+    QSet<QString> m_inputFormats;
+    QSet<QString> m_outputFormats;
     std::unique_ptr<QProcess> m_process;
     bool m_isRunning;
     QString m_currentInputFile;

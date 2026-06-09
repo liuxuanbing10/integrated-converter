@@ -83,3 +83,9 @@ translations/
 
 # Local test samples (not referenced by source)
 test_samples/
+
+# CTest output
+Testing/
+
+# AI agent tool config (node_modules)
+.opencode/node_modules/

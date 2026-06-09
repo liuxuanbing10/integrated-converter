@@ -13,8 +13,8 @@ PandocConverter::PandocConverter(QObject* parent)
 {
     m_pandocPath = ConfigManager::instance().value("pandocPath", "pandoc").toString();
     const auto& reg = FormatRegistry::instance();
-    m_inputFormats = reg.documentInputFormats();
-    m_outputFormats = reg.documentOutputFormats();
+    m_inputFormats = QSet<QString>(reg.documentInputFormats().begin(), reg.documentInputFormats().end());
+    m_outputFormats = QSet<QString>(reg.documentOutputFormats().begin(), reg.documentOutputFormats().end());
 }
 PandocConverter::~PandocConverter() {
     if (m_currentProcess) {
@@ -355,10 +355,10 @@ void PandocConverter::onProcessReadyReadStandardError() {
     }
 }
 QStringList PandocConverter::supportedInputFormats() const {
-    return m_inputFormats;
+    return QStringList(m_inputFormats.cbegin(), m_inputFormats.cend());
 }
 QStringList PandocConverter::supportedOutputFormats() const {
-    return m_outputFormats;
+    return QStringList(m_outputFormats.cbegin(), m_outputFormats.cend());
 }
 bool PandocConverter::isConversionSupported(const QString& inputFormat,
                                           const QString& outputFormat) const {
