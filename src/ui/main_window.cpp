@@ -122,12 +122,12 @@ void MainWindow::setupToolBar() {
     toolBar->setMovable(false);
     toolBar->setIconSize(QSize(24, 24));
 
-    QAction* addFilesAction = toolBar->addAction(style()->standardIcon(QStyle::SP_FileIcon), tr("添加文件"));
+    QAction* addFilesAction = toolBar->addAction(QIcon(":/icons/file.svg"), tr("添加文件"));
     connect(addFilesAction, &QAction::triggered, this, &MainWindow::onAddFiles);
 
     toolBar->addSeparator();
 
-    m_toolbarStartAction = toolBar->addAction(style()->standardIcon(QStyle::SP_MediaPlay), tr("开始转换"));
+    m_toolbarStartAction = toolBar->addAction(QIcon(":/icons/play.svg"), tr("开始转换"));
     connect(m_toolbarStartAction, &QAction::triggered, this, &MainWindow::onStartConversion);
 }
 
@@ -149,7 +149,7 @@ void MainWindow::setupCentralWidget() {
 
     // ── Global action bar (above tabs) ────────────────────────────
     QHBoxLayout* globalBar = new QHBoxLayout();
-    QPushButton* globalAddBtn = new QPushButton(style()->standardIcon(QStyle::SP_FileIcon),
+    QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"),
         tr(" 选择文件（自动识别分类）"));
     globalAddBtn->setStyleSheet(
         "QPushButton { padding: 10px 24px; border: 2px solid #1976D2; "
@@ -290,7 +290,7 @@ void MainWindow::setupCentralWidget() {
     configLayout->addStretch(1);
 
     // ── Parameter settings button ─────────────────────────────────
-    m_paramsBtn = new QPushButton(style()->standardIcon(QStyle::SP_FileDialogDetailedView),
+    m_paramsBtn = new QPushButton(QIcon(":/icons/settings.svg"),
         tr(" 参数设置"));
     m_paramsBtn->setMinimumHeight(28);
     m_paramsBtn->setCursor(Qt::PointingHandCursor);
@@ -304,7 +304,7 @@ void MainWindow::setupCentralWidget() {
     configLayout->addWidget(m_paramsBtn);
 
     // Convert button
-    m_convertBtn = new QPushButton(style()->standardIcon(QStyle::SP_MediaPlay),
+    m_convertBtn = new QPushButton(QIcon(":/icons/play.svg"),
         tr(" 开始转换"));
     m_convertBtn->setMinimumHeight(30);
     m_convertBtn->setCursor(Qt::PointingHandCursor);

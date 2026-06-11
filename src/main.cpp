@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QStyleFactory>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
@@ -130,6 +131,8 @@ int main(int argc, char* argv[]) {
     // GUI mode: full initialization.
     // ----------------------------------------------------------------
     QApplication app(argc, argv);
+    // Use Fusion style for a modern, cross-platform consistent look
+    app.setStyle(QStyleFactory::create("Fusion"));
     app.setApplicationName("IntegratedConverter");
     app.setApplicationVersion("1.3.1");
     app.setOrganizationName("ConverterTools");

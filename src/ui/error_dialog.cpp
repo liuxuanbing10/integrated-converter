@@ -84,18 +84,18 @@ void ErrorDialog::setupUi() {
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     buttonLayout->addStretch();
     m_retryButton = new QPushButton(tr("重试"));
-    m_retryButton->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    m_retryButton->setIcon(QIcon(":/icons/refresh.svg"));
     connect(m_retryButton, &QPushButton::clicked, this, &ErrorDialog::onRetryClicked);
     buttonLayout->addWidget(m_retryButton);
     m_ignoreButton = new QPushButton(tr("忽略"));
     connect(m_ignoreButton, &QPushButton::clicked, this, &ErrorDialog::onIgnoreClicked);
     buttonLayout->addWidget(m_ignoreButton);
     m_viewLogButton = new QPushButton(tr("查看日志"));
-    m_viewLogButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    m_viewLogButton->setIcon(QIcon(":/icons/detail.svg"));
     connect(m_viewLogButton, &QPushButton::clicked, this, &ErrorDialog::onViewLogClicked);
     buttonLayout->addWidget(m_viewLogButton);
     m_helpButton = new QPushButton(tr("帮助"));
-    m_helpButton->setIcon(style()->standardIcon(QStyle::SP_DialogHelpButton));
+    m_helpButton->setIcon(QIcon(":/icons/help.svg"));
     connect(m_helpButton, &QPushButton::clicked, this, &ErrorDialog::onHelpClicked);
     buttonLayout->addWidget(m_helpButton);
     m_closeButton = new QPushButton(tr("关闭"));
@@ -113,19 +113,23 @@ void ErrorDialog::setError(const ErrorInfo& error) {
 void ErrorDialog::updateDisplay() {
     setWindowTitle(formatErrorTitle());
     QStyle::StandardPixmap iconPixmap = QStyle::SP_MessageBoxCritical;
+    QString iconPath;
     switch (m_error.code) {
         case ErrorCode::FileNotFound:
         case ErrorCode::UnsupportedFormat:
             iconPixmap = QStyle::SP_MessageBoxWarning;
+            iconPath = ":/icons/error.svg";
             break;
         case ErrorCode::TaskCancelled:
             iconPixmap = QStyle::SP_MessageBoxInformation;
+            iconPath = ":/icons/help.svg";
             break;
         default:
             iconPixmap = QStyle::SP_MessageBoxCritical;
+            iconPath = ":/icons/error.svg";
             break;
     }
-    m_iconLabel->setPixmap(style()->standardIcon(iconPixmap).pixmap(48, 48));
+    m_iconLabel->setPixmap(QIcon(iconPath).pixmap(48, 48));
     m_titleLabel->setText(formatErrorTitle());
     m_messageLabel->setText(formatErrorMessage());
     QString details = formatErrorDetails();

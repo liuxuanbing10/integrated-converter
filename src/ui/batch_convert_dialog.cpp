@@ -106,7 +106,7 @@ void BatchConvertDialog::setupUI() {
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     buttonLayout->addStretch();
     m_startButton = new QPushButton(tr("开始转换"));
-    m_startButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    m_startButton->setIcon(QIcon(":/icons/play.svg"));
     m_startButton->setStyleSheet(
         "QPushButton {"
         "  padding: 8px 20px;"
@@ -118,7 +118,7 @@ void BatchConvertDialog::setupUI() {
         "QPushButton:hover { background-color: #45a049; }"
     );
     m_cancelButton = new QPushButton(tr("取消"));
-    m_cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+    m_cancelButton->setIcon(QIcon(":/icons/cancel.svg"));
     buttonLayout->addWidget(m_startButton);
     buttonLayout->addWidget(m_cancelButton);
     mainLayout->addLayout(buttonLayout);

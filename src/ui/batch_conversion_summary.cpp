@@ -89,14 +89,14 @@ void BatchConversionSummary::setupUI() {
     mainLayout->addWidget(resultGroup, 1);
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     m_retryButton = new QPushButton(tr("重试失败项"));
-    m_retryButton->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    m_retryButton->setIcon(QIcon(":/icons/refresh.svg"));
     m_retryButton->setEnabled(false);
     m_exportCsvButton = new QPushButton(tr("导出CSV"));
-    m_exportCsvButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    m_exportCsvButton->setIcon(QIcon(":/icons/save.svg"));
     m_exportTxtButton = new QPushButton(tr("导出文本"));
-    m_exportTxtButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    m_exportTxtButton->setIcon(QIcon(":/icons/save.svg"));
     m_closeButton = new QPushButton(tr("关闭"));
-    m_closeButton->setIcon(style()->standardIcon(QStyle::SP_DialogCloseButton));
+    m_closeButton->setIcon(QIcon(":/icons/close.svg"));
     buttonLayout->addWidget(m_retryButton);
     buttonLayout->addWidget(m_exportCsvButton);
     buttonLayout->addWidget(m_exportTxtButton);
