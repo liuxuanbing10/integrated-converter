@@ -22,6 +22,7 @@ public:
     QString getPandocFormat(const QString& format) const;
     bool checkPandocAvailable() const;
     QString getPandocVersion() const;
+    void cancel();
 signals:
     void progressChanged(int progress);
     void statusChanged(const QString& status);

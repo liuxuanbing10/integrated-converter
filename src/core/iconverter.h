@@ -15,5 +15,6 @@ public:
     virtual QString name() const = 0;
     virtual bool isConversionSupported(const QString& inputFormat,
                                        const QString& outputFormat) const = 0;
+    virtual void cancel() {}
 };
 #endif // ICONVERTER_H

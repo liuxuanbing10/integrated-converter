@@ -16,9 +16,6 @@ namespace CliRunner {
 
 namespace {
 
-// Use raw fputs/fflush for CLI output. QTextStream buffers through Qt's
-// FILE* wrappers and doesn't always flush on static destruction in CLI
-// mode, leaving the user with empty output. Direct stdio is bulletproof.
 void printOut(const QString& s) {
     const QByteArray utf8 = s.toUtf8();
     fwrite(utf8.constData(), 1, utf8.size(), stdout);

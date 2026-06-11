@@ -82,6 +82,9 @@ int main(int argc, char* argv[]) {
     }
 
     if (isCli) {
+        // Note: WIN32_EXECUTABLE is OFF in CMakeLists.txt so the linker uses
+        // /SUBSYSTEM:CONSOLE — the OS creates a console and CRT stdio handles
+        // are valid from process start. No AttachConsole / freopen_s needed.
         // QCoreApplication is sufficient — converters don't need GUI.
         QCoreApplication coreApp(argc, argv);
         coreApp.setApplicationName("IntegratedConverter");

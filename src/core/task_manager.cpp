@@ -190,6 +190,11 @@ void TaskManager::cancelTask(const QString& taskId) {
     ConversionTask::Status status = task->status();
     if (status == ConversionTask::Status::Running) {
         task->requestCancel();
+        // Actually kill the underlying process so orphaned children don't survive
+        QString converterName = task->params().value("converter").toString();
+        if (m_converters.contains(converterName)) {
+            m_converters.value(converterName)->cancel();
+        }
         LOG_INFO("TaskManager", QString("请求取消运行中任务: %1").arg(taskId));
     } else if (status == ConversionTask::Status::Pending) {
         task->setStatus(ConversionTask::Status::Cancelled);
@@ -200,6 +205,20 @@ void TaskManager::cancelTask(const QString& taskId) {
 
 void TaskManager::cancelAllTasks() {
     QMutexLocker locker(&m_mutex);
+    // First: kill all running converter processes to orphaned children
+    QSet<QString> convertersToCancel;
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+        ConversionTask* task = it.value();
+        if (task && task->status() == ConversionTask::Status::Running) {
+            convertersToCancel.insert(task->params().value("converter").toString());
+        }
+    }
+    for (const auto& name : convertersToCancel) {
+        if (m_converters.contains(name)) {
+            m_converters.value(name)->cancel();
+        }
+    }
+    // Then: set cancel flags and clean up task state
     for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
         ConversionTask* task = it.value();
         if (task) {

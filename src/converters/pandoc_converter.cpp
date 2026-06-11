@@ -22,6 +22,13 @@ PandocConverter::~PandocConverter() {
         m_currentProcess.reset();
     }
 }
+void PandocConverter::cancel() {
+    if (m_currentProcess && m_isConverting) {
+        m_currentProcess->kill();
+        m_currentProcess->waitForFinished(3000);
+        m_isConverting = false;
+    }
+}
 QString PandocConverter::getPandocFormat(const QString& format) const {
     return FormatRegistry::instance().pandocFormatName(format);
 }

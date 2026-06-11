@@ -36,10 +36,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Widgets
     Qt6::Concurrent
 )
-if(WIN32 AND NOT MINGW)
-    set_target_properties(${PROJECT_NAME} PROPERTIES
-        WIN32_EXECUTABLE ON
-    )
+# 不使用 WIN32_EXECUTABLE，以便 CLI 模式下能正常继承父控制台、
+# shell 也会同步等待进程结束；GUI 模式下通过 FreeConsole 主动隐藏窗口。
+if(WIN32)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
 # 每次编译后将可执行文件复制到项目根目录
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
