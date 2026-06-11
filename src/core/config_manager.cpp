@@ -20,15 +20,15 @@ ConfigManager::ConfigManager() {
 ConfigManager::~ConfigManager() {
 }
 void ConfigManager::initDefaultConfig() {
-    m_config["maxParallelTasks"] = 4;
-    m_config["outputDirectory"] = QDir::homePath();
-    m_config["logLevel"] = 1;
-    m_config["autoStartConversion"] = false;
-    m_config["overwriteExisting"] = false;
-    m_config["showNotification"] = true;
-    m_config["ffmpegPath"] = "ffmpeg";
-    m_config["pandocPath"] = "pandoc";
-    m_config["imagemagickPath"] = "magick";
+    m_config[QStringLiteral("maxParallelTasks")] = 4;
+    m_config[QStringLiteral("outputDirectory")] = QDir::homePath();
+    m_config[QStringLiteral("logLevel")] = 1;
+    m_config[QStringLiteral("autoStartConversion")] = false;
+    m_config[QStringLiteral("overwriteExisting")] = false;
+    m_config[QStringLiteral("showNotification")] = true;
+    m_config[QStringLiteral("ffmpegPath")] = QStringLiteral("ffmpeg");
+    m_config[QStringLiteral("pandocPath")] = QStringLiteral("pandoc");
+    m_config[QStringLiteral("imagemagickPath")] = QStringLiteral("magick");
 }
 QString ConfigManager::findExecutable(const QString& name) {
     QStringList possiblePaths;
@@ -53,31 +53,31 @@ QString ConfigManager::findExecutable(const QString& name) {
     return name;
 }
 void ConfigManager::detectFFmpegPath() {
-    QString detected = findExecutable("ffmpeg");
-    if (detected != "ffmpeg") {
-        m_config["ffmpegPath"] = detected;
+    QString detected = findExecutable(QStringLiteral("ffmpeg"));
+    if (detected != QStringLiteral("ffmpeg")) {
+        m_config[QStringLiteral("ffmpegPath")] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到FFmpeg路径: %1").arg(detected));
     }
 }
 void ConfigManager::detectPandocPath() {
-    QString detected = findExecutable("pandoc");
-    if (detected != "pandoc") {
-        m_config["pandocPath"] = detected;
+    QString detected = findExecutable(QStringLiteral("pandoc"));
+    if (detected != QStringLiteral("pandoc")) {
+        m_config[QStringLiteral("pandocPath")] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到Pandoc路径: %1").arg(detected));
     }
 }
 void ConfigManager::detectImageMagickPath() {
     // ImageMagick 7+ uses 'magick', IM6 uses 'convert'
-    QString detected = findExecutable("magick");
-    if (detected == "magick") {
+    QString detected = findExecutable(QStringLiteral("magick"));
+    if (detected == QStringLiteral("magick")) {
         // magick not found on PATH, try 'convert' for ImageMagick 6
-        detected = findExecutable("convert");
-        if (detected != "convert") {
-            m_config["imagemagickPath"] = detected;
+        detected = findExecutable(QStringLiteral("convert"));
+        if (detected != QStringLiteral("convert")) {
+            m_config[QStringLiteral("imagemagickPath")] = detected;
             LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(convert)路径: %1").arg(detected));
         }
     } else {
-        m_config["imagemagickPath"] = detected;
+        m_config[QStringLiteral("imagemagickPath")] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(magick)路径: %1").arg(detected));
     }
 }
@@ -128,20 +128,20 @@ void ConfigManager::setValue(const QString& key, const QVariant& value) {
     emit configChanged(key);
 }
 int ConfigManager::maxParallelTasks() const {
-    return m_config.value("maxParallelTasks", 4).toInt();
+    return m_config.value(QStringLiteral("maxParallelTasks"), 4).toInt();
 }
 void ConfigManager::setMaxParallelTasks(int count) {
-    setValue("maxParallelTasks", count);
+    setValue(QStringLiteral("maxParallelTasks"), count);
 }
 QString ConfigManager::outputDirectory() const {
-    return m_config.value("outputDirectory", QDir::homePath()).toString();
+    return m_config.value(QStringLiteral("outputDirectory"), QDir::homePath()).toString();
 }
 void ConfigManager::setOutputDirectory(const QString& dir) {
-    setValue("outputDirectory", dir);
+    setValue(QStringLiteral("outputDirectory"), dir);
 }
 int ConfigManager::logLevel() const {
-    return m_config.value("logLevel", 1).toInt();
+    return m_config.value(QStringLiteral("logLevel"), 1).toInt();
 }
 void ConfigManager::setLogLevel(int level) {
-    setValue("logLevel", level);
+    setValue(QStringLiteral("logLevel"), level);
 }
