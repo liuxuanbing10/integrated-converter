@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.25)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Test)
 
 # Shared source/header lists from root (must come before target creation)
