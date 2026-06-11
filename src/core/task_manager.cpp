@@ -345,6 +345,26 @@ int TaskManager::runningCount() const {
     return m_runningTasks.size();
 }
 
+TaskManager::TaskCounters TaskManager::counters() const {
+    QMutexLocker locker(&m_mutex);
+    TaskCounters c;
+    c.total = m_tasks.size();
+    c.pending = m_pendingQueue.size();
+    c.running = m_runningTasks.size();
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+        ConversionTask* task = it.value();
+        if (!task) continue;
+        auto status = task->status();
+        if (status == ConversionTask::Status::Completed) {
+            ++c.completed;
+        } else if (status == ConversionTask::Status::Failed ||
+                   status == ConversionTask::Status::Cancelled) {
+            ++c.failed;
+        }
+    }
+    return c;
+}
+
 int TaskManager::completedCount() const {
     QMutexLocker locker(&m_mutex);
     int count = 0;

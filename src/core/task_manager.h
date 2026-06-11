@@ -49,6 +49,15 @@ public:
     void setMaxParallelTasks(int max);
     int maxParallelTasks() const;
 
+    struct TaskCounters {
+        int total = 0;
+        int pending = 0;
+        int running = 0;
+        int completed = 0;
+        int failed = 0;
+    };
+    TaskCounters counters() const;
+
     int totalTaskCount() const;
     int pendingCount() const;
     int runningCount() const;

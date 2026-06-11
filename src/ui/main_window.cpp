@@ -20,6 +20,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStyle>
+#include <QStyleHints>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
@@ -60,6 +61,12 @@ MainWindow::MainWindow(QWidget* parent)
     setupCentralWidget();
     setupConnections();
     applyLightTheme();
+
+    // Qt 6.12: Use QStyleHints for fine-grained tooltip control
+    if (auto* hints = QApplication::styleHints()) {
+        hints->setToolTipWakeUpDelay(500);
+    }
+
     LOG_INFO("MainWindow", "主窗口初始化完成 (外部配置面板)");
 }
 
@@ -783,10 +790,9 @@ void MainWindow::onAllTasksCompleted() {
     updateProgressWidget();
     m_taskListWidget->refreshTaskList();
     if (ConfigManager::instance().value("showNotification", true).toBool()) {
-        int completed = TaskManager::instance()->completedCount();
-        int failed = TaskManager::instance()->failedCount();
-        QString msg = tr("转换完成！\n成功: %1\n失败: %2").arg(completed).arg(failed);
-        if (failed > 0) {
+        auto c = TaskManager::instance()->counters();
+        QString msg = tr("转换完成！\n成功: %1\n失败: %2").arg(c.completed).arg(c.failed);
+        if (c.failed > 0) {
             QMessageBox::warning(this, tr("转换完成"), msg);
         } else {
             QMessageBox::information(this, tr("转换完成"), msg);
@@ -812,25 +818,18 @@ void MainWindow::onRetryFailed(const QList<QString>& inputPaths) {
 
 void MainWindow::updateStatusBar() {
     TaskManager* tm = TaskManager::instance();
-    int total = tm->totalTaskCount();
-    int running = tm->runningCount();
-    int pending = tm->pendingCount();
-    int completed = tm->completedCount();
-    int failed = tm->failedCount();
+    auto c = tm->counters();
     m_taskStatsLabel->setText(
         tr("总计: %1 | 运行: %2 | 等待: %3 | 完成: %4 | 失败: %5")
-        .arg(total).arg(running).arg(pending).arg(completed).arg(failed)
+        .arg(c.total).arg(c.running).arg(c.pending).arg(c.completed).arg(c.failed)
     );
 }
 
 void MainWindow::updateProgressWidget() {
     TaskManager* tm = TaskManager::instance();
+    auto c = tm->counters();
     m_progressWidget->updateFromTaskManager(
-        tm->totalTaskCount(),
-        tm->pendingCount(),
-        tm->runningCount(),
-        tm->completedCount(),
-        tm->failedCount()
+        c.total, c.pending, c.running, c.completed, c.failed
     );
 }
 
