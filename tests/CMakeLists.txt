@@ -16,6 +16,13 @@ set(TEST_SOURCES
     converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp
     converters/test_imagemagick_converter.cpp
+    converters/test_segmented_converter.cpp
+
+    core/test_large_file_handler.cpp
+    core/test_memory_monitor.cpp
+    core/test_retry_manager.cpp
+    core/test_skill_manager.cpp
+    core/test_format_registry.cpp
 )
 add_executable(test_runner ${TEST_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES})
 target_include_directories(test_runner PRIVATE
