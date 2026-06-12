@@ -24,6 +24,7 @@ set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/task_manager.h
     ${PROJECT_SOURCE_DIR}/src/core/task_runnable.h
     ${PROJECT_SOURCE_DIR}/src/core/config_manager.h
+    ${PROJECT_SOURCE_DIR}/src/core/ilogger.h
     ${PROJECT_SOURCE_DIR}/src/core/logger.h
     ${PROJECT_SOURCE_DIR}/src/core/error_types.h
     ${PROJECT_SOURCE_DIR}/src/core/error_handler.h

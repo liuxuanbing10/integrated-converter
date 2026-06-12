@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
+#include "core/iconverter.h"
 
 namespace CliRunner {
 
@@ -28,7 +29,7 @@ Options parseArgs(const QStringList& args, QString* errorMessage = nullptr);
 // stream progress to stdout. Returns process exit code (0 = success).
 // converters is a map of name -> IConverter* (e.g. "FFmpeg", "Pandoc", "ImageMagick").
 int run(const Options& opts,
-        const QHash<QString, void*>& convertersByName,
+        const QHash<QString, IConverter*>& convertersByName,
         QString* errorMessage = nullptr);
 
 // Print --help text to stdout.

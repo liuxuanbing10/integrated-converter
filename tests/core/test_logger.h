@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include "../../src/core/logger.h"
 
 class TestLogger : public QObject {
     Q_OBJECT
@@ -19,9 +20,9 @@ private slots:
     void testModuleFilter();
     void testThreadSafety();
     void testConsoleOutput();
-    void testSingleton();
 private:
     QString m_testLogFile;
+    Logger m_logger;
 };
 
 #endif

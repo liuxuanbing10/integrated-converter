@@ -13,12 +13,14 @@
 #endif
 #include "ui/main_window.h"
 #include "core/logger.h"
+#include "core/ilogger.h"
 #include "core/config_manager.h"
 #include "core/task_manager.h"
 #include "converters/ffmpeg_converter.h"
 #include "converters/pandoc_converter.h"
 #include "converters/imagemagick_converter.h"
 #include "cli/cli_runner.h"
+#include "core/iconverter.h"
 #include <memory>
 
 #ifdef Q_OS_WIN
@@ -95,7 +97,7 @@ int main(int argc, char* argv[]) {
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
         auto pandocConverter = std::make_shared<PandocConverter>();
         auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
-        QHash<QString, void*> byName;
+        QHash<QString, IConverter*> byName;
         byName.insert("FFmpeg",      ffmpegConverter.get());
         byName.insert("Pandoc",      pandocConverter.get());
         byName.insert("ImageMagick", imagemagickConverter.get());
@@ -136,19 +138,21 @@ int main(int argc, char* argv[]) {
     app.setApplicationName("IntegratedConverter");
     app.setApplicationVersion("1.3.1");
     app.setOrganizationName("ConverterTools");
+    Logger logger;
+    g_logger = &logger;
     QString configDir = QStandardPaths::writableLocation(
         QStandardPaths::AppConfigLocation);
     QDir().mkpath(configDir);
     QString logPath = configDir + "/converter.log";
-    Logger::instance().setLogFile(logPath);
-    Logger::instance().setLevel(Logger::Level::Info);
+    logger.setLogFile(logPath);
+    logger.setLevel(ILogger::Level::Info);
     LOG_INFO("Main", "应用程序启动");
     QString configPath = configDir + "/config.json";
     if (QFile::exists(configPath)) {
         ConfigManager::instance().loadConfig(configPath);
     }
     int logLevel = ConfigManager::instance().logLevel();
-    Logger::instance().setLevel(static_cast<Logger::Level>(logLevel));
+    logger.setLevel(static_cast<ILogger::Level>(logLevel));
     auto ffmpegConverter = std::make_shared<FFmpegConverter>();
     auto pandocConverter = std::make_shared<PandocConverter>();
     auto imagemagickConverter = std::make_shared<ImageMagickConverter>();

@@ -124,7 +124,7 @@ Options parseArgs(const QStringList& args, QString* errorMessage) {
 }
 
 int run(const Options& opts,
-        const QHash<QString, void*>& convertersByName,
+        const QHash<QString, IConverter*>& convertersByName,
         QString* errorMessage) {
     if (opts.inputs.isEmpty()) {
         if (errorMessage) *errorMessage = "No input files.";
@@ -167,7 +167,7 @@ int run(const Options& opts,
             ++failures;
             continue;
         }
-        auto* converter = static_cast<IConverter*>(it.value());
+        auto* converter = it.value();
 
         printOut(QStringLiteral("[%1/%2] %3 -> %4 (%5)")
                      .arg(idx + 1).arg(total).arg(input, output, converterName));

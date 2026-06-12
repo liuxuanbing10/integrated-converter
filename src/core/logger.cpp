@@ -5,10 +5,7 @@
 #include <QFileInfoList>
 #include <algorithm>
 
-Logger& Logger::instance() {
-    static Logger instance;
-    return instance;
-}
+ILogger* g_logger = nullptr;
 
 Logger::Logger()
     : m_level(Level::Info)

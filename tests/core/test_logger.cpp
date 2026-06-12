@@ -9,7 +9,6 @@
 #include <QAtomicInt>
 #include <QRegularExpression>
 #include <QDir>
-#include "../../src/core/logger.h"
 #include "test_logger.h"
 
 void TestLogger::initTestCase() {
@@ -25,33 +24,32 @@ void TestLogger::cleanupTestCase() {
 }
 
 void TestLogger::init() {
-    Logger::instance().setLevel(Logger::Level::Debug);
-    Logger::instance().setConsoleOutput(false);
-    Logger::instance().setFileOutput(false);
-    Logger::instance().clearModuleFilter();
+    g_logger = &m_logger;
+    m_logger.setLevel(ILogger::Level::Debug);
+    m_logger.setConsoleOutput(false);
+    m_logger.setFileOutput(false);
+    m_logger.clearModuleFilter();
 }
 
 void TestLogger::testLogLevel() {
-    Logger& logger = Logger::instance();
-    logger.setLevel(Logger::Level::Warning);
-    QCOMPARE(logger.level(), Logger::Level::Warning);
-    logger.setLevel(Logger::Level::Error);
-    QCOMPARE(logger.level(), Logger::Level::Error);
-    logger.setLevel(Logger::Level::Info);
-    QCOMPARE(logger.level(), Logger::Level::Info);
-    logger.setLevel(Logger::Level::Debug);
-    QCOMPARE(logger.level(), Logger::Level::Debug);
+    m_logger.setLevel(ILogger::Level::Warning);
+    QCOMPARE(m_logger.level(), ILogger::Level::Warning);
+    m_logger.setLevel(ILogger::Level::Error);
+    QCOMPARE(m_logger.level(), ILogger::Level::Error);
+    m_logger.setLevel(ILogger::Level::Info);
+    QCOMPARE(m_logger.level(), ILogger::Level::Info);
+    m_logger.setLevel(ILogger::Level::Debug);
+    QCOMPARE(m_logger.level(), ILogger::Level::Debug);
 }
 
 void TestLogger::testLogLevelFiltering() {
-    Logger& logger = Logger::instance();
-    logger.setLevel(Logger::Level::Warning);
-    logger.setFileOutput(true);
-    logger.setLogFile(m_testLogFile);
-    logger.debug("TestModule", "This debug message should be filtered");
-    logger.info("TestModule", "This info message should be filtered");
-    logger.warning("TestModule", "This warning should appear");
-    logger.error("TestModule", "This error should appear");
+    m_logger.setLevel(ILogger::Level::Warning);
+    m_logger.setFileOutput(true);
+    m_logger.setLogFile(m_testLogFile);
+    m_logger.debug("TestModule", "This debug message should be filtered");
+    m_logger.info("TestModule", "This info message should be filtered");
+    m_logger.warning("TestModule", "This warning should appear");
+    m_logger.error("TestModule", "This error should appear");
     QFile file(m_testLogFile);
     QVERIFY(file.open(QIODevice::ReadOnly));
     QString content = file.readAll();
@@ -63,10 +61,9 @@ void TestLogger::testLogLevelFiltering() {
 }
 
 void TestLogger::testFileOutput() {
-    Logger& logger = Logger::instance();
-    logger.setFileOutput(true);
-    logger.setLogFile(m_testLogFile);
-    logger.info("TestModule", "Test file output message");
+    m_logger.setFileOutput(true);
+    m_logger.setLogFile(m_testLogFile);
+    m_logger.info("TestModule", "Test file output message");
     QFile file(m_testLogFile);
     QVERIFY(file.exists());
     QVERIFY(file.open(QIODevice::ReadOnly));
@@ -79,15 +76,14 @@ void TestLogger::testFileOutput() {
 }
 
 void TestLogger::testMaxFileSize() {
-    Logger& logger = Logger::instance();
-    logger.setFileOutput(true);
-    logger.setLogFile(m_testLogFile);
-    logger.setMaxFileSize(100);
-    logger.setMaxBackupFiles(3);
-    QCOMPARE(logger.maxFileSize(), qint64(100));
-    QCOMPARE(logger.maxBackupFiles(), 3);
+    m_logger.setFileOutput(true);
+    m_logger.setLogFile(m_testLogFile);
+    m_logger.setMaxFileSize(100);
+    m_logger.setMaxBackupFiles(3);
+    QCOMPARE(m_logger.maxFileSize(), qint64(100));
+    QCOMPARE(m_logger.maxBackupFiles(), 3);
     for (int i = 0; i < 20; ++i) {
-        logger.info("TestModule", "This is a test message to trigger rotation");
+        m_logger.info("TestModule", "This is a test message to trigger rotation");
     }
     bool hasBackup = QFile::exists(m_testLogFile + ".1") ||
                     QFile::exists(m_testLogFile + ".2") ||
@@ -96,29 +92,27 @@ void TestLogger::testMaxFileSize() {
 }
 
 void TestLogger::testModuleFilter() {
-    Logger& logger = Logger::instance();
-    logger.setFileOutput(true);
-    logger.setLogFile(m_testLogFile);
+    m_logger.setFileOutput(true);
+    m_logger.setLogFile(m_testLogFile);
     QSet<QString> enabledModules;
     enabledModules.insert("EnabledModule");
     enabledModules.insert("AnotherEnabled");
-    logger.setModuleFilter(enabledModules);
-    QVERIFY(logger.isModuleEnabled("EnabledModule"));
-    QVERIFY(logger.isModuleEnabled("AnotherEnabled"));
-    QVERIFY(!logger.isModuleEnabled("DisabledModule"));
-    logger.enableModule("NewModule");
-    QVERIFY(logger.isModuleEnabled("NewModule"));
-    logger.disableModule("NewModule");
-    QVERIFY(!logger.isModuleEnabled("NewModule"));
-    logger.clearModuleFilter();
-    QVERIFY(logger.isModuleEnabled("AnyModule"));
+    m_logger.setModuleFilter(enabledModules);
+    QVERIFY(m_logger.isModuleEnabled("EnabledModule"));
+    QVERIFY(m_logger.isModuleEnabled("AnotherEnabled"));
+    QVERIFY(!m_logger.isModuleEnabled("DisabledModule"));
+    m_logger.enableModule("NewModule");
+    QVERIFY(m_logger.isModuleEnabled("NewModule"));
+    m_logger.disableModule("NewModule");
+    QVERIFY(!m_logger.isModuleEnabled("NewModule"));
+    m_logger.clearModuleFilter();
+    QVERIFY(m_logger.isModuleEnabled("AnyModule"));
 }
 
 void TestLogger::testThreadSafety() {
-    Logger& logger = Logger::instance();
-    logger.setFileOutput(true);
-    logger.setLogFile(m_testLogFile);
-    logger.setLevel(Logger::Level::Debug);
+    m_logger.setFileOutput(true);
+    m_logger.setLogFile(m_testLogFile);
+    m_logger.setLevel(ILogger::Level::Debug);
     const int threadCount = 4;
     const int messagesPerThread = 100;
     const int expectedTotal = threadCount * messagesPerThread;
@@ -136,7 +130,7 @@ void TestLogger::testThreadSafety() {
                 }
             }
             for (int i = 0; i < messagesPerThread; ++i) {
-                logger.info(QString("Thread%1").arg(t),
+                m_logger.info(QString("Thread%1").arg(t),
                            QString("Message %1").arg(i));
                 writeCount.ref();
             }
@@ -165,7 +159,7 @@ void TestLogger::testThreadSafety() {
     // to a subsequent read due to OS cache coalescing — this is a MinGW
     // runtime limitation, not a Logger correctness bug. Check that every
     // present line is properly formatted (no corruption).
-    logger.closeLogFile();
+    m_logger.closeLogFile();
     QFile file(m_testLogFile);
     QVERIFY(file.open(QIODevice::ReadOnly));
     QString content = file.readAll();
@@ -185,16 +179,11 @@ void TestLogger::testThreadSafety() {
 }
 
 void TestLogger::testConsoleOutput() {
-    Logger& logger = Logger::instance();
-    logger.setConsoleOutput(true);
-    logger.setFileOutput(false);
-    logger.info("TestModule", "Console output test");
+    m_logger.setConsoleOutput(true);
+    m_logger.setFileOutput(false);
+    m_logger.info("TestModule", "Console output test");
     QVERIFY(true);
 }
 
-void TestLogger::testSingleton() {
-    Logger& instance1 = Logger::instance();
-    Logger& instance2 = Logger::instance();
-    QCOMPARE(&instance1, &instance2);
-}
+
 
