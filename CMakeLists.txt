@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent LinguistTools)
 
 # Shared source/header lists (also used by tests/CMakeLists.txt)
 include(cmake/sources.cmake)
@@ -54,3 +54,16 @@ if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# ── i18n / Translations ────────────────────────────────────────────
+set(TS_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n/integrated_converter_zh_CN.ts
+)
+qt_add_translations(${PROJECT_NAME}
+    TS_FILES ${TS_FILES}
+    OUTPUT_LOCATION ${CMAKE_CURRENT_BINARY_DIR}/i18n
+)
+
+# ── Packaging ──────────────────────────────────────────────────────
+# Adds the 'package' target (e.g. cmake --build build/release --target package)
+include(cmake/cpack.cmake)
