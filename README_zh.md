@@ -4,7 +4,7 @@
 
 **一个基于 Qt6 的多引擎文件格式转换桌面工具，集成 FFmpeg、Pandoc 和 ImageMagick，提供统一的图形界面。**
 
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)](https://en.cppreference.com/w/cpp/17)
+[![C++23](https://img.shields.io/badge/C%2B%2B-23-blue)](https://en.cppreference.com/w/cpp/23)
 [![Qt](https://img.shields.io/badge/Qt-6-green)](https://www.qt.io/)
 [![License](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)]()
