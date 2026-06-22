@@ -388,6 +388,19 @@ integrated_converter/
 
 ## 更新日志
 
+### v1.4.0 (2026-06-22)
+- 精简代码库：移除 ~1100 行冗余代码
+- 移除模块：SkillManager、SkillInvokeDialog、MemoryMonitor、RetryManager、ErrorHandler、ILogger（全部未使用）
+- 简化 TaskManager：移除暂停/恢复/内存压力相关方法、信号、槽和成员
+- 简化 LargeFileHandler：移除 7 个仅测试用的方法
+- 简化 ErrorTypes：移除未使用的工厂函数和枚举值
+- 简化 FormatRegistry：QSet → QStringList::contains()
+- 简化 ConfigManager：移除未使用的 configChanged 信号
+- 简化 ConversionTask：移除速度/比特率/ETA 追踪
+- Logger：Singleton 模式重构为 ILogger 接口
+- 修复测试：TestSegmentedConverter、TestLargeFileHandler 断言阈值修正（全部 11 套件通过）
+- UI 美化：12 个 Material Design SVG 图标、Fusion 样式
+
 ### v1.3.1 (2026-06-05)
 - 修复"转换参数设置"对话框内下拉框的阴影/半透明外观,统一为与主窗口"输出格式"相同的纯白底(2px 蓝色边框、5px 圆角)
 - 同步更新版本号:CMake project VERSION、QApplication 版本、窗口标题、"关于"对话框

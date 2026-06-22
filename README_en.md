@@ -388,6 +388,19 @@ A: `~/.integrated_converter/converter.log` (rotated automatically).
 
 ## Changelog
 
+### v1.4.0 (2026-06-22)
+- Codebase simplification: remove ~1100 lines of unused code
+- Removed modules: SkillManager, SkillInvokeDialog, MemoryMonitor, RetryManager, ErrorHandler, ILogger
+- Simplified TaskManager: removed pause/resume/memory-pressure methods, signals, slots and members
+- Simplified LargeFileHandler: removed 7 test-only methods
+- Simplified ErrorTypes: removed unused factory functions and enum values
+- Simplified FormatRegistry: QSet → QStringList::contains()
+- Simplified ConfigManager: removed unused configChanged signal
+- Simplified ConversionTask: removed speed/bitrate/ETA tracking
+- Logger: refactored from Singleton to ILogger interface
+- Fixed tests: TestSegmentedConverter and TestLargeFileHandler assertion thresholds (all 11 suites pass)
+- UI improvements: 12 Material Design SVG icons, Fusion style
+
 ### v1.3.1 (2026-06-05)
 - Fix shadowed/translucent appearance of combo boxes inside the "Conversion Parameter Settings" dialog; align them with the main window "Output Format" combo (solid white background, 2px blue border, 5px radius)
 - Unify version number across CMake project VERSION, QApplication version, window title, and About dialog

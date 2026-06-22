@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
         // QCoreApplication is sufficient — converters don't need GUI.
         QCoreApplication coreApp(argc, argv);
         coreApp.setApplicationName("IntegratedConverter");
-        coreApp.setApplicationVersion("1.3.1");
+        coreApp.setApplicationVersion("1.4.0");
         coreApp.setOrganizationName("ConverterTools");
 
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     // Use Fusion style for a modern, cross-platform consistent look
     app.setStyle(QStyleFactory::create("Fusion"));
     app.setApplicationName("IntegratedConverter");
-    app.setApplicationVersion("1.3.1");
+    app.setApplicationVersion("1.4.0");
     app.setOrganizationName("ConverterTools");
     Logger logger;
     g_logger = &logger;
