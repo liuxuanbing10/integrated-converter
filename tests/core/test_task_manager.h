@@ -19,11 +19,9 @@ private slots:
     void testMaxParallelTasks();
     void testTaskCounts();
     void testGetTasksByStatus();
-    void testPauseAndResume();
     void testStart();
     void testTaskAddedSignal();
     void testTaskRemovedSignal();
-    void testMemoryPressureThreshold();
     void testSingleton();
 };
 

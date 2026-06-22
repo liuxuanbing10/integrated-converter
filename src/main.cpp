@@ -13,7 +13,6 @@
 #endif
 #include "ui/main_window.h"
 #include "core/logger.h"
-#include "core/ilogger.h"
 #include "core/config_manager.h"
 #include "core/task_manager.h"
 #include "converters/ffmpeg_converter.h"
@@ -145,14 +144,14 @@ int main(int argc, char* argv[]) {
     QDir().mkpath(configDir);
     QString logPath = configDir + "/converter.log";
     logger.setLogFile(logPath);
-    logger.setLevel(ILogger::Level::Info);
+    logger.setLevel(Logger::Level::Info);
     LOG_INFO("Main", "应用程序启动");
     QString configPath = configDir + "/config.json";
     if (QFile::exists(configPath)) {
         ConfigManager::instance().loadConfig(configPath);
     }
     int logLevel = ConfigManager::instance().logLevel();
-    logger.setLevel(static_cast<ILogger::Level>(logLevel));
+    logger.setLevel(static_cast<Logger::Level>(logLevel));
     auto ffmpegConverter = std::make_shared<FFmpegConverter>();
     auto pandocConverter = std::make_shared<PandocConverter>();
     auto imagemagickConverter = std::make_shared<ImageMagickConverter>();

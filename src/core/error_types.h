@@ -17,9 +17,7 @@ enum class ErrorCode {
     ConversionFailed = 103,
     TaskCancelled = 200,
     TaskTimeout = 201,
-    TaskDependencyFailed = 202,
     ProcessCrashed = 300,
-    OutOfMemory = 301,
     ProcessFailedToStart = 302
 };
 
@@ -59,18 +57,9 @@ namespace ErrorTypes {
                          const QString& taskId = QString());
     ErrorInfo createFileNotFoundError(const QString& filePath,
                                      const QString& context = QString());
-    ErrorInfo createPermissionDeniedError(const QString& filePath,
-                                         const QString& context = QString());
-    ErrorInfo createConverterNotAvailableError(const QString& converterName,
-                                              const QString& context = QString());
-    ErrorInfo createUnsupportedFormatError(const QString& inputFormat,
-                                          const QString& outputFormat,
-                                          const QString& context = QString());
     ErrorInfo createConversionFailedError(const QString& details,
                                          const QString& converterName = QString(),
                                          const QString& context = QString());
-    ErrorInfo createTaskCancelledError(const QString& taskId,
-                                      const QString& context = QString());
     ErrorInfo createProcessError(ErrorCode code, const QString& processName,
                                 const QString& details = QString(),
                                 const QString& context = QString());

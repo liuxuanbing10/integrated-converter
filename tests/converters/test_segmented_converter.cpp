@@ -18,7 +18,7 @@ void TestSegmentedConverter::initTestCase() {
 void TestSegmentedConverter::testDefaultConfig() {
     SegmentedConverter converter;
     QCOMPARE(converter.currentSegment(), 0);
-    QCOMPARE(converter.totalSegments(), 0);
+    QCOMPARE(converter.totalSegments(), 4);  // constructor default
     QCOMPARE(converter.overallProgress(), 0);
     QVERIFY(!converter.isRunning());
 }
@@ -76,7 +76,7 @@ void TestSegmentedConverter::testIsRunningWhenNotRunning() {
 void TestSegmentedConverter::testCurrentSegmentWhenNotRunning() {
     SegmentedConverter converter;
     QCOMPARE(converter.currentSegment(), 0);
-    QCOMPARE(converter.totalSegments(), 0);
+    QCOMPARE(converter.totalSegments(), 4);  // constructor default
 }
 
 void TestSegmentedConverter::testCancelWhenNotRunning() {

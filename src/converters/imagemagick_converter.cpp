@@ -2,7 +2,6 @@
 #include "config_manager.h"
 #include "format_registry.h"
 #include "logger.h"
-#include "error_handler.h"
 #include <QFileInfo>
 #include <QDir>
 #include <QDateTime>
@@ -112,7 +111,6 @@ std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile,
         error.outputFile = outputFile;
         m_lastError = error;
         LOG_ERROR("ImageMagick", QString("输入文件不存在: %1").arg(inputFile));
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return error;
@@ -127,7 +125,6 @@ std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile,
         error.outputFile = outputFile;
         m_lastError = error;
         LOG_ERROR("ImageMagick", paramError);
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, paramError);
         return error;
@@ -177,7 +174,6 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
         LOG_ERROR("ImageMagick", error.message);
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return false;
@@ -199,7 +195,6 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
         LOG_ERROR("ImageMagick", error.message);
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return false;
@@ -357,7 +352,6 @@ void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus 
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
         LOG_ERROR("ImageMagick", error.fullMessage());
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit statusChanged(tr("转换失败"));
         emit conversionFinished(false, error.message);
@@ -389,7 +383,6 @@ void ImageMagickConverter::onProcessError(QProcess::ProcessError error) {
     err.outputFile = m_currentOutputFile;
     m_lastError = err;
     LOG_ERROR("ImageMagick", err.message);
-    ErrorHandler::instance()->handleError(err);
     emit errorOccurred(err);
     emit statusChanged(tr("转换失败"));
     emit conversionFinished(false, err.message);

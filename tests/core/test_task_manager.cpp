@@ -111,15 +111,6 @@ void TestTaskManager::testGetTasksByStatus() {
     QVERIFY(tm->pendingCount() > 0);
 }
 
-void TestTaskManager::testPauseAndResume() {
-    auto* tm = TaskManager::instance();
-    tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
-    tm->pause();
-    QVERIFY(tm->isPaused());
-    tm->resume();
-    QVERIFY(!tm->isPaused());
-}
-
 void TestTaskManager::testStart() {
     auto* tm = TaskManager::instance();
     int originalMax = tm->maxParallelTasks();
@@ -144,12 +135,6 @@ void TestTaskManager::testTaskRemovedSignal() {
     QSignalSpy spy(tm, &TaskManager::taskRemoved);
     tm->removeTask(taskId);
     QCOMPARE(spy.count(), 1);
-}
-
-void TestTaskManager::testMemoryPressureThreshold() {
-    auto* tm = TaskManager::instance();
-    tm->setMemoryPressureThreshold(0.5);
-    QVERIFY(!tm->isMemoryUnderPressure());
 }
 
 void TestTaskManager::testSingleton() {

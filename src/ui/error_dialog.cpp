@@ -185,7 +185,6 @@ QString ErrorDialog::formatErrorTitle() const {
         case ErrorCode::TaskCancelled: return tr("任务已取消");
         case ErrorCode::TaskTimeout: return tr("任务超时");
         case ErrorCode::ProcessCrashed: return tr("进程崩溃");
-        case ErrorCode::OutOfMemory: return tr("内存不足");
         case ErrorCode::ProcessFailedToStart: return tr("进程启动失败");
         default: return tr("错误");
     }

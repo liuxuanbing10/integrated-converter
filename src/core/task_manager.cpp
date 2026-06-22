@@ -2,7 +2,6 @@
 #include "task_runnable.h"
 #include "config_manager.h"
 #include "logger.h"
-#include "memory_monitor.h"
 #include "large_file_handler.h"
 #include <QFileInfo>
 #include <QCoreApplication>
@@ -15,24 +14,11 @@ TaskManager* TaskManager::instance() {
 TaskManager::TaskManager()
     : m_threadPool(new QThreadPool(this))
     , m_maxParallel(4)
-    , m_baseMaxParallel(4)
-    , m_paused(false)
     , m_started(false)
-    , m_memoryUnderPressure(false)
-    , m_memoryPressureThreshold(0.75)
 {
     m_maxParallel = ConfigManager::instance().maxParallelTasks();
-    m_baseMaxParallel = m_maxParallel;
     m_threadPool->setMaxThreadCount(m_maxParallel);
     LOG_INFO("TaskManager", QString("任务管理器初始化，最大并行数: %1").arg(m_maxParallel));
-    MemoryMonitor* memMonitor = MemoryMonitor::instance();
-    connect(memMonitor, &MemoryMonitor::memoryWarning,
-            this, &TaskManager::onMemoryWarning, Qt::QueuedConnection);
-    connect(memMonitor, &MemoryMonitor::memoryCritical,
-            this, &TaskManager::onMemoryCritical, Qt::QueuedConnection);
-    connect(memMonitor, &MemoryMonitor::memoryNormalized,
-            this, &TaskManager::onMemoryNormalized, Qt::QueuedConnection);
-    memMonitor->startMonitoring();
 }
 
 TaskManager::~TaskManager() {
@@ -100,19 +86,6 @@ void TaskManager::updateTaskPriority(const QString& taskId) {
     }
 }
 
-int TaskManager::calculateDynamicMaxParallel() const {
-    if (m_memoryUnderPressure) {
-        return qMax(1, m_baseMaxParallel / 2);
-    }
-    MemoryMonitor* memMonitor = MemoryMonitor::instance();
-    double usageRatio = memMonitor->usageRatio();
-    if (usageRatio > m_memoryPressureThreshold) {
-        int reduced = static_cast<int>(m_baseMaxParallel * (1.0 - (usageRatio - m_memoryPressureThreshold)));
-        return qMax(1, reduced);
-    }
-    return m_baseMaxParallel;
-}
-
 QString TaskManager::addTask(std::unique_ptr<ConversionTask> task) {
     if (!task) {
         return QString();
@@ -128,7 +101,7 @@ QString TaskManager::addTask(std::unique_ptr<ConversionTask> task) {
         m_tasks[taskId] = task.release();
         updateTaskPriority(taskId);
         insertTaskByPriority(taskId);
-        shouldProcess = m_started && !m_paused;
+        shouldProcess = m_started;
         LOG_INFO("TaskManager", QString("添加任务: %1, 优先级: %2")
                  .arg(taskId)
                  .arg(ConversionTask::priorityToString(m_tasks.value(taskId)->priority())));
@@ -299,47 +272,19 @@ void TaskManager::start() {
     {
         QMutexLocker locker(&m_mutex);
         m_started = true;
-        m_paused = false;
         LOG_INFO("TaskManager", "启动任务管理器");
     }
     processQueue();
 }
 
-void TaskManager::pause() {
-    QMutexLocker locker(&m_mutex);
-    m_paused = true;
-    LOG_INFO("TaskManager", "暂停任务管理器");
-}
-
-void TaskManager::resume() {
-    bool shouldProcess = false;
-    {
-        QMutexLocker locker(&m_mutex);
-        if (m_paused) {
-            m_paused = false;
-            shouldProcess = true;
-            LOG_INFO("TaskManager", "恢复任务管理器");
-        }
-    }
-    if (shouldProcess) {
-        processQueue();
-    }
-}
-
-bool TaskManager::isPaused() const {
-    QMutexLocker locker(&m_mutex);
-    return m_paused;
-}
-
 bool TaskManager::isRunning() const {
     QMutexLocker locker(&m_mutex);
-    return m_started && !m_paused;
+    return m_started;
 }
 
 void TaskManager::setMaxParallelTasks(int max) {
     QMutexLocker locker(&m_mutex);
     m_maxParallel = qBound(1, max, QThread::idealThreadCount() * 2);
-    m_baseMaxParallel = m_maxParallel;
     m_threadPool->setMaxThreadCount(m_maxParallel);
     LOG_INFO("TaskManager", QString("设置最大并行数: %1").arg(m_maxParallel));
 }
@@ -410,30 +355,12 @@ int TaskManager::failedCount() const {
     return count;
 }
 
-bool TaskManager::isMemoryUnderPressure() const {
-    return m_memoryUnderPressure;
-}
-
-void TaskManager::setMemoryPressureThreshold(double ratio) {
-    m_memoryPressureThreshold = qBound(0.5, ratio, 0.95);
-}
-
-void TaskManager::adjustParallelTasksForMemory() {
-    int newMax = calculateDynamicMaxParallel();
-    if (newMax != m_maxParallel) {
-        m_maxParallel = newMax;
-        m_threadPool->setMaxThreadCount(m_maxParallel);
-        LOG_INFO("TaskManager", QString("根据内存压力调整并行数: %1").arg(m_maxParallel));
-    }
-}
-
 void TaskManager::processQueue() {
     QMutexLocker locker(&m_mutex);
-    if (m_paused || !m_started) {
+    if (!m_started) {
         return;
     }
-    int effectiveMaxParallel = calculateDynamicMaxParallel();
-    while (m_runningTasks.size() < effectiveMaxParallel && !m_pendingQueue.isEmpty()) {
+    while (m_runningTasks.size() < m_maxParallel && !m_pendingQueue.isEmpty()) {
         QString taskId = m_pendingQueue.takeFirst();
         ConversionTask* task = m_tasks.value(taskId);
         if (!task || task->status() != ConversionTask::Status::Pending) {
@@ -490,35 +417,4 @@ void TaskManager::onTaskFinished(const QString& taskId, bool success, const QStr
     } else {
         processQueue();
     }
-}
-
-void TaskManager::onMemoryWarning(size_t current, size_t threshold) {
-    Q_UNUSED(current);
-    Q_UNUSED(threshold);
-    LOG_WARNING("TaskManager", "内存警告，准备减少并行任务数");
-    m_memoryUnderPressure = true;
-    adjustParallelTasksForMemory();
-    emit memoryPressureChanged(true);
-}
-
-void TaskManager::onMemoryCritical(size_t current, size_t threshold) {
-    Q_UNUSED(current);
-    Q_UNUSED(threshold);
-    LOG_ERROR("TaskManager", "内存严重警告，暂停新任务启动");
-    m_memoryUnderPressure = true;
-    m_maxParallel = 1;
-    m_threadPool->setMaxThreadCount(1);
-    emit memoryPressureChanged(true);
-}
-
-void TaskManager::onMemoryNormalized() {
-    {
-        QMutexLocker locker(&m_mutex);
-        LOG_INFO("TaskManager", "内存恢复正常，恢复并行任务数");
-        m_memoryUnderPressure = false;
-        m_maxParallel = m_baseMaxParallel;
-        m_threadPool->setMaxThreadCount(m_maxParallel);
-    }
-    emit memoryPressureChanged(false);
-    processQueue();
 }

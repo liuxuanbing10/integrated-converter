@@ -10,9 +10,6 @@ ConversionTask::ConversionTask(QObject* parent)
     , m_priority(Priority::Normal)
     , m_cancelled(0)
     , m_fileSize(0)
-    , m_estimatedRemainingMs(0)
-    , m_processingSpeed(0.0)
-    , m_currentBitrate(0.0)
 {
 }
 
@@ -29,9 +26,6 @@ ConversionTask::ConversionTask(const QString& inputFile, const QString& outputFi
     , m_priority(Priority::Normal)
     , m_cancelled(0)
     , m_fileSize(0)
-    , m_estimatedRemainingMs(0)
-    , m_processingSpeed(0.0)
-    , m_currentBitrate(0.0)
 {
 }
 
@@ -50,7 +44,6 @@ void ConversionTask::setStatus(Status status) {
         if (status == Status::Running) {
             m_startTime = QDateTime::currentDateTime();
             m_endTime = QDateTime();
-            m_progressHistory.clear();
         } else if (status == Status::Completed || status == Status::Failed || status == Status::Cancelled) {
             m_endTime = QDateTime::currentDateTime();
         }
@@ -70,35 +63,6 @@ void ConversionTask::setProgress(int progress) {
     if (m_progress.loadRelaxed() != clampedProgress) {
         m_progress.storeRelaxed(clampedProgress);
         emit progressChanged(clampedProgress);
-    }
-}
-
-void ConversionTask::updateEstimatedTime(int currentProgress, qint64 elapsedMs) {
-    if (currentProgress <= 0 || currentProgress >= 100 || elapsedMs <= 0) {
-        m_estimatedRemainingMs = 0;
-        emit estimatedTimeChanged(0);
-        return;
-    }
-    m_progressHistory.append(qMakePair(currentProgress, elapsedMs));
-    while (m_progressHistory.size() > HISTORY_SIZE) {
-        m_progressHistory.removeFirst();
-    }
-    if (m_progressHistory.size() >= 2) {
-        const auto& first = m_progressHistory.first();
-        const auto& last = m_progressHistory.last();
-        int progressDiff = last.first - first.first;
-        qint64 timeDiff = last.second - first.second;
-        if (progressDiff > 0 && timeDiff > 0) {
-            double speed = static_cast<double>(progressDiff) / static_cast<double>(timeDiff);
-            int remainingProgress = 100 - currentProgress;
-            m_estimatedRemainingMs = static_cast<qint64>(remainingProgress / speed);
-            if (m_fileSize > 0 && elapsedMs > 0) {
-                double processedRatio = currentProgress / 100.0;
-                qint64 processedBytes = static_cast<qint64>(m_fileSize * processedRatio);
-                m_processingSpeed = static_cast<double>(processedBytes) / (static_cast<double>(elapsedMs) / 1000.0);
-            }
-            emit estimatedTimeChanged(m_estimatedRemainingMs);
-        }
     }
 }
 

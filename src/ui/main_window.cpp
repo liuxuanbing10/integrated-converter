@@ -44,11 +44,8 @@ MainWindow::MainWindow(QWidget* parent)
     , m_statusLabel(nullptr)
     , m_taskStatsLabel(nullptr)
     , m_startAction(nullptr)
-    , m_pauseAction(nullptr)
-    , m_resumeAction(nullptr)
     , m_cancelAction(nullptr)
     , m_summaryAction(nullptr)
-    , m_isPaused(false)
     , m_darkMode(false)
     , m_lastActiveCategory(FormatRegistry::Category::Image)
 {
@@ -88,14 +85,6 @@ void MainWindow::setupMenuBar() {
     m_startAction = toolMenu->addAction(tr("开始转换(&S)"));
     m_startAction->setShortcut(QKeySequence(Qt::Key_F5));
     connect(m_startAction, &QAction::triggered, this, &MainWindow::onStartConversion);
-    m_pauseAction = toolMenu->addAction(tr("暂停(&P)"));
-    m_pauseAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
-    m_pauseAction->setEnabled(false);
-    connect(m_pauseAction, &QAction::triggered, this, &MainWindow::onPauseConversion);
-    m_resumeAction = toolMenu->addAction(tr("继续(&R)"));
-    m_resumeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
-    m_resumeAction->setEnabled(false);
-    connect(m_resumeAction, &QAction::triggered, this, &MainWindow::onResumeConversion);
     toolMenu->addSeparator();
     m_cancelAction = toolMenu->addAction(tr("取消全部(&C)"));
     m_cancelAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_C));
@@ -680,29 +669,9 @@ void MainWindow::onStartConversion() {
     TaskManager::instance()->start();
     m_statusLabel->setText(tr("正在转换..."));
     m_startAction->setEnabled(false);
-    m_pauseAction->setEnabled(true);
-    m_resumeAction->setEnabled(false);
     m_summaryAction->setEnabled(false);
     m_toolbarStartAction->setEnabled(false);
     LOG_INFO("MainWindow", "开始转换任务");
-}
-
-void MainWindow::onPauseConversion() {
-    TaskManager::instance()->pause();
-    m_isPaused = true;
-    m_statusLabel->setText(tr("已暂停"));
-    m_pauseAction->setEnabled(false);
-    m_resumeAction->setEnabled(true);
-    LOG_INFO("MainWindow", "暂停转换");
-}
-
-void MainWindow::onResumeConversion() {
-    TaskManager::instance()->resume();
-    m_isPaused = false;
-    m_statusLabel->setText(tr("正在转换..."));
-    m_pauseAction->setEnabled(true);
-    m_resumeAction->setEnabled(false);
-    LOG_INFO("MainWindow", "继续转换");
 }
 
 void MainWindow::onCancelAll() {
@@ -712,10 +681,7 @@ void MainWindow::onCancelAll() {
         TaskManager::instance()->cancelAllTasks();
         m_statusLabel->setText(tr("已取消"));
         m_startAction->setEnabled(true);
-        m_pauseAction->setEnabled(false);
-        m_resumeAction->setEnabled(false);
         m_toolbarStartAction->setEnabled(true);
-        m_isPaused = false;
         LOG_INFO("MainWindow", "取消所有任务");
     }
 }
@@ -781,9 +747,6 @@ void MainWindow::onTaskCompleted(const QString& taskId, bool success) {
 void MainWindow::onAllTasksCompleted() {
     m_statusLabel->setText(tr("所有任务已完成"));
     m_startAction->setEnabled(true);
-    m_pauseAction->setEnabled(false);
-    m_resumeAction->setEnabled(false);
-    m_isPaused = false;
     m_summaryAction->setEnabled(!m_conversionResults.isEmpty());
     m_toolbarStartAction->setEnabled(true);
     m_progressWidget->setCurrentFile(QString());

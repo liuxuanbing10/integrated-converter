@@ -1,7 +1,6 @@
 #include "ffmpeg_converter.h"
 #include "config_manager.h"
 #include "logger.h"
-#include "error_handler.h"
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -422,7 +421,6 @@ std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, cons
         error.outputFile = outputFile;
         m_lastError = error;
         LOG_ERROR("FFmpeg", QString("输入文件不存在: %1").arg(inputFile));
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return error;
@@ -436,7 +434,6 @@ std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, cons
         error.outputFile = outputFile;
         m_lastError = error;
         LOG_ERROR("FFmpeg", paramError);
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, paramError);
         return error;
@@ -566,7 +563,6 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
         LOG_ERROR("FFmpeg", error.message);
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return false;
@@ -650,7 +646,6 @@ void FFmpegConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitS
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
         LOG_ERROR("FFmpeg", error.fullMessage());
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit statusChanged(tr("转换失败"));
         emit conversionFinished(false, error.message);
@@ -683,7 +678,6 @@ void FFmpegConverter::onProcessError(QProcess::ProcessError error) {
     err.outputFile = m_currentOutputFile;
     m_lastError = err;
     LOG_ERROR("FFmpeg", err.message);
-    ErrorHandler::instance()->handleError(err);
     emit errorOccurred(err);
     emit statusChanged(tr("转换失败"));
     emit conversionFinished(false, err.message);

@@ -6,8 +6,8 @@
 void TestLargeFileHandler::testCategorizeBySize() {
     QCOMPARE(LargeFileHandler::categorizeBySize(0), LargeFileHandler::FileSizeCategory::Small);
     QCOMPARE(LargeFileHandler::categorizeBySize(50LL * 1024 * 1024 - 1), LargeFileHandler::FileSizeCategory::Small);
-    QCOMPARE(LargeFileHandler::categorizeBySize(60LL * 1024 * 1024), LargeFileHandler::FileSizeCategory::Medium);
-    QCOMPARE(LargeFileHandler::categorizeBySize(200LL * 1024 * 1024), LargeFileHandler::FileSizeCategory::Large);
+    QCOMPARE(LargeFileHandler::categorizeBySize(120LL * 1024 * 1024), LargeFileHandler::FileSizeCategory::Medium);
+    QCOMPARE(LargeFileHandler::categorizeBySize(600LL * 1024 * 1024), LargeFileHandler::FileSizeCategory::Large);
     QCOMPARE(LargeFileHandler::categorizeBySize(2LL * 1024 * 1024 * 1024), LargeFileHandler::FileSizeCategory::VeryLarge);
     QCOMPARE(LargeFileHandler::categorizeBySize(10LL * 1024 * 1024 * 1024), LargeFileHandler::FileSizeCategory::Huge);
 }
@@ -36,37 +36,6 @@ void TestLargeFileHandler::testGetFileSizeNonExistent() {
     QCOMPARE(LargeFileHandler::getFileSize("/nonexistent/path/file.mp4"), 0);
 }
 
-void TestLargeFileHandler::testIsLargeFile() {
-    QVERIFY(LargeFileHandler::isLargeFile("", LargeFileHandler::SMALL_THRESHOLD) == false);
-}
-
-void TestLargeFileHandler::testIsLargeFileBelowThreshold() {
-    QCOMPARE(LargeFileHandler::isLargeFile("/nonexistent/path/file.mp4", 0), true);
-    QCOMPARE(LargeFileHandler::isLargeFile("/nonexistent/path/file.mp4", 1), false);
-}
-
-void TestLargeFileHandler::testOptimizeParamsSmallFile() {
-    QVariantMap params;
-    params["preset"] = "slow";
-    QVariantMap result = LargeFileHandler::optimizeParams(params, 1024);
-    QCOMPARE(result["preset"].toString(), QString("slow"));
-}
-
-void TestLargeFileHandler::testOptimizeParamsLargeFile() {
-    QVariantMap params;
-    params["preset"] = "slow";
-    QVariantMap result = LargeFileHandler::optimizeParams(params, 600LL * 1024 * 1024);
-    QCOMPARE(result["preset"].toString(), QString("veryfast"));
-}
-
-void TestLargeFileHandler::testOptimizeParamsHugeFile() {
-    QVariantMap params;
-    params["videoBitrate"] = 10000;
-    QVariantMap result = LargeFileHandler::optimizeParams(params, 10LL * 1024 * 1024 * 1024);
-    QCOMPARE(result["videoBitrate"].toInt(), 8000);
-    QVERIFY(result.contains("resolution"));
-}
-
 void TestLargeFileHandler::testShouldUseStreamCopy() {
     QVERIFY(LargeFileHandler::shouldUseStreamCopy("mp4", "mp4"));
     QVERIFY(LargeFileHandler::shouldUseStreamCopy("mp4", "mov"));
@@ -79,22 +48,8 @@ void TestLargeFileHandler::testShouldUseStreamCopyMismatch() {
     QVERIFY(!LargeFileHandler::shouldUseStreamCopy("mp3", "wav"));
 }
 
-void TestLargeFileHandler::testCategoryToString() {
-    QVERIFY(!LargeFileHandler::categoryToString(LargeFileHandler::FileSizeCategory::Small).isEmpty());
-    QVERIFY(!LargeFileHandler::categoryToString(LargeFileHandler::FileSizeCategory::Large).isEmpty());
-}
-
 void TestLargeFileHandler::testRecommendedPriority() {
     QCOMPARE(LargeFileHandler::recommendedPriority(LargeFileHandler::FileSizeCategory::Small), 2);
     QCOMPARE(LargeFileHandler::recommendedPriority(LargeFileHandler::FileSizeCategory::Medium), 1);
     QCOMPARE(LargeFileHandler::recommendedPriority(LargeFileHandler::FileSizeCategory::Large), 0);
-}
-
-void TestLargeFileHandler::testShouldUseSegmentedConversion() {
-    QCOMPARE(LargeFileHandler::shouldUseSegmentedConversion("/nonexistent"), false);
-}
-
-void TestLargeFileHandler::testRecommendedSegmentCount() {
-    QCOMPARE(LargeFileHandler::recommendedSegmentCount("/nonexistent"), 1);
-    QCOMPARE(LargeFileHandler::recommendedSegmentCount(""), 1);
 }

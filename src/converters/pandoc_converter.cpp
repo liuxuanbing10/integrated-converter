@@ -2,7 +2,6 @@
 #include "config_manager.h"
 #include "format_registry.h"
 #include "logger.h"
-#include "error_handler.h"
 #include <QFileInfo>
 #include <QDir>
 PandocConverter::PandocConverter(QObject* parent)
@@ -214,7 +213,6 @@ std::optional<ErrorInfo> PandocConverter::convert(const QString& inputFile, cons
         error.outputFile = outputFile;
         m_lastError = error;
         LOG_ERROR("Pandoc", QString("输入文件不存在: %1").arg(inputFile));
-        ErrorHandler::instance()->handleError(error);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
         return error;
@@ -234,8 +232,7 @@ std::optional<ErrorInfo> PandocConverter::convert(const QString& inputFile, cons
             error.outputFile = outputFile;
             m_lastError = error;
             LOG_ERROR("Pandoc", QString("无法创建输出目录: %1").arg(outputDir.absolutePath()));
-            ErrorHandler::instance()->handleError(error);
-            emit errorOccurred(error);
+                emit errorOccurred(error);
             emit conversionFinished(false, error.message);
             return error;
         }
@@ -255,7 +252,6 @@ std::optional<ErrorInfo> PandocConverter::convert(const QString& inputFile, cons
     error.outputFile = outputFile;
     m_lastError = error;
     LOG_ERROR("Pandoc", QString("转换失败: %1").arg(output));
-    ErrorHandler::instance()->handleError(error);
     emit errorOccurred(error);
     emit conversionFinished(false, error.message);
     return error;
@@ -350,7 +346,6 @@ void PandocConverter::onProcessError(QProcess::ProcessError error) {
     err.outputFile = m_currentOutputFile;
     m_lastError = err;
     LOG_ERROR("Pandoc", QString("进程错误: %1").arg(err.message));
-    ErrorHandler::instance()->handleError(err);
     emit errorOccurred(err);
     emit conversionFinished(false, err.message);
 }

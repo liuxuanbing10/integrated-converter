@@ -18,8 +18,6 @@ public:
     int logLevel() const;
     void setLogLevel(int level);
     QVariantMap allConfig() const { return m_config; }
-signals:
-    void configChanged(const QString& key);
 private:
     ConfigManager();
     ~ConfigManager();

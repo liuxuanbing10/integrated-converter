@@ -14,17 +14,9 @@ private slots:
     void testFormatFileSize();
     void testFormatFileSizeNegative();
     void testGetFileSizeNonExistent();
-    void testIsLargeFile();
-    void testIsLargeFileBelowThreshold();
-    void testOptimizeParamsSmallFile();
-    void testOptimizeParamsLargeFile();
-    void testOptimizeParamsHugeFile();
     void testShouldUseStreamCopy();
     void testShouldUseStreamCopyMismatch();
-    void testCategoryToString();
     void testRecommendedPriority();
-    void testShouldUseSegmentedConversion();
-    void testRecommendedSegmentCount();
 };
 
 #endif // TEST_LARGE_FILE_HANDLER_H

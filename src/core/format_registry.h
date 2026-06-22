@@ -2,7 +2,6 @@
 #define FORMAT_REGISTRY_H
 
 #include <QStringList>
-#include <QSet>
 #include <QMap>
 #include <QString>
 
@@ -67,10 +66,6 @@ private:
     QStringList m_documentOutputFormats;
 
     // ── Sets for O(1) membership tests ────────────────────────────
-    QSet<QString> m_videoFormatsSet;
-    QSet<QString> m_audioFormatsSet;
-    QSet<QString> m_imageInputFormatsSet;
-    QSet<QString> m_documentInputFormatsSet;
 
     QMap<QString, QString> m_ffmpegFormatMap;
     QMap<QString, QString> m_videoCodecMap;

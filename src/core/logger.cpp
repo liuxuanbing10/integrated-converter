@@ -5,7 +5,7 @@
 #include <QFileInfoList>
 #include <algorithm>
 
-ILogger* g_logger = nullptr;
+Logger* g_logger = nullptr;
 
 Logger::Logger()
     : m_level(Level::Info)

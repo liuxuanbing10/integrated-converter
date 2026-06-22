@@ -19,7 +19,6 @@ private slots:
     void testMaxParallelTasks();
     void testOutputDirectory();
     void testLogLevel();
-    void testConfigChangedSignal();
     void testInvalidConfigFile();
     void testAllConfig();
     void testSingleton();

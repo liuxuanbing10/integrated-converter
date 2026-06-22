@@ -41,9 +41,6 @@ public:
     QList<ConversionTask*> getFailedTasks() const;
 
     void start();
-    void pause();
-    void resume();
-    bool isPaused() const;
     bool isRunning() const;
 
     void setMaxParallelTasks(int max);
@@ -64,10 +61,6 @@ public:
     int completedCount() const;
     int failedCount() const;
 
-    bool isMemoryUnderPressure() const;
-    void setMemoryPressureThreshold(double ratio);
-    void adjustParallelTasksForMemory();
-
 signals:
     void taskAdded(const QString& taskId);
     void taskStarted(const QString& taskId);
@@ -75,15 +68,11 @@ signals:
     void taskCompleted(const QString& taskId, bool success);
     void taskRemoved(const QString& taskId);
     void allTasksCompleted();
-    void memoryPressureChanged(bool underPressure);
 
 private slots:
     void onTaskStarted(const QString& taskId);
     void onTaskProgressChanged(const QString& taskId, int progress);
     void onTaskFinished(const QString& taskId, bool success, const QString& message);
-    void onMemoryWarning(size_t current, size_t threshold);
-    void onMemoryCritical(size_t current, size_t threshold);
-    void onMemoryNormalized();
 
 private:
     TaskManager();
@@ -94,7 +83,6 @@ private:
     void processQueue();
     void insertTaskByPriority(const QString& taskId);
     void updateTaskPriority(const QString& taskId);
-    int calculateDynamicMaxParallel() const;
 
     QMap<QString, std::shared_ptr<IConverter>> m_converters;
     QMap<QString, ConversionTask*> m_tasks;
@@ -103,10 +91,6 @@ private:
     mutable QMutex m_mutex;
     QThreadPool* m_threadPool;
     int m_maxParallel;
-    int m_baseMaxParallel;
-    bool m_paused;
     bool m_started;
-    bool m_memoryUnderPressure;
-    double m_memoryPressureThreshold;
 };
 #endif // TASK_MANAGER_H

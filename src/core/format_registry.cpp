@@ -13,22 +13,19 @@ void FormatRegistry::init() {
     // ── Video ─────────────────────────────────────────────────────
     m_videoFormats << "mp4" << "avi" << "mkv" << "mov" << "wmv"
                    << "flv" << "webm" << "mpeg";
-    m_videoFormatsSet = QSet<QString>{m_videoFormats.begin(), m_videoFormats.end()};
 
     // ── Audio ─────────────────────────────────────────────────────
     m_audioFormats << "mp3" << "wav" << "flac" << "aac" << "ogg"
                    << "m4a" << "wma";
-    m_audioFormatsSet = QSet<QString>{m_audioFormats.begin(), m_audioFormats.end()};
 
     // ── Image (input - ImageMagick can read many formats) ─────────
     m_imageInputFormats << "png" << "jpg" << "jpeg" << "gif" << "bmp"
-                        << "tiff" << "tif" << "webp" << "svg" << "svgz"
-                        << "ico" << "cur" << "heic" << "heif" << "avif"
-                        << "psd" << "xcf" << "cr2" << "nef" << "arw"
-                        << "dng" << "raw" << "orf" << "rw2" << "ppm"
-                        << "pgm" << "pbm" << "xbm" << "xpm" << "jp2"
-                        << "j2k" << "pcx" << "tga";
-    m_imageInputFormatsSet = QSet<QString>{m_imageInputFormats.begin(), m_imageInputFormats.end()};
+                         << "tiff" << "tif" << "webp" << "svg" << "svgz"
+                         << "ico" << "cur" << "heic" << "heif" << "avif"
+                         << "psd" << "xcf" << "cr2" << "nef" << "arw"
+                         << "dng" << "raw" << "orf" << "rw2" << "ppm"
+                         << "pgm" << "pbm" << "xbm" << "xpm" << "jp2"
+                         << "j2k" << "pcx" << "tga";
 
     // ── Image (output - most common writable formats) ─────────────
     m_imageOutputFormats << "png" << "jpg" << "jpeg" << "gif" << "bmp"
@@ -39,13 +36,12 @@ void FormatRegistry::init() {
 
     // ── Document (input) ──────────────────────────────────────────
     m_documentInputFormats << "md" << "markdown" << "html" << "htm"
-                           << "tex" << "latex"
-                           << "docx" << "word"
-                           << "rst" << "rest"
-                           << "org" << "epub"
-                           << "txt" << "plain"
-                           << "odt" << "csv" << "json";
-    m_documentInputFormatsSet = QSet<QString>{m_documentInputFormats.begin(), m_documentInputFormats.end()};
+                            << "tex" << "latex"
+                            << "docx" << "word"
+                            << "rst" << "rest"
+                            << "org" << "epub"
+                            << "txt" << "plain"
+                            << "odt" << "csv" << "json";
 
     // ── Document (output) ─────────────────────────────────────────
     m_documentOutputFormats << "md" << "markdown" << "html" << "htm"
@@ -197,19 +193,19 @@ FormatRegistry::Converter FormatRegistry::converterForExt(const QString& format)
 }
 
 bool FormatRegistry::isVideo(const QString& format) const {
-    return m_videoFormatsSet.contains(format.toLower());
+    return m_videoFormats.contains(format.toLower());
 }
 
 bool FormatRegistry::isAudio(const QString& format) const {
-    return m_audioFormatsSet.contains(format.toLower());
+    return m_audioFormats.contains(format.toLower());
 }
 
 bool FormatRegistry::isImage(const QString& format) const {
-    return m_imageInputFormatsSet.contains(format.toLower());
+    return m_imageInputFormats.contains(format.toLower());
 }
 
 bool FormatRegistry::isDocument(const QString& format) const {
-    return m_documentInputFormatsSet.contains(format.toLower());
+    return m_documentInputFormats.contains(format.toLower());
 }
 
 bool FormatRegistry::isSupported(const QString& format) const {

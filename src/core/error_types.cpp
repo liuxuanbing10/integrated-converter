@@ -18,9 +18,7 @@ QString errorCodeToString(ErrorCode code) {
         case ErrorCode::ConversionFailed: return QStringLiteral("ConversionFailed");
         case ErrorCode::TaskCancelled: return QStringLiteral("TaskCancelled");
         case ErrorCode::TaskTimeout: return QStringLiteral("TaskTimeout");
-        case ErrorCode::TaskDependencyFailed: return QStringLiteral("TaskDependencyFailed");
         case ErrorCode::ProcessCrashed: return QStringLiteral("ProcessCrashed");
-        case ErrorCode::OutOfMemory: return QStringLiteral("OutOfMemory");
         case ErrorCode::ProcessFailedToStart: return QStringLiteral("ProcessFailedToStart");
         default: return QStringLiteral("Unknown");
     }
@@ -35,12 +33,10 @@ ErrorCode stringToErrorCode(const QString& str) {
         std::pair{"DiskSpaceInsufficient", ErrorCode::DiskSpaceInsufficient},
         std::pair{"FileNotFound", ErrorCode::FileNotFound},
         std::pair{"InvalidParameter", ErrorCode::InvalidParameter},
-        std::pair{"OutOfMemory", ErrorCode::OutOfMemory},
         std::pair{"PermissionDenied", ErrorCode::PermissionDenied},
         std::pair{"ProcessCrashed", ErrorCode::ProcessCrashed},
         std::pair{"ProcessFailedToStart", ErrorCode::ProcessFailedToStart},
         std::pair{"TaskCancelled", ErrorCode::TaskCancelled},
-        std::pair{"TaskDependencyFailed", ErrorCode::TaskDependencyFailed},
         std::pair{"TaskTimeout", ErrorCode::TaskTimeout},
         std::pair{"Unknown", ErrorCode::Unknown},
         std::pair{"UnsupportedFormat", ErrorCode::UnsupportedFormat},
@@ -74,8 +70,6 @@ QString defaultSuggestion(ErrorCode code) {
             return QObject::tr("任务执行超时，可能是文件过大或系统资源不足");
         case ErrorCode::ProcessCrashed:
             return QObject::tr("转换进程异常退出，请检查系统环境和转换工具");
-        case ErrorCode::OutOfMemory:
-            return QObject::tr("内存不足，请尝试关闭其他程序或处理较小的文件");
         case ErrorCode::ProcessFailedToStart:
             return QObject::tr("无法启动转换进程，请检查转换工具是否正确安装");
         default:
@@ -121,43 +115,6 @@ ErrorInfo createFileNotFoundError(const QString& filePath, const QString& contex
     return error;
 }
 
-ErrorInfo createPermissionDeniedError(const QString& filePath, const QString& context) {
-    ErrorInfo error;
-    error.code = ErrorCode::PermissionDenied;
-    error.message = QObject::tr("权限不足");
-    error.details = QObject::tr("文件路径: %1").arg(filePath);
-    error.context = context;
-    error.inputFile = filePath;
-    error.suggestion = defaultSuggestion(ErrorCode::PermissionDenied);
-    error.recoverable = true;
-    return error;
-}
-
-ErrorInfo createConverterNotAvailableError(const QString& converterName, const QString& context) {
-    ErrorInfo error;
-    error.code = ErrorCode::ConverterNotAvailable;
-    error.message = QObject::tr("转换器不可用");
-    error.details = QObject::tr("转换器: %1").arg(converterName);
-    error.context = context;
-    error.converterName = converterName;
-    error.suggestion = defaultSuggestion(ErrorCode::ConverterNotAvailable);
-    error.recoverable = true;
-    return error;
-}
-
-ErrorInfo createUnsupportedFormatError(const QString& inputFormat,
-                                      const QString& outputFormat,
-                                      const QString& context) {
-    ErrorInfo error;
-    error.code = ErrorCode::UnsupportedFormat;
-    error.message = QObject::tr("不支持的格式转换");
-    error.details = QObject::tr("输入格式: %1, 输出格式: %2").arg(inputFormat, outputFormat);
-    error.context = context;
-    error.suggestion = defaultSuggestion(ErrorCode::UnsupportedFormat);
-    error.recoverable = false;
-    return error;
-}
-
 ErrorInfo createConversionFailedError(const QString& details,
                                      const QString& converterName,
                                      const QString& context) {
@@ -169,17 +126,6 @@ ErrorInfo createConversionFailedError(const QString& details,
     error.converterName = converterName;
     error.suggestion = defaultSuggestion(ErrorCode::ConversionFailed);
     error.recoverable = true;
-    return error;
-}
-
-ErrorInfo createTaskCancelledError(const QString& taskId, const QString& context) {
-    ErrorInfo error;
-    error.code = ErrorCode::TaskCancelled;
-    error.message = QObject::tr("任务已取消");
-    error.context = context;
-    error.taskId = taskId;
-    error.suggestion = defaultSuggestion(ErrorCode::TaskCancelled);
-    error.recoverable = false;
     return error;
 }
 

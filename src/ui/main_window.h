@@ -35,8 +35,6 @@ public:
 private slots:
     void onAddFiles();
     void onStartConversion();
-    void onPauseConversion();
-    void onResumeConversion();
     void onCancelAll();
     void onAbout();
     void onExit();
@@ -111,15 +109,11 @@ protected:
     QLabel* m_taskStatsLabel;
     QLabel* m_errorIconLabel;
     QAction* m_startAction;
-    QAction* m_pauseAction;
-    QAction* m_resumeAction;
     QAction* m_cancelAction;
     QAction* m_summaryAction;
     QAction* m_toolbarStartAction;
-    QAction* m_toolbarPauseAction;
     QAction* m_toolbarCancelAction;
     QAction* m_toolbarSummaryAction;
-    bool m_isPaused;
     int m_errorCount;
     QList<ConversionResult> m_conversionResults;
     QString m_currentConvertingFile;

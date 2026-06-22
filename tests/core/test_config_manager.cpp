@@ -98,16 +98,6 @@ void TestConfigManager::testLogLevel() {
     QCOMPARE(config.logLevel(), 1);
 }
 
-void TestConfigManager::testConfigChangedSignal() {
-    ConfigManager& config = ConfigManager::instance();
-    QSignalSpy spy(&config, &ConfigManager::configChanged);
-    config.setValue("testSignalKey", "value1");
-    QCOMPARE(spy.count(), 1);
-    QCOMPARE(spy.at(0).at(0).toString(), QString("testSignalKey"));
-    config.setValue("testSignalKey", "value2");
-    QCOMPARE(spy.count(), 2);
-}
-
 void TestConfigManager::testInvalidConfigFile() {
     ConfigManager& config = ConfigManager::instance();
     QString invalidFile = "/nonexistent/path/config.json";

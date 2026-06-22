@@ -125,7 +125,6 @@ QVariant ConfigManager::value(const QString& key, const QVariant& defaultValue) 
 }
 void ConfigManager::setValue(const QString& key, const QVariant& value) {
     m_config[key] = value;
-    emit configChanged(key);
 }
 int ConfigManager::maxParallelTasks() const {
     return m_config.value(QStringLiteral("maxParallelTasks"), 4).toInt();

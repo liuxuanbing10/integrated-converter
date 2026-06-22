@@ -25,25 +25,25 @@ void TestLogger::cleanupTestCase() {
 
 void TestLogger::init() {
     g_logger = &m_logger;
-    m_logger.setLevel(ILogger::Level::Debug);
+    m_logger.setLevel(Logger::Level::Debug);
     m_logger.setConsoleOutput(false);
     m_logger.setFileOutput(false);
     m_logger.clearModuleFilter();
 }
 
 void TestLogger::testLogLevel() {
-    m_logger.setLevel(ILogger::Level::Warning);
-    QCOMPARE(m_logger.level(), ILogger::Level::Warning);
-    m_logger.setLevel(ILogger::Level::Error);
-    QCOMPARE(m_logger.level(), ILogger::Level::Error);
-    m_logger.setLevel(ILogger::Level::Info);
-    QCOMPARE(m_logger.level(), ILogger::Level::Info);
-    m_logger.setLevel(ILogger::Level::Debug);
-    QCOMPARE(m_logger.level(), ILogger::Level::Debug);
+    m_logger.setLevel(Logger::Level::Warning);
+    QCOMPARE(m_logger.level(), Logger::Level::Warning);
+    m_logger.setLevel(Logger::Level::Error);
+    QCOMPARE(m_logger.level(), Logger::Level::Error);
+    m_logger.setLevel(Logger::Level::Info);
+    QCOMPARE(m_logger.level(), Logger::Level::Info);
+    m_logger.setLevel(Logger::Level::Debug);
+    QCOMPARE(m_logger.level(), Logger::Level::Debug);
 }
 
 void TestLogger::testLogLevelFiltering() {
-    m_logger.setLevel(ILogger::Level::Warning);
+    m_logger.setLevel(Logger::Level::Warning);
     m_logger.setFileOutput(true);
     m_logger.setLogFile(m_testLogFile);
     m_logger.debug("TestModule", "This debug message should be filtered");
@@ -112,7 +112,7 @@ void TestLogger::testModuleFilter() {
 void TestLogger::testThreadSafety() {
     m_logger.setFileOutput(true);
     m_logger.setLogFile(m_testLogFile);
-    m_logger.setLevel(ILogger::Level::Debug);
+    m_logger.setLevel(Logger::Level::Debug);
     const int threadCount = 4;
     const int messagesPerThread = 100;
     const int expectedTotal = threadCount * messagesPerThread;

@@ -72,9 +72,7 @@ void TestErrorTypes::testRoundTripAllCodes() {
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConversionFailed)), ErrorCode::ConversionFailed);
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskCancelled)), ErrorCode::TaskCancelled);
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskTimeout)), ErrorCode::TaskTimeout);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskDependencyFailed)), ErrorCode::TaskDependencyFailed);
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessCrashed)), ErrorCode::ProcessCrashed);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::OutOfMemory)), ErrorCode::OutOfMemory);
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessFailedToStart)), ErrorCode::ProcessFailedToStart);
 }
 
@@ -91,7 +89,6 @@ void TestErrorTypes::testDefaultSuggestion() {
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::TaskCancelled).isEmpty());
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::TaskTimeout).isEmpty());
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::ProcessCrashed).isEmpty());
-    QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::OutOfMemory).isEmpty());
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::ProcessFailedToStart).isEmpty());
 }
 
@@ -110,9 +107,7 @@ void TestErrorTypes::testIsRecoverable() {
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::ConverterNotFound));
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::UnsupportedFormat));
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::TaskCancelled));
-    QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::TaskDependencyFailed));
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::ProcessCrashed));
-    QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::OutOfMemory));
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::ProcessFailedToStart));
 }
 
@@ -139,33 +134,6 @@ void TestErrorTypes::testCreateFileNotFoundError() {
     QVERIFY(!error.suggestion.isEmpty());
 }
 
-void TestErrorTypes::testCreatePermissionDeniedError() {
-    ErrorInfo error = ErrorTypes::createPermissionDeniedError("/path/to/protected", "test");
-    QCOMPARE(error.code, ErrorCode::PermissionDenied);
-    QVERIFY(!error.message.isEmpty());
-    QVERIFY(error.details.contains("/path/to/protected"));
-    QCOMPARE(error.inputFile, QString("/path/to/protected"));
-    QCOMPARE(error.context, QString("test"));
-    QVERIFY(error.recoverable);
-}
-
-void TestErrorTypes::testCreateConverterNotAvailableError() {
-    ErrorInfo error = ErrorTypes::createConverterNotAvailableError("FFmpeg", "test");
-    QCOMPARE(error.code, ErrorCode::ConverterNotAvailable);
-    QCOMPARE(error.converterName, QString("FFmpeg"));
-    QCOMPARE(error.context, QString("test"));
-    QVERIFY(error.recoverable);
-}
-
-void TestErrorTypes::testCreateUnsupportedFormatError() {
-    ErrorInfo error = ErrorTypes::createUnsupportedFormatError("xxx", "yyy", "test");
-    QCOMPARE(error.code, ErrorCode::UnsupportedFormat);
-    QVERIFY(error.details.contains("xxx"));
-    QVERIFY(error.details.contains("yyy"));
-    QCOMPARE(error.context, QString("test"));
-    QVERIFY(!error.recoverable);
-}
-
 void TestErrorTypes::testCreateConversionFailedError() {
     ErrorInfo error = ErrorTypes::createConversionFailedError("ffmpeg crashed", "FFmpeg", "convert");
     QCOMPARE(error.code, ErrorCode::ConversionFailed);
@@ -173,14 +141,6 @@ void TestErrorTypes::testCreateConversionFailedError() {
     QCOMPARE(error.converterName, QString("FFmpeg"));
     QCOMPARE(error.context, QString("convert"));
     QVERIFY(error.recoverable);
-}
-
-void TestErrorTypes::testCreateTaskCancelledError() {
-    ErrorInfo error = ErrorTypes::createTaskCancelledError("task-99", "test");
-    QCOMPARE(error.code, ErrorCode::TaskCancelled);
-    QCOMPARE(error.taskId, QString("task-99"));
-    QCOMPARE(error.context, QString("test"));
-    QVERIFY(!error.recoverable);
 }
 
 void TestErrorTypes::testCreateProcessError() {

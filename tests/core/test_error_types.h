@@ -23,11 +23,7 @@ private slots:
 
     void testCreateError();
     void testCreateFileNotFoundError();
-    void testCreatePermissionDeniedError();
-    void testCreateConverterNotAvailableError();
-    void testCreateUnsupportedFormatError();
     void testCreateConversionFailedError();
-    void testCreateTaskCancelledError();
     void testCreateProcessError();
 };
 

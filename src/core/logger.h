@@ -1,7 +1,6 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include "ilogger.h"
 #include <QString>
 #include <QFile>
 #include <QTextStream>
@@ -10,38 +9,45 @@
 #include <QSet>
 #include <QFileInfo>
 
-class Logger : public ILogger {
+class Logger {
 public:
+    enum class Level {
+        Debug,
+        Info,
+        Warning,
+        Error
+    };
+
     Logger();
-    ~Logger() override;
+    ~Logger();
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
 
-    void setLogFile(const QString& filePath) override;
-    void setLevel(Level level) override;
-    Level level() const override;
+    void setLogFile(const QString& filePath);
+    void setLevel(Level level);
+    Level level() const;
 
-    void setConsoleOutput(bool enabled) override;
-    void setFileOutput(bool enabled) override;
-    void closeLogFile() override;
+    void setConsoleOutput(bool enabled);
+    void setFileOutput(bool enabled);
+    void closeLogFile();
 
-    void setMaxFileSize(qint64 maxSize) override;
-    qint64 maxFileSize() const override;
+    void setMaxFileSize(qint64 maxSize);
+    qint64 maxFileSize() const;
 
-    void setMaxBackupFiles(int count) override;
-    int maxBackupFiles() const override;
+    void setMaxBackupFiles(int count);
+    int maxBackupFiles() const;
 
-    void enableModule(const QString& module) override;
-    void disableModule(const QString& module) override;
-    void setModuleFilter(const QSet<QString>& modules) override;
-    void clearModuleFilter() override;
-    bool isModuleEnabled(const QString& module) const override;
+    void enableModule(const QString& module);
+    void disableModule(const QString& module);
+    void setModuleFilter(const QSet<QString>& modules);
+    void clearModuleFilter();
+    bool isModuleEnabled(const QString& module) const;
 
-    void log(Level level, const QString& module, const QString& message) override;
-    void debug(const QString& module, const QString& message) override;
-    void info(const QString& module, const QString& message) override;
-    void warning(const QString& module, const QString& message) override;
-    void error(const QString& module, const QString& message) override;
+    void log(Level level, const QString& module, const QString& message);
+    void debug(const QString& module, const QString& message);
+    void info(const QString& module, const QString& message);
+    void warning(const QString& module, const QString& message);
+    void error(const QString& module, const QString& message);
 
 private:
     QString levelToString(Level level) const;
@@ -65,6 +71,10 @@ private:
     QSet<QString> m_enabledModules;
     bool m_useModuleFilter;
 };
+
+/// Global logger pointer used by LOG_* convenience macros.
+/// Set at application startup (main.cpp) before any logging occurs.
+extern Logger* g_logger;
 
 // Convenience macros — check g_logger before dereferencing so they
 // safely degrade to a no-op when no logger has been installed.
