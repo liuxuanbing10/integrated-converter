@@ -21,6 +21,7 @@
 #include <QFileInfo>
 #include <QStyle>
 #include <QStyleHints>
+#include <QCloseEvent>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
@@ -702,6 +703,14 @@ void MainWindow::onAbout() {
 
 void MainWindow::onExit() {
     close();
+}
+
+void MainWindow::closeEvent(QCloseEvent* event) {
+    // Cancel all running tasks before the window is destroyed.
+    // This kills child processes (FFmpeg/Pandoc/ImageMagick) so they don't
+    // become orphans that outlive the application.
+    TaskManager::instance()->cancelAllTasks();
+    event->accept();
 }
 
 void MainWindow::onTaskAdded(const QString& taskId) {

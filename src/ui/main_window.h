@@ -71,6 +71,10 @@ private:
     void addFilesAndAutoRoute(const QStringList& filePaths);
 
 protected:
+    // Cancel running tasks before the window is destroyed so child processes
+    // (FFmpeg, Pandoc, ImageMagick) are killed instead of becoming orphans.
+    void closeEvent(QCloseEvent* event) override;
+
     // Drag-and-drop support: accept files dropped from Explorer / Finder etc.
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;

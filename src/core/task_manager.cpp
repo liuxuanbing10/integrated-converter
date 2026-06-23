@@ -23,7 +23,7 @@ TaskManager::TaskManager()
 
 TaskManager::~TaskManager() {
     QMutexLocker locker(&m_mutex);
-    cancelAllTasks();
+    cancelAllTasksInternal();
     m_threadPool->waitForDone(5000);
     qDeleteAll(m_tasks);
     m_tasks.clear();
@@ -178,7 +178,12 @@ void TaskManager::cancelTask(const QString& taskId) {
 
 void TaskManager::cancelAllTasks() {
     QMutexLocker locker(&m_mutex);
-    // First: kill all running converter processes to orphaned children
+    cancelAllTasksInternal();
+}
+
+void TaskManager::cancelAllTasksInternal() {
+    // NOTE: caller MUST already hold m_mutex (no lock here!)
+    // First: kill all running converter processes to avoid orphaned children
     QSet<QString> convertersToCancel;
     for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
         ConversionTask* task = it.value();

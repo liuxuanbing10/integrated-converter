@@ -163,6 +163,11 @@ int main(int argc, char* argv[]) {
     mainWindow.show();
     int result = app.exec();
 
+    // Safety-net: cancel any tasks that survived closeEvent (e.g. race
+    // between signal delivery and static destruction).  This is a no-op
+    // when all tasks were already cancelled by MainWindow::closeEvent.
+    TaskManager::instance()->cancelAllTasks();
+
     // Requirement 5: ensure console closes with the GUI application
 #ifdef Q_OS_WIN
     // On MinGW builds, WIN32_EXECUTABLE is OFF, so a console is allocated.

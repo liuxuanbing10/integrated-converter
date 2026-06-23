@@ -84,6 +84,9 @@ private:
     void insertTaskByPriority(const QString& taskId);
     void updateTaskPriority(const QString& taskId);
 
+    /// Core cancel logic — caller MUST already hold m_mutex.
+    void cancelAllTasksInternal();
+
     QMap<QString, std::shared_ptr<IConverter>> m_converters;
     QMap<QString, ConversionTask*> m_tasks;
     QMap<QString, TaskRunnable*> m_runningTasks;
