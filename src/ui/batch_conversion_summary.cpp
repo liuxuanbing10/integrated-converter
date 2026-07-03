@@ -38,11 +38,11 @@ void BatchConversionSummary::setupUI() {
     m_successLabel = new QLabel(tr("成功: 0"));
     m_failedLabel = new QLabel(tr("失败: 0"));
     m_timeLabel = new QLabel(tr("耗时: 0秒"));
-    QString labelStyle = "padding: 6px 12px; border-radius: 4px; font-weight: bold;";
-    m_totalLabel->setStyleSheet(labelStyle + "background-color: #E3F2FD; color: #1565C0;");
-    m_successLabel->setStyleSheet(labelStyle + "background-color: #E8F5E9; color: #2E7D32;");
-    m_failedLabel->setStyleSheet(labelStyle + "background-color: #FFEBEE; color: #C62828;");
-    m_timeLabel->setStyleSheet(labelStyle + "background-color: #ECEFF1; color: #455A64;");
+    QString labelStyle = "padding: 6px 12px; border-radius: 8px; font-weight: 600;";
+    m_totalLabel->setStyleSheet(labelStyle + "background-color: #f3f7ff; color: #1664ff;");
+    m_successLabel->setStyleSheet(labelStyle + "background-color: #e2f5eb; color: #2a814b;");
+    m_failedLabel->setStyleSheet(labelStyle + "background-color: #feeced; color: #d7312a;");
+    m_timeLabel->setStyleSheet(labelStyle + "background-color: #f7f9fb; color: #4e5969;");
     statsLayout->addWidget(m_totalLabel);
     statsLayout->addWidget(m_successLabel);
     statsLayout->addWidget(m_failedLabel);
@@ -71,18 +71,19 @@ void BatchConversionSummary::setupUI() {
     m_resultTable->setAlternatingRowColors(true);
     m_resultTable->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QTableWidget::item { padding: 4px; }"
-        "QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 4px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
+        "  color: #4e5969;"
         "}"
     );
     resultLayout->addWidget(m_resultTable);
@@ -104,12 +105,14 @@ void BatchConversionSummary::setupUI() {
     buttonLayout->addWidget(m_closeButton);
     mainLayout->addLayout(buttonLayout);
     setStyleSheet(
+        "QDialog { background-color: #f7f9fb; }"
         "QGroupBox {"
-        "  font-weight: bold;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
+        "  font-weight: 600;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
         "  margin-top: 8px;"
         "  padding-top: 8px;"
+        "  color: #1d2129;"
         "}"
         "QGroupBox::title {"
         "  subcontrol-origin: margin;"
@@ -118,13 +121,14 @@ void BatchConversionSummary::setupUI() {
         "}"
         "QPushButton {"
         "  padding: 6px 12px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  background-color: #fff;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  background-color: #ffffff;"
+        "  color: #1d2129;"
         "}"
-        "QPushButton:hover { background-color: #f0f0f0; }"
-        "QPushButton:pressed { background-color: #e0e0e0; }"
-        "QPushButton:disabled { background-color: #f5f5f5; color: #999; }"
+        "QPushButton:hover { background-color: #f7f9fb; }"
+        "QPushButton:pressed { background-color: #f1f4f8; }"
+        "QPushButton:disabled { background-color: #f7f9fb; color: #c9cdd4; }"
     );
 }
 void BatchConversionSummary::setupConnections() {
@@ -160,11 +164,11 @@ void BatchConversionSummary::updateDisplay() {
             result.success ? tr("成功") : tr("失败")
         );
         if (result.success) {
-            statusItem->setBackground(QColor(232, 245, 233));
-            statusItem->setForeground(QColor(46, 125, 50));
+            statusItem->setBackground(QColor(226, 245, 235));
+            statusItem->setForeground(QColor(42, 129, 75));
         } else {
-            statusItem->setBackground(QColor(255, 235, 238));
-            statusItem->setForeground(QColor(198, 40, 40));
+            statusItem->setBackground(QColor(254, 238, 237));
+            statusItem->setForeground(QColor(215, 49, 42));
         }
         m_resultTable->setItem(i, 0, statusItem);
         m_resultTable->setItem(i, 1, new QTableWidgetItem(inputInfo.fileName()));

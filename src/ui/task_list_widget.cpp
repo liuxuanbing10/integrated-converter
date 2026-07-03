@@ -53,18 +53,19 @@ void TaskListWidget::setupUI() {
     m_tableWidget->verticalHeader()->setDefaultSectionSize(36);
     m_tableWidget->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QTableWidget::item { padding: 4px; }"
-        "QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 6px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
+        "  color: #4e5969;"
         "}"
     );
     mainLayout->addWidget(m_tableWidget);
@@ -72,12 +73,13 @@ void TaskListWidget::setupUI() {
     setStyleSheet(
         "QPushButton {"
         "  padding: 6px 12px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  background-color: #fff;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  background-color: #ffffff;"
+        "  color: #1d2129;"
         "}"
-        "QPushButton:hover { background-color: #f0f0f0; }"
-        "QPushButton:pressed { background-color: #e0e0e0; }"
+        "QPushButton:hover { background-color: #f7f9fb; }"
+        "QPushButton:pressed { background-color: #f1f4f8; }"
     );
 }
 
@@ -116,12 +118,12 @@ void TaskListWidget::updateTableRow(int row, ConversionTask* task) {
     progressBar->setFormat(QString("%1%").arg(task->progress()));
     progressBar->setStyleSheet(
         "QProgressBar {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 3px;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 4px;"
         "  text-align: center;"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "}"
-        "QProgressBar::chunk { background-color: #4CAF50; border-radius: 2px; }"
+        "QProgressBar::chunk { background-color: #1664ff; border-radius: 3px; }"
     );
     m_progressBars[taskId] = progressBar;
     m_tableWidget->setCellWidget(row, 2, progressBar);
@@ -205,12 +207,12 @@ QString TaskListWidget::formatStatus(ConversionTask::Status status) const {
 
 QColor TaskListWidget::statusColor(ConversionTask::Status status) const {
     switch (status) {
-        case ConversionTask::Status::Pending:   return QColor(0x7B, 0x1F, 0xA2);
-        case ConversionTask::Status::Running:   return QColor(0xE6, 0x51, 0x00);
-        case ConversionTask::Status::Completed: return QColor(0x2E, 0x7D, 0x32);
-        case ConversionTask::Status::Failed:    return QColor(0xC6, 0x28, 0x28);
-        case ConversionTask::Status::Cancelled: return QColor(0x45, 0x5A, 0x64);
-        default:                                return QColor(0x00, 0x00, 0x00);
+        case ConversionTask::Status::Pending:   return QColor(0x38, 0x7b, 0xff);   // primary blue
+        case ConversionTask::Status::Running:   return QColor(0xbd, 0x7e, 0x00);   // warning
+        case ConversionTask::Status::Completed: return QColor(0x2a, 0x81, 0x4b);   // success
+        case ConversionTask::Status::Failed:    return QColor(0xd7, 0x31, 0x2a);   // danger
+        case ConversionTask::Status::Cancelled: return QColor(0x86, 0x90, 0x9c);  // muted
+        default:                                return QColor(0x0c, 0x0d, 0x0e);
     }
 }
 

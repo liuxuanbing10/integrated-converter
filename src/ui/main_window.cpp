@@ -142,15 +142,16 @@ void MainWindow::setupCentralWidget() {
     QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"),
         tr(" 选择文件（自动识别分类）"));
     globalAddBtn->setStyleSheet(
-        "QPushButton { padding: 10px 24px; border: 2px solid #1976D2; "
-        "border-radius: 8px; background-color: #1976D2; color: white; "
-        "font-size: 14px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #1565C0; }"
+        "QPushButton { padding: 10px 24px; border: none; "
+        "border-radius: 8px; background-color: #1664ff; color: #ffffff; "
+        "font-size: 14px; font-weight: 600; }"
+        "QPushButton:hover { background-color: #0055ff; }"
+        "QPushButton:pressed { background-color: #387bff; }"
     );
     connect(globalAddBtn, &QPushButton::clicked, this, &MainWindow::onAddFiles);
 
     QLabel* globalHint = new QLabel(tr("支持图片、文档、音频、视频文件，系统自动识别分类"));
-    globalHint->setStyleSheet("color: #666; font-size: 12px; padding-left: 8px;");
+    globalHint->setStyleSheet("color: #86909c; font-size: 12px; padding-left: 8px;");
 
     globalBar->addWidget(globalAddBtn);
     globalBar->addWidget(globalHint, 1);
@@ -163,15 +164,15 @@ void MainWindow::setupCentralWidget() {
     // -- Tab widget (left, stretchy) --
     m_tabWidget = new QTabWidget();
     m_tabWidget->setStyleSheet(
-        "QTabWidget::pane { border: 1px solid #ccc; border-radius: 4px; "
-        "background-color: #fafafa; padding: 0px; }"
-        "QTabBar::tab { padding: 8px 20px; font-size: 13px; font-weight: bold; "
-        "border: 1px solid #ccc; border-bottom: none; border-top-left-radius: 6px; "
-        "border-top-right-radius: 6px; margin-right: 2px; }"
-        "QTabBar::tab:selected { background-color: #fff; color: #1976D2; "
-        "border-bottom: 2px solid #1976D2; }"
-        "QTabBar::tab:!selected { background-color: #f0f0f0; color: #666; }"
-        "QTabBar::tab:hover:!selected { background-color: #e3f2fd; }"
+        "QTabWidget::pane { border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; padding: 0px; }"
+        "QTabBar::tab { padding: 8px 20px; font-size: 13px; font-weight: 600; "
+        "border: 1px solid #dde2e9; border-bottom: none; border-top-left-radius: 8px; "
+        "border-top-right-radius: 8px; margin-right: 2px; color: #4e5969; }"
+        "QTabBar::tab:selected { background-color: #ffffff; color: #1664ff; "
+        "border-bottom: 2px solid #1664ff; }"
+        "QTabBar::tab:!selected { background-color: #f7f9fb; }"
+        "QTabBar::tab:hover:!selected { background-color: #f3f7ff; }"
     );
 
     using Cat = FormatRegistry::Category;
@@ -192,11 +193,11 @@ void MainWindow::setupCentralWidget() {
     m_configPanel->setObjectName("configPanel");
     m_configPanel->setFixedWidth(280);
     m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #bbb; border-radius: 8px; "
+        "#configPanel { border: 1px solid #dde2e9; border-radius: 12px; "
         "background-color: #ffffff; }"
-        "#configPanel QLabel { color: #333; background: transparent; border: none; }"
-        "#configTitleTxt { color: #1565C0; font-size: 14px; font-weight: bold; }"
-        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: bold; }"
+        "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
+        "#configTitleTxt { color: #1664ff; font-size: 14px; font-weight: 600; }"
+        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: 600; color: #4e5969; }"
     );
 
     QVBoxLayout* configLayout = new QVBoxLayout(m_configPanel);
@@ -213,7 +214,7 @@ void MainWindow::setupCentralWidget() {
     // Separator line
     QFrame* sepLine = new QFrame();
     sepLine->setFrameShape(QFrame::HLine);
-    sepLine->setStyleSheet("QFrame { color: #e0e0e0; border: none; border-top: 1px solid #e0e0e0; }");
+    sepLine->setStyleSheet("QFrame { color: #eceded; border: none; border-top: 1px solid #eceded; }");
     configLayout->addWidget(sepLine);
 
     // Output format label
@@ -226,14 +227,14 @@ void MainWindow::setupCentralWidget() {
     m_formatCombo = new QComboBox();
     m_formatCombo->setMinimumHeight(28);
     m_formatCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 2px solid #1976D2; border-radius: 5px; "
-        "background-color: #ffffff; color: #333; font-size: 12px; min-width: 100px; }"
+        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
         "QComboBox::drop-down { border: none; width: 22px; "
         "background-color: #ffffff; }"
         "QComboBox::down-arrow { width: 10px; height: 10px; }"
         "QComboBox QAbstractItemView { "
-        "border: 1px solid #ccc; border-radius: 4px; background-color: #ffffff; "
-        "color: #333; selection-background-color: #e3f2fd; selection-color: #000; "
+        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
+        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
         "font-size: 12px; }"
     );
     configLayout->addWidget(m_formatCombo);
@@ -252,8 +253,8 @@ void MainWindow::setupCentralWidget() {
     m_outputDirEdit->setPlaceholderText(tr("留空则使用源文件所在目录"));
     m_outputDirEdit->setMinimumHeight(28);
     m_outputDirEdit->setStyleSheet(
-        "QLineEdit { padding: 3px 8px; border: 1px solid #bbb; border-radius: 5px; "
-        "background-color: #ffffff; color: #333; font-size: 12px; }"
+        "QLineEdit { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; color: #1d2129; font-size: 12px; }"
     );
     dirRow->addWidget(m_outputDirEdit, 1);
 
@@ -261,9 +262,9 @@ void MainWindow::setupCentralWidget() {
     browseBtn->setMinimumHeight(28);
     browseBtn->setFixedWidth(50);
     browseBtn->setStyleSheet(
-        "QPushButton { padding: 3px 8px; border: 1px solid #bbb; border-radius: 5px; "
-        "background-color: #f0f0f0; color: #333; font-size: 12px; }"
-        "QPushButton:hover { background-color: #e0e0e0; }"
+        "QPushButton { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #f7f9fb; color: #4e5969; font-size: 12px; }"
+        "QPushButton:hover { background-color: #f1f4f8; }"
     );
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this,
@@ -285,10 +286,10 @@ void MainWindow::setupCentralWidget() {
     m_paramsBtn->setMinimumHeight(28);
     m_paramsBtn->setCursor(Qt::PointingHandCursor);
     m_paramsBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #64B5F6; border-radius: 5px; "
-        "background-color: #E3F2FD; color: #1565C0; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #BBDEFB; }"
-        "QPushButton:pressed { background-color: #90CAF9; }"
+        "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+        "background-color: #f3f7ff; color: #1664ff; font-size: 12px; font-weight: 600; }"
+        "QPushButton:hover { background-color: #ebf1ff; }"
+        "QPushButton:pressed { background-color: #ccddff; }"
     );
     m_paramsBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_paramsBtn);
@@ -299,11 +300,11 @@ void MainWindow::setupCentralWidget() {
     m_convertBtn->setMinimumHeight(30);
     m_convertBtn->setCursor(Qt::PointingHandCursor);
     m_convertBtn->setStyleSheet(
-        "QPushButton { border: none; border-radius: 5px; "
-        "background-color: #1976D2; color: white; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #1565C0; }"
-        "QPushButton:pressed { background-color: #0D47A1; }"
-        "QPushButton:disabled { background-color: #ccc; color: #888; }"
+        "QPushButton { border: none; border-radius: 8px; "
+        "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
+        "QPushButton:hover { background-color: #0055ff; }"
+        "QPushButton:pressed { background-color: #387bff; }"
+        "QPushButton:disabled { background-color: #eceded; color: #c9cdd4; }"
     );
     m_convertBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_convertBtn);
@@ -315,8 +316,8 @@ void MainWindow::setupCentralWidget() {
     // ── Bottom: progress + task list ──────────────────────────────
     QGroupBox* taskGroup = new QGroupBox(tr("任务列表"));
     taskGroup->setStyleSheet(
-        "QGroupBox { font-weight: bold; border: 1px solid #ccc; border-radius: 4px; "
-        "margin-top: 8px; padding-top: 8px; }"
+        "QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; "
+        "margin-top: 8px; padding-top: 8px; color: #1d2129; }"
         "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }"
     );
     QVBoxLayout* taskLayout = new QVBoxLayout(taskGroup);
@@ -455,10 +456,10 @@ void MainWindow::onConversionParams() {
 
     // Reset button style before opening dialog
     m_paramsBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #64B5F6; border-radius: 6px; "
-        "background-color: #E3F2FD; color: #1565C0; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #BBDEFB; }"
-        "QPushButton:pressed { background-color: #90CAF9; }"
+        "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+        "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
+        "QPushButton:hover { background-color: #ebf1ff; }"
+        "QPushButton:pressed { background-color: #ccddff; }"
     );
 
     ConversionParamsDialog dialog(this);
@@ -491,9 +492,9 @@ void MainWindow::onConversionParams() {
 
         // Visual feedback
         m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 2px solid #4CAF50; border-radius: 6px; "
-            "background-color: #E8F5E9; color: #2E7D32; font-size: 13px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #C8E6C9; }"
+            "QPushButton { border: 2px solid #1ebf6f; border-radius: 8px; "
+            "background-color: #e2f5eb; color: #2a814b; font-size: 13px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #8dd8b3; }"
         );
         m_statusLabel->setText(tr("转换参数已设置"));
     }
@@ -510,92 +511,92 @@ void MainWindow::toggleTheme() {
 
 void MainWindow::applyLightTheme() {
     QString style = R"(
-        QMainWindow { background-color: #f5f5f5; }
-        QMenuBar { background-color: #ffffff; border-bottom: 1px solid #e0e0e0; }
-        QMenuBar::item { padding: 6px 12px; background: transparent; }
-        QMenuBar::item:selected { background-color: #e3f2fd; }
-        QMenu { background-color: #ffffff; border: 1px solid #e0e0e0; }
-        QMenu::item { padding: 6px 30px 6px 20px; }
-        QMenu::item:selected { background-color: #e3f2fd; }
-        QToolBar { background-color: #ffffff; border-bottom: 1px solid #e0e0e0; spacing: 5px; padding: 4px; }
-        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; }
-        QToolBar QToolButton:hover { background-color: #e3f2fd; }
-        QStatusBar { background-color: #ffffff; border-top: 1px solid #e0e0e0; }
-        QGroupBox { font-weight: bold; border: 1px solid #ccc; border-radius: 4px; margin-top: 8px; padding-top: 8px; }
+        QMainWindow { background-color: #f7f9fb; }
+        QMenuBar { background-color: #ffffff; border-bottom: 1px solid #dde2e9; }
+        QMenuBar::item { padding: 6px 12px; background: transparent; color: #1d2129; }
+        QMenuBar::item:selected { background-color: #f3f7ff; }
+        QMenu { background-color: #ffffff; border: 1px solid #dde2e9; }
+        QMenu::item { padding: 6px 30px 6px 20px; color: #1d2129; }
+        QMenu::item:selected { background-color: #f3f7ff; }
+        QToolBar { background-color: #ffffff; border-bottom: 1px solid #dde2e9; spacing: 5px; padding: 4px; }
+        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #4e5969; }
+        QToolBar QToolButton:hover { background-color: #f3f7ff; }
+        QStatusBar { background-color: #ffffff; border-top: 1px solid #dde2e9; color: #86909c; }
+        QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; margin-top: 8px; padding-top: 8px; color: #1d2129; }
         QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
-        QTableWidget { border: 1px solid #ccc; border-radius: 4px; gridline-color: #e0e0e0; background: #fff; }
-        QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }
-        QHeaderView::section { background-color: #f5f5f5; border: none; border-bottom: 1px solid #ccc; padding: 4px; font-weight: bold; }
-        QPushButton { padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background-color: #fff; }
-        QPushButton:hover { background-color: #f0f0f0; }
-        QPushButton:disabled { background-color: #f5f5f5; color: #999; }
-        QCheckBox { spacing: 6px; }
-        QLabel { color: #333; }
+        QTableWidget { border: 1px solid #dde2e9; border-radius: 8px; gridline-color: #eceded; background: #ffffff; }
+        QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }
+        QHeaderView::section { background-color: #f7f9fb; border: none; border-bottom: 1px solid #dde2e9; padding: 4px; font-weight: 600; color: #4e5969; }
+        QPushButton { padding: 6px 12px; border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; color: #1d2129; }
+        QPushButton:hover { background-color: #f7f9fb; }
+        QPushButton:disabled { background-color: #f7f9fb; color: #c9cdd4; }
+        QCheckBox { spacing: 6px; color: #1d2129; }
+        QLabel { color: #1d2129; }
+        QScrollBar:vertical { background: #f7f9fb; width: 8px; border-radius: 4px; }
+        QScrollBar::handle:vertical { background: #c9cdd4; border-radius: 4px; min-height: 30px; }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
     )";
     setStyleSheet(style);
-    // Re-apply config panel-specific styles that the global theme might override
     m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #bbb; border-radius: 8px; "
+        "#configPanel { border: 1px solid #dde2e9; border-radius: 12px; "
         "background-color: #ffffff; }"
-        "#configPanel QLabel { color: #333; background: transparent; border: none; }"
-        "#configTitleTxt { color: #1565C0; font-size: 16px; font-weight: bold; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: bold; }"
+        "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
+        "#configTitleTxt { color: #1664ff; font-size: 16px; font-weight: 600; }"
+        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #4e5969; }"
     );
-    // Reset params button to light style unless it was customized (green for accepted)
     QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#4CAF50")) {
+    if (!currentBtnStyle.contains("#1ebf6f")) {
         m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 1px solid #64B5F6; border-radius: 6px; "
-            "background-color: #E3F2FD; color: #1565C0; font-size: 13px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #BBDEFB; }"
-            "QPushButton:pressed { background-color: #90CAF9; }"
+            "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+            "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
+            "QPushButton:hover { background-color: #ebf1ff; }"
+            "QPushButton:pressed { background-color: #ccddff; }"
         );
     }
 }
 
 void MainWindow::applyDarkTheme() {
     QString style = R"(
-        QMainWindow { background-color: #1e1e1e; }
-        QMenuBar { background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c; color: #e0e0e0; }
-        QMenuBar::item { padding: 6px 12px; background: transparent; color: #e0e0e0; }
-        QMenuBar::item:selected { background-color: #094771; }
-        QMenu { background-color: #2d2d2d; border: 1px solid #3c3c3c; color: #e0e0e0; }
-        QMenu::item { padding: 6px 30px 6px 20px; color: #e0e0e0; }
-        QMenu::item:selected { background-color: #094771; }
-        QToolBar { background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c; spacing: 5px; padding: 4px; }
-        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #e0e0e0; }
-        QToolBar QToolButton:hover { background-color: #094771; }
-        QStatusBar { background-color: #2d2d2d; border-top: 1px solid #3c3c3c; color: #e0e0e0; }
-        QGroupBox { font-weight: bold; border: 1px solid #3c3c3c; border-radius: 4px; margin-top: 8px; padding-top: 8px; }
+        QMainWindow { background-color: #0c0d0e; }
+        QMenuBar { background-color: #1d2129; border-bottom: 1px solid #333333; color: #eceded; }
+        QMenuBar::item { padding: 6px 12px; background: transparent; color: #eceded; }
+        QMenuBar::item:selected { background-color: rgba(56, 123, 255, 0.16); }
+        QMenu { background-color: #1d2129; border: 1px solid #333333; color: #eceded; }
+        QMenu::item { padding: 6px 30px 6px 20px; color: #eceded; }
+        QMenu::item:selected { background-color: rgba(56, 123, 255, 0.16); }
+        QToolBar { background-color: #1d2129; border-bottom: 1px solid #333333; spacing: 5px; padding: 4px; }
+        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #eceded; }
+        QToolBar QToolButton:hover { background-color: rgba(56, 123, 255, 0.16); }
+        QStatusBar { background-color: #1d2129; border-top: 1px solid #333333; color: #86909c; }
+        QGroupBox { font-weight: 600; border: 1px solid #333333; border-radius: 8px; margin-top: 8px; padding-top: 8px; color: #eceded; }
         QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
-        QTableWidget { border: 1px solid #3c3c3c; border-radius: 4px; gridline-color: #3c3c3c; background: #252526; }
-        QTableWidget::item:selected { background-color: #094771; color: #fff; }
-        QHeaderView::section { background-color: #2d2d2d; border: none; border-bottom: 1px solid #3c3c3c; padding: 4px; font-weight: bold; }
-        QPushButton { padding: 6px 12px; border: 1px solid #3c3c3c; border-radius: 4px; background-color: #333; color: #e0e0e0; }
-        QPushButton:hover { background-color: #094771; }
-        QPushButton:disabled { background-color: #2d2d2d; color: #666; }
-        QCheckBox { spacing: 6px; color: #e0e0e0; }
-        QLabel { color: #e0e0e0; }
-        QScrollBar:vertical { background: #2d2d2d; width: 12px; }
-        QScrollBar::handle:vertical { background: #555; border-radius: 6px; min-height: 30px; }
+        QTableWidget { border: 1px solid #333333; border-radius: 8px; gridline-color: #333333; background: #1d2129; }
+        QTableWidget::item:selected { background-color: rgba(56, 123, 255, 0.16); color: #ffffff; }
+        QHeaderView::section { background-color: #1d2129; border: none; border-bottom: 1px solid #333333; padding: 4px; font-weight: 600; color: #eceded; }
+        QPushButton { padding: 6px 12px; border: 1px solid #333333; border-radius: 8px; background-color: #1d2129; color: #eceded; }
+        QPushButton:hover { background-color: rgba(56, 123, 255, 0.16); }
+        QPushButton:disabled { background-color: #1d2129; color: #41464f; }
+        QCheckBox { spacing: 6px; color: #eceded; }
+        QLabel { color: #eceded; }
+        QScrollBar:vertical { background: #1d2129; width: 8px; border-radius: 4px; }
+        QScrollBar::handle:vertical { background: #41464f; border-radius: 4px; min-height: 30px; }
         QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
     )";
     setStyleSheet(style);
     m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #555; border-radius: 8px; "
-        "background-color: #252526; }"
-        "#configPanel QLabel { color: #e0e0e0; background: transparent; border: none; }"
-        "#configTitleTxt { color: #64B5F6; font-size: 16px; font-weight: bold; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: bold; }"
+        "#configPanel { border: 1px solid #333333; border-radius: 12px; "
+        "background-color: #1d2129; }"
+        "#configPanel QLabel { color: #eceded; background: transparent; border: none; }"
+        "#configTitleTxt { color: #387bff; font-size: 16px; font-weight: 600; }"
+        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #86909c; }"
     );
-    // Reset params button to dark style unless it was customized (green for accepted)
     QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#4CAF50")) {
+    if (!currentBtnStyle.contains("#1ebf6f")) {
         m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 1px solid #1565C0; border-radius: 6px; "
-            "background-color: #0D47A1; color: #90CAF9; font-size: 13px; font-weight: bold; }"
-            "QPushButton:hover { background-color: #1565C0; }"
-            "QPushButton:pressed { background-color: #1976D2; }"
+            "QPushButton { border: 1px solid #1664ff; border-radius: 8px; "
+            "background-color: rgba(22, 100, 255, 0.12); color: #387bff; font-size: 13px; font-weight: 600; }"
+            "QPushButton:hover { background-color: rgba(22, 100, 255, 0.24); }"
+            "QPushButton:pressed { background-color: rgba(22, 100, 255, 0.32); }"
         );
     }
 }

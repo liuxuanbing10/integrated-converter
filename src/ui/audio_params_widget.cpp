@@ -36,14 +36,14 @@ void AudioParamsWidget::setupUI() {
     m_codecCombo->addItem("WAV (PCM)", "pcm_s16le");
     m_codecCombo->setMinimumHeight(32);
     m_codecCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 2px solid #1976D2; border-radius: 5px; "
-        "background-color: #ffffff; color: #333; font-size: 12px; min-width: 100px; }"
+        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
         "QComboBox::drop-down { border: none; width: 22px; "
         "background-color: #ffffff; }"
         "QComboBox::down-arrow { width: 10px; height: 10px; }"
         "QComboBox QAbstractItemView { "
-        "border: 1px solid #ccc; border-radius: 4px; background-color: #ffffff; "
-        "color: #333; selection-background-color: #e3f2fd; selection-color: #000; "
+        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
+        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
         "font-size: 12px; }"
     );
     codecLayout->addWidget(m_codecCombo, 1);
@@ -106,7 +106,7 @@ void AudioParamsWidget::setupUI() {
     bitrateGrid->addLayout(vbrLayout, 3, 0, 1, 2);
 
     QLabel* vbrHint = new QLabel(tr("提示: VBR质量 0=最佳质量(文件大), 9=最大压缩(质量低)"));
-    vbrHint->setStyleSheet("color: #888; font-size: 11px;");
+    vbrHint->setStyleSheet("color: #86909c; font-size: 11px;");
     bitrateGrid->addWidget(vbrHint, 4, 0, 1, 2);
 
     mainLayout->addWidget(bitrateGroup);
@@ -117,9 +117,9 @@ void AudioParamsWidget::setupUI() {
     m_previewLabel = new QLabel();
     m_previewLabel->setWordWrap(true);
     m_previewLabel->setStyleSheet(
-        "QLabel { background-color: #f5f5f5; border: 1px solid #e0e0e0; "
-        "border-radius: 6px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
-        "font-size: 12px; color: #333; }"
+        "QLabel { background-color: #f7f9fb; border: 1px solid #eceded; "
+        "border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
+        "font-size: 12px; color: #1d2129; }"
     );
     m_previewLabel->setMinimumHeight(200);
     previewLayout->addWidget(m_previewLabel);

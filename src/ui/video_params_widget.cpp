@@ -44,14 +44,14 @@ void VideoParamsWidget::setupUI() {
     m_videoCodecCombo->addItem(tr("自动"), "auto");
     m_videoCodecCombo->setMinimumHeight(32);
     m_videoCodecCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 2px solid #1976D2; border-radius: 5px; "
-        "background-color: #ffffff; color: #333; font-size: 12px; min-width: 100px; }"
+        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
         "QComboBox::drop-down { border: none; width: 22px; "
         "background-color: #ffffff; }"
         "QComboBox::down-arrow { width: 10px; height: 10px; }"
         "QComboBox QAbstractItemView { "
-        "border: 1px solid #ccc; border-radius: 4px; background-color: #ffffff; "
-        "color: #333; selection-background-color: #e3f2fd; selection-color: #000; "
+        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
+        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
         "font-size: 12px; }"
     );
     codecGrid->addWidget(m_videoCodecCombo, 0, 1);
@@ -90,7 +90,7 @@ void VideoParamsWidget::setupUI() {
     qualityLayout->addLayout(crfRow);
 
     QLabel* crfHint = new QLabel(tr("提示: 0=无损, 23=默认, 51=最差质量/最小文件"));
-    crfHint->setStyleSheet("color: #888; font-size: 11px;");
+    crfHint->setStyleSheet("color: #86909c; font-size: 11px;");
     qualityLayout->addWidget(crfHint);
 
     mainLayout->addWidget(qualityGroup);
@@ -106,7 +106,7 @@ void VideoParamsWidget::setupUI() {
     m_resolutionInput->setMaxLength(21);
     m_resolutionInput->setMinimumHeight(30);
     m_resolutionInput->setStyleSheet(
-        "QLineEdit { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }"
+        "QLineEdit { padding: 4px 8px; border: 1px solid #dde2e9; border-radius: 8px; font-size: 13px; }"
     );
     QRegularExpression resRx(R"(^\d+[xX]\d+$|^$)");
     m_resolutionInput->setValidator(new QRegularExpressionValidator(resRx, this));
@@ -174,7 +174,7 @@ void VideoParamsWidget::setupUI() {
     advGrid->addWidget(m_twoPassCheckBox, 1, 0, 1, 2);
 
     QLabel* presetHint = new QLabel(tr("提示: ultrafast=编码快但文件大, veryslow=编码慢但文件小"));
-    presetHint->setStyleSheet("color: #888; font-size: 11px;");
+    presetHint->setStyleSheet("color: #86909c; font-size: 11px;");
     advGrid->addWidget(presetHint, 2, 0, 1, 2);
 
     mainLayout->addWidget(advGroup);
@@ -185,9 +185,9 @@ void VideoParamsWidget::setupUI() {
     m_previewLabel = new QLabel();
     m_previewLabel->setWordWrap(true);
     m_previewLabel->setStyleSheet(
-        "QLabel { background-color: #f5f5f5; border: 1px solid #e0e0e0; "
-        "border-radius: 6px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
-        "font-size: 12px; color: #333; }"
+        "QLabel { background-color: #f7f9fb; border: 1px solid #eceded; "
+        "border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
+        "font-size: 12px; color: #1d2129; }"
     );
     m_previewLabel->setMinimumHeight(200);
     previewLayout->addWidget(m_previewLabel);

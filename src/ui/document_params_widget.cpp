@@ -66,7 +66,7 @@ void DocumentParamsWidget::setupUI() {
         sp->setDecimals(1);
         sp->setMinimumHeight(30);
         sp->setStyleSheet(
-            "QDoubleSpinBox { padding: 4px 18px 4px 4px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }"
+            "QDoubleSpinBox { padding: 4px 18px 4px 4px; border: 1px solid #dde2e9; border-radius: 8px; font-size: 13px; }"
         );
         return sp;
     };
@@ -132,9 +132,9 @@ void DocumentParamsWidget::setupUI() {
     m_previewLabel = new QLabel();
     m_previewLabel->setWordWrap(true);
     m_previewLabel->setStyleSheet(
-        "QLabel { background-color: #f5f5f5; border: 1px solid #e0e0e0; "
-        "border-radius: 6px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
-        "font-size: 12px; color: #333; }"
+        "QLabel { background-color: #f7f9fb; border: 1px solid #eceded; "
+        "border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
+        "font-size: 12px; color: #1d2129; }"
     );
     m_previewLabel->setMinimumHeight(200);
     previewLayout->addWidget(m_previewLabel);

@@ -32,7 +32,7 @@ void BatchConvertDialog::setupUI() {
     QVBoxLayout* fileListLayout = new QVBoxLayout(m_fileListGroup);
     QHBoxLayout* countLayout = new QHBoxLayout();
     m_fileCountLabel = new QLabel(tr("共 0 个文件"));
-    m_fileCountLabel->setStyleSheet("font-weight: bold; color: #1565C0;");
+    m_fileCountLabel->setStyleSheet("font-weight: 600; color: #1664ff;");
     countLayout->addWidget(m_fileCountLabel);
     countLayout->addStretch();
     fileListLayout->addLayout(countLayout);
@@ -50,16 +50,17 @@ void BatchConvertDialog::setupUI() {
     m_fileTable->setAlternatingRowColors(true);
     m_fileTable->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 4px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
+        "  color: #4e5969;"
         "}"
     );
     fileListLayout->addWidget(m_fileTable);
@@ -110,12 +111,13 @@ void BatchConvertDialog::setupUI() {
     m_startButton->setStyleSheet(
         "QPushButton {"
         "  padding: 8px 20px;"
-        "  background-color: #4CAF50;"
-        "  color: white;"
+        "  background-color: #1ebf6f;"
+        "  color: #ffffff;"
         "  border: none;"
-        "  border-radius: 4px;"
+        "  border-radius: 8px;"
+        "  font-weight: 600;"
         "}"
-        "QPushButton:hover { background-color: #45a049; }"
+        "QPushButton:hover { background-color: #16b35f; }"
     );
     m_cancelButton = new QPushButton(tr("取消"));
     m_cancelButton->setIcon(QIcon(":/icons/cancel.svg"));
@@ -124,11 +126,12 @@ void BatchConvertDialog::setupUI() {
     mainLayout->addLayout(buttonLayout);
     setStyleSheet(
         "QGroupBox {"
-        "  font-weight: bold;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
+        "  font-weight: 600;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
         "  margin-top: 8px;"
         "  padding-top: 8px;"
+        "  color: #1d2129;"
         "}"
         "QGroupBox::title {"
         "  subcontrol-origin: margin;"
@@ -137,22 +140,23 @@ void BatchConvertDialog::setupUI() {
         "}"
         "QPushButton {"
         "  padding: 6px 12px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  background-color: #fff;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  background-color: #ffffff;"
+        "  color: #1d2129;"
         "}"
-        "QPushButton:hover { background-color: #f0f0f0; }"
+        "QPushButton:hover { background-color: #f7f9fb; }"
         "QLineEdit {"
         "  padding: 4px 8px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
         "}"
         "QComboBox {"
         "  padding: 4px 8px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
         "}"
-        "QCheckBox { spacing: 6px; }"
+        "QCheckBox { spacing: 6px; color: #1d2129; }"
     );
 }
 void BatchConvertDialog::setupConnections() {

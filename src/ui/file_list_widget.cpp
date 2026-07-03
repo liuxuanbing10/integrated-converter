@@ -32,7 +32,7 @@ void FileListWidget::setupUI() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     QHBoxLayout* headerLayout = new QHBoxLayout();
     m_infoLabel = new QLabel(tr("待转换文件 (0)"), this);
-    m_infoLabel->setStyleSheet("font-weight: bold; color: #333;");
+    m_infoLabel->setStyleSheet("font-weight: 600; color: #1d2129;");
     headerLayout->addWidget(m_infoLabel);
     headerLayout->addStretch();
     mainLayout->addLayout(headerLayout);
@@ -55,18 +55,18 @@ void FileListWidget::setupUI() {
     m_tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     m_tableWidget->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QTableWidget::item { padding: 4px; }"
-        "QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 4px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
         "}"
     );
     mainLayout->addWidget(m_tableWidget);
@@ -97,13 +97,13 @@ void FileListWidget::setupUI() {
     setStyleSheet(
         "QPushButton {"
         "  padding: 6px 12px;"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  background-color: #fff;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  background-color: #ffffff;"
         "}"
-        "QPushButton:hover { background-color: #f0f0f0; }"
-        "QPushButton:pressed { background-color: #e0e0e0; }"
-        "QPushButton:disabled { background-color: #f5f5f5; color: #999; }"
+        "QPushButton:hover { background-color: #f7f9fb; }"
+        "QPushButton:pressed { background-color: #eceded; }"
+        "QPushButton:disabled { background-color: #f7f9fb; color: #c9cdd4; }"
         "QCheckBox { spacing: 6px; }"
     );
 }
@@ -130,7 +130,7 @@ void FileListWidget::dragEnterEvent(QDragEnterEvent* event) {
         m_dragActive = true;
         m_tableWidget->setStyleSheet(
             m_tableWidget->styleSheet() +
-            "QTableWidget { border: 2px dashed #2196F3; background-color: #e3f2fd; }"
+            "QTableWidget { border: 2px dashed #1664ff; background-color: #f3f7ff; }"
         );
     }
 }
@@ -144,18 +144,18 @@ void FileListWidget::dragLeaveEvent(QDragLeaveEvent* event) {
     m_dragActive = false;
     m_tableWidget->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QTableWidget::item { padding: 4px; }"
-        "QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 4px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
         "}"
     );
 }
@@ -163,18 +163,18 @@ void FileListWidget::dropEvent(QDropEvent* event) {
     m_dragActive = false;
     m_tableWidget->setStyleSheet(
         "QTableWidget {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
-        "  gridline-color: #e0e0e0;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
+        "  gridline-color: #eceded;"
         "}"
         "QTableWidget::item { padding: 4px; }"
-        "QTableWidget::item:selected { background-color: #e3f2fd; color: #000; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
         "QHeaderView::section {"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
         "  border: none;"
-        "  border-bottom: 1px solid #ccc;"
+        "  border-bottom: 1px solid #dde2e9;"
         "  padding: 4px;"
-        "  font-weight: bold;"
+        "  font-weight: 600;"
         "}"
     );
     QList<QUrl> urls = event->mimeData()->urls();

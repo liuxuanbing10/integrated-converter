@@ -66,7 +66,7 @@ void ImageParamsWidget::setupUI() {
     m_resizeInput->setMaxLength(21);
     m_resizeInput->setMinimumHeight(32);
     m_resizeInput->setStyleSheet(
-        "QLineEdit { padding: 4px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }"
+        "QLineEdit { padding: 4px 8px; border: 1px solid #dde2e9; border-radius: 8px; font-size: 13px; }"
     );
     // Validation
     QRegularExpression resizeRx(R"(^\d+[xX]\d+!?$|^\d+%$|^x\d+$|^\d+$|^$)");
@@ -74,7 +74,7 @@ void ImageParamsWidget::setupUI() {
     resizeLayout->addWidget(m_resizeInput, 1);
 
     QLabel* hintLabel = new QLabel(tr("留空则不缩放"));
-    hintLabel->setStyleSheet("color: #999; font-size: 11px;");
+    hintLabel->setStyleSheet("color: #c9cdd4; font-size: 11px;");
     resizeLayout->addWidget(hintLabel);
 
     mainLayout->addWidget(resizeGroup);
@@ -125,9 +125,9 @@ void ImageParamsWidget::setupUI() {
     m_previewLabel = new QLabel();
     m_previewLabel->setWordWrap(true);
     m_previewLabel->setStyleSheet(
-        "QLabel { background-color: #f5f5f5; border: 1px solid #e0e0e0; "
-        "border-radius: 6px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
-        "font-size: 12px; color: #333; }"
+        "QLabel { background-color: #f7f9fb; border: 1px solid #eceded; "
+        "border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
+        "font-size: 12px; color: #1d2129; }"
     );
     m_previewLabel->setMinimumHeight(200);
     previewLayout->addWidget(m_previewLabel);

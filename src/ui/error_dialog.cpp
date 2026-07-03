@@ -41,7 +41,7 @@ void ErrorDialog::setupUi() {
     headerLayout->addWidget(m_iconLabel);
     QVBoxLayout* titleMessageLayout = new QVBoxLayout();
     m_titleLabel = new QLabel();
-    m_titleLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: #d32f2f;");
+    m_titleLabel->setStyleSheet("font-size: 14px; font-weight: 600; color: #d7312a;");
     m_titleLabel->setWordWrap(true);
     titleMessageLayout->addWidget(m_titleLabel);
     m_messageLabel = new QLabel();
@@ -52,11 +52,11 @@ void ErrorDialog::setupUi() {
     mainLayout->addLayout(headerLayout);
     m_suggestionLabel = new QLabel();
     m_suggestionLabel->setStyleSheet(
-        "background-color: #fff3e0; "
-        "border: 1px solid #ffb74d; "
-        "border-radius: 4px; "
+        "background-color: #fdf3de; "
+        "border: 1px solid #f8d080; "
+        "border-radius: 8px; "
         "padding: 8px; "
-        "font-size: 11px;"
+        "font-size: 11px; color: #bd7e00;"
     );
     m_suggestionLabel->setWordWrap(true);
     m_suggestionLabel->setVisible(false);
@@ -64,7 +64,7 @@ void ErrorDialog::setupUi() {
     QHBoxLayout* detailsHeaderLayout = new QHBoxLayout();
     m_detailsButton = new QPushButton(tr("显示详细信息"));
     m_detailsButton->setFlat(true);
-    m_detailsButton->setStyleSheet("color: #1976d2; text-align: left;");
+    m_detailsButton->setStyleSheet("color: #1664ff; text-align: left; font-weight: 600;");
     connect(m_detailsButton, &QPushButton::clicked, this, &ErrorDialog::onToggleDetails);
     detailsHeaderLayout->addWidget(m_detailsButton);
     detailsHeaderLayout->addStretch();

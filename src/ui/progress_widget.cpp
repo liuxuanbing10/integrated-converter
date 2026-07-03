@@ -35,7 +35,7 @@ void ProgressWidget::setupUI() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     m_currentFileLabel = new QLabel(tr("当前: 无"));
     m_currentFileLabel->setStyleSheet(
-        "padding: 4px 8px; background-color: #FFF8E1; border-radius: 4px; color: #F57C00;"
+        "padding: 4px 8px; background-color: #fdf3de; border-radius: 8px; color: #bd7e00; font-size: 12px;"
     );
     m_currentFileLabel->setWordWrap(true);
     mainLayout->addWidget(m_currentFileLabel);
@@ -43,10 +43,10 @@ void ProgressWidget::setupUI() {
     m_fileSizeLabel = new QLabel(tr("大小: --"), this);
     m_speedLabel = new QLabel(tr("速度: --"), this);
     m_bitrateLabel = new QLabel(tr("码率: --"), this);
-    QString infoStyle = "padding: 2px 6px; border-radius: 3px; font-size: 11px;";
-    m_fileSizeLabel->setStyleSheet(infoStyle + "background-color: #E8EAF6; color: #3F51B5;");
-    m_speedLabel->setStyleSheet(infoStyle + "background-color: #E0F2F1; color: #00695C;");
-    m_bitrateLabel->setStyleSheet(infoStyle + "background-color: #FCE4EC; color: #C2185B;");
+    QString infoStyle = "padding: 2px 6px; border-radius: 8px; font-size: 11px;";
+    m_fileSizeLabel->setStyleSheet(infoStyle + "background-color: #f3f7ff; color: #1664ff;");
+    m_speedLabel->setStyleSheet(infoStyle + "background-color: #e2f5eb; color: #2a814b;");
+    m_bitrateLabel->setStyleSheet(infoStyle + "background-color: #feeced; color: #d7312a;");
     infoLayout->addWidget(m_fileSizeLabel);
     infoLayout->addWidget(m_speedLabel);
     infoLayout->addWidget(m_bitrateLabel);
@@ -60,14 +60,15 @@ void ProgressWidget::setupUI() {
     m_progressBar->setFormat(tr("%p%"));
     m_progressBar->setStyleSheet(
         "QProgressBar {"
-        "  border: 1px solid #ccc;"
-        "  border-radius: 4px;"
+        "  border: 1px solid #dde2e9;"
+        "  border-radius: 8px;"
         "  text-align: center;"
-        "  background-color: #f5f5f5;"
+        "  background-color: #f7f9fb;"
+        "  color: #4e5969;"
         "}"
         "QProgressBar::chunk {"
-        "  background-color: #4CAF50;"
-        "  border-radius: 3px;"
+        "  background-color: #1664ff;"
+        "  border-radius: 7px;"
         "}"
     );
     progressLayout->addWidget(m_progressBar);
@@ -83,13 +84,13 @@ void ProgressWidget::setupUI() {
     m_completedLabel = new QLabel(tr("成功: 0"), this);
     m_failedLabel = new QLabel(tr("失败: 0"), this);
     m_timeLabel = new QLabel(tr("剩余: --"), this);
-    QString labelStyle = "padding: 2px 8px; border-radius: 3px; font-size: 12px;";
-    m_totalLabel->setStyleSheet(labelStyle + "background-color: #E3F2FD; color: #1565C0;");
-    m_runningLabel->setStyleSheet(labelStyle + "background-color: #FFF3E0; color: #E65100;");
-    m_pendingLabel->setStyleSheet(labelStyle + "background-color: #F3E5F5; color: #7B1FA2;");
-    m_completedLabel->setStyleSheet(labelStyle + "background-color: #E8F5E9; color: #2E7D32;");
-    m_failedLabel->setStyleSheet(labelStyle + "background-color: #FFEBEE; color: #C62828;");
-    m_timeLabel->setStyleSheet(labelStyle + "background-color: #ECEFF1; color: #455A64;");
+    QString labelStyle = "padding: 2px 8px; border-radius: 8px; font-size: 12px;";
+    m_totalLabel->setStyleSheet(labelStyle + "background-color: #f3f7ff; color: #1664ff;");
+    m_runningLabel->setStyleSheet(labelStyle + "background-color: #fdf3de; color: #bd7e00;");
+    m_pendingLabel->setStyleSheet(labelStyle + "background-color: #f3f7ff; color: #387bff;");
+    m_completedLabel->setStyleSheet(labelStyle + "background-color: #e2f5eb; color: #2a814b;");
+    m_failedLabel->setStyleSheet(labelStyle + "background-color: #feeced; color: #d7312a;");
+    m_timeLabel->setStyleSheet(labelStyle + "background-color: #f7f9fb; color: #4e5969;");
     statsLayout->addWidget(m_totalLabel);
     statsLayout->addWidget(m_runningLabel);
     statsLayout->addWidget(m_pendingLabel);

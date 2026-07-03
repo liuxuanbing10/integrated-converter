@@ -38,7 +38,7 @@ void FileCategoryWidget::setupUI() {
     // ── Category header ──────────────────────────────────────────
     m_infoLabel = new QLabel(categoryIcon(m_category) + tr(" %1 (0 个文件)").arg(m_categoryName));
     m_infoLabel->setStyleSheet(
-        "font-size: 15px; font-weight: bold; color: #1565C0; padding: 4px 0;"
+        "font-size: 15px; font-weight: 600; color: #1664ff; padding: 4px 0;"
     );
     mainLayout->addWidget(m_infoLabel);
 
@@ -46,17 +46,17 @@ void FileCategoryWidget::setupUI() {
     QHBoxLayout* btnRow = new QHBoxLayout();
     m_addBtn = new QPushButton(tr("添加文件"));
     m_addBtn->setStyleSheet(
-        "QPushButton { padding: 6px 14px; border: 1px solid #1976D2; "
-        "border-radius: 4px; background-color: #1976D2; color: white; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #1565C0; }"
+        "QPushButton { padding: 6px 14px; border: none; "
+        "border-radius: 8px; background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
+        "QPushButton:hover { background-color: #0055ff; }"
     );
     m_removeBtn = new QPushButton(tr("移除选中"));
     m_removeBtn->setEnabled(false);
     m_removeBtn->setStyleSheet(
-        "QPushButton { padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; "
-        "background-color: #fff; font-size: 13px; }"
-        "QPushButton:hover { background-color: #ffebee; border-color: #e53935; }"
-        "QPushButton:disabled { background-color: #f5f5f5; color: #999; }"
+        "QPushButton { padding: 6px 12px; border: 1px solid #dde2e9; border-radius: 8px; "
+        "background-color: #ffffff; font-size: 13px; color: #1d2129; }"
+        "QPushButton:hover { background-color: #feeced; border-color: #fa9ea3; color: #d7312a; }"
+        "QPushButton:disabled { background-color: #f7f9fb; color: #c9cdd4; border-color: #eceded; }"
     );
     m_clearBtn = new QPushButton(tr("清空"));
     m_clearBtn->setEnabled(false);
@@ -85,12 +85,12 @@ void FileCategoryWidget::setupUI() {
     m_fileTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_fileTable->setAlternatingRowColors(true);
     m_fileTable->setStyleSheet(
-        "QTableWidget { border: 1px solid #ccc; border-radius: 4px; "
-        "gridline-color: #e0e0e0; }"
+        "QTableWidget { border: 1px solid #dde2e9; border-radius: 8px; "
+        "gridline-color: #eceded; }"
         "QTableWidget::item { padding: 6px; }"
-        "QTableWidget::item:selected { background-color: #90CAF9; color: #000; }"
-        "QHeaderView::section { background-color: #f5f5f5; border: none; "
-        "border-bottom: 1px solid #ccc; padding: 6px; font-weight: bold; }"
+        "QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }"
+        "QHeaderView::section { background-color: #f7f9fb; border: none; "
+        "border-bottom: 1px solid #dde2e9; padding: 6px; font-weight: 600; color: #4e5969; }"
     );
     mainLayout->addWidget(m_fileTable, 1);
 }
