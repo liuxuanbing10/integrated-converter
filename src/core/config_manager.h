@@ -26,6 +26,7 @@ private:
     void initDefaultConfig();
     QString findExecutable(const QString& name);
     void detectFFmpegPath();
+    void detectFFprobePath();
     void detectPandocPath();
     void detectImageMagickPath();
     QVariantMap m_config;

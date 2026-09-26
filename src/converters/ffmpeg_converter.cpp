@@ -573,6 +573,43 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
     // kills the process and causes waitForFinished to return immediately.
     m_process->waitForFinished(-1);
     bool success = m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
+
+    // Read stderr directly — the onProcessReadyReadStandardError signal may
+    // never fire because QProcess lives in the worker thread while
+    // FFmpegConverter lives in the main thread (cross-thread = queued
+    // connection).  Collect output here while the process still exists.
+    QString stderrOutput = QString::fromUtf8(m_process->readAllStandardError());
+    m_errorBuffer += stderrOutput;
+
+    if (!success) {
+        // Build a detailed error so the user sees what FFmpeg actually reported.
+        QString detailMsg;
+        QStringList lines = stderrOutput.split('\n', Qt::SkipEmptyParts);
+        for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i) {
+            if (lines[i].contains("Error") || lines[i].contains("error") ||
+                lines[i].contains("Invalid") || lines[i].contains("failed")) {
+                detailMsg += lines[i].trimmed() + "\n";
+            }
+        }
+        ErrorInfo error;
+        if (m_process->exitStatus() == QProcess::CrashExit) {
+            error = ErrorTypes::createProcessError(ErrorCode::ProcessCrashed, "FFmpeg",
+                                                   QString(), "FFmpeg::runFFmpeg");
+        } else {
+            error = ErrorTypes::createConversionFailedError(
+                detailMsg.trimmed().isEmpty()
+                    ? tr("退出码: %1").arg(m_process->exitCode())
+                    : detailMsg.trimmed(),
+                "FFmpeg", "FFmpeg::runFFmpeg");
+        }
+        error.inputFile = m_currentInputFile;
+        error.outputFile = m_currentOutputFile;
+        m_lastError = error;
+        LOG_ERROR("FFmpeg", error.fullMessage());
+    } else {
+        LOG_INFO("FFmpeg", QString("转换完成: %1").arg(m_currentOutputFile));
+    }
+
     m_isRunning = false;
     // Destroy the finished QProcess to close OS pipe handles and prevent stale
     // queued signal events (readyReadStandardError, finished) from firing during

@@ -14,6 +14,7 @@ ConfigManager& ConfigManager::instance() {
 ConfigManager::ConfigManager() {
     initDefaultConfig();
     detectFFmpegPath();
+    detectFFprobePath();
     detectPandocPath();
     detectImageMagickPath();
 }
@@ -38,6 +39,26 @@ QString ConfigManager::findExecutable(const QString& name) {
     possiblePaths << QDir::rootPath() + "Program Files (x86)/ffmpeg/bin/" + name + ".exe";
     possiblePaths << QCoreApplication::applicationDirPath() + "/" + name;
     possiblePaths << QCoreApplication::applicationDirPath() + "/tools/" + name;
+    // ponytail: scan common package manager dirs (WinGet, scoop) for ffmpeg/pandoc/magick
+    QStringList pkgRoots = {
+        QDir::homePath() + "/AppData/Local/Microsoft/WinGet/Packages",
+        QDir::homePath() + "/scoop/apps"
+    };
+    for (const QString& root : pkgRoots) {
+        QDir rootDir(root);
+        if (!rootDir.exists()) continue;
+        for (const QString& pkg : rootDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            // ponytail: skip shared builds — DLLs can't be found by QProcess, causes crash
+            if (pkg.contains(QStringLiteral("Shared"), Qt::CaseInsensitive)) continue;
+            QString directBin = root + "/" + pkg + "/bin/" + name + ".exe";
+            if (QFileInfo::exists(directBin)) { possiblePaths << directBin; continue; }
+            QDir pkgDir(root + "/" + pkg);
+            for (const QString& sub : pkgDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+                QString deepBin = root + "/" + pkg + "/" + sub + "/bin/" + name + ".exe";
+                if (QFileInfo::exists(deepBin)) { possiblePaths << deepBin; }
+            }
+        }
+    }
     for (const QString& path : possiblePaths) {
         QFileInfo fi(path);
         if (fi.exists() && fi.isExecutable()) {
@@ -57,6 +78,13 @@ void ConfigManager::detectFFmpegPath() {
     if (detected != QStringLiteral("ffmpeg")) {
         m_config[QStringLiteral("ffmpegPath")] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到FFmpeg路径: %1").arg(detected));
+    }
+}
+void ConfigManager::detectFFprobePath() {
+    QString detected = findExecutable(QStringLiteral("ffprobe"));
+    if (detected != QStringLiteral("ffprobe")) {
+        m_config[QStringLiteral("ffprobePath")] = detected;
+        LOG_INFO("ConfigManager", QString("自动检测到FFprobe路径: %1").arg(detected));
     }
 }
 void ConfigManager::detectPandocPath() {
@@ -101,6 +129,22 @@ bool ConfigManager::loadConfig(const QString& filePath) {
     }
     m_config = doc.object().toVariantMap();
     m_configFilePath = filePath;
+    // ponytail: loadConfig() replaces m_config wholesale, overwriting auto-detected
+    // paths with bare names or stale Shared paths from config.json. Re-detect.
+    for (const auto& [key, name] : {
+        QPair{"ffmpegPath", "ffmpeg"}, QPair{"ffprobePath", "ffprobe"},
+        QPair{"pandocPath", "pandoc"}, QPair{"imagemagickPath", "magick"}
+    }) {
+        QString val = m_config.value(key).toString();
+        bool stale = (val == name) || val.contains("Shared", Qt::CaseInsensitive);
+        if (stale) {
+            QString detected = findExecutable(name);
+            if (detected != name) {
+                m_config[key] = detected;
+                LOG_INFO("ConfigManager", QString("配置加载后重新检测到%1: %2").arg(key, detected));
+            }
+        }
+    }
     LOG_INFO("ConfigManager", QString("配置已加载: %1").arg(filePath));
     return true;
 }
