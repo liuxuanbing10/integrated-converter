@@ -218,7 +218,12 @@ QStringList FFmpegConverter::buildVideoArgs(const QVariantMap& params) {
 QStringList FFmpegConverter::buildAudioArgs(const QVariantMap& params) {
     QStringList args;
     QString codec = params.value("audioCodec").toString();
-    if (!codec.isEmpty()) {
+    if (codec.compare(QStringLiteral("none"), Qt::CaseInsensitive) == 0) {
+        // UI "无音频" -> drop the audio stream entirely.
+        args << "-an";
+    } else if (!codec.isEmpty()) {
+        // "copy" passes through the registry lookup unchanged (ffmpeg-native);
+        // known names map to their encoder ids.
         const auto& reg = FormatRegistry::instance();
         args << "-c:a" << reg.ffmpegAudioCodec(codec);
     }
@@ -256,14 +261,19 @@ static const QSet<QString> s_validVideoCodecs = {
     "libx264", "libx265", "libvpx-vp9", "mpeg4", "h264_nvenc", "h264", "h265", "hevc", "vp9", "av1", "auto"
 };
 static const QSet<QString> s_validAudioCodecs = {
-    "libmp3lame", "aac", "libvorbis", "vorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus"
+    "libmp3lame", "aac", "libvorbis", "vorbis", "flac", "pcm_s16le", "libopus", "mp3", "opus",
+    // UI-exposed passthroughs (video_params_widget "复制源音频"/"无音频").
+    // FFmpeg accepts both natively; buildAudioArgs maps them to -c:a copy / -an.
+    "copy", "none"
 };
 static const QSet<QString> s_validPresets = {
     "ultrafast", "superfast", "veryfast", "faster", "fast",
     "medium", "slow", "slower", "veryslow"
 };
-static const QSet<int> s_validSampleRates = {8000, 11025, 16000, 22050, 44100, 48000, 96000};
-static const QSet<int> s_validChannels = {1, 2};
+// 192000 added: it is valid for ffmpeg -ar and exposed by audio_params_widget.
+static const QSet<int> s_validSampleRates = {8000, 11025, 16000, 22050, 44100, 48000, 96000, 192000};
+// 6 added: 5.1 surround, exposed by audio_params_widget and valid for -ac.
+static const QSet<int> s_validChannels = {1, 2, 6};
 static const QRegularExpression s_resolutionRe(R"(^\d+x\d+$)");
 
 bool FFmpegConverter::validateParams(const QVariantMap& params, QString& errorMsg) {
@@ -316,14 +326,14 @@ bool FFmpegConverter::validateParams(const QVariantMap& params, QString& errorMs
     // Validate sample rate
     int sampleRate = params.value("sampleRate", 0).toInt();
     if (sampleRate != 0 && !s_validSampleRates.contains(sampleRate)) {
-        errorMsg = QString("无效的采样率: %1 Hz (可选: 8000, 11025, 16000, 22050, 44100, 48000, 96000)").arg(sampleRate);
+        errorMsg = QString("无效的采样率: %1 Hz (可选: 8000, 11025, 16000, 22050, 44100, 48000, 96000, 192000)").arg(sampleRate);
         return false;
     }
 
     // Validate channels
     int channels = params.value("channels", 0).toInt();
     if (channels != 0 && !s_validChannels.contains(channels)) {
-        errorMsg = QString("无效的声道数: %1 (仅支持 1 或 2)").arg(channels);
+        errorMsg = QString("无效的声道数: %1 (仅支持 1, 2 或 6)").arg(channels);
         return false;
     }
 

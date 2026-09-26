@@ -28,6 +28,8 @@ private slots:
     void testGetDurationWithoutFFmpeg();
     void testCancel();
     void testSpeedMetrics();
+    void testUiCodecOptionsPassValidation();
+    void testUiAudioOptionsPassValidation();
 private:
     bool checkFFmpegAvailable();
     bool m_ffmpegAvailable;

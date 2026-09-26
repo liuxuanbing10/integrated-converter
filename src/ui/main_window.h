@@ -17,6 +17,7 @@
 #include <QPushButton>
 #include <QFrame>
 #include <QMap>
+#include <QSet>
 #include "format_registry.h"
 
 class TaskListWidget;
@@ -59,7 +60,10 @@ private:
     void setupStatusBar();
     void setupCentralWidget();
     void setupConnections();
-    void submitConversionTasks();
+    /// Submit every file currently in the four category tabs. When
+    /// onlyPaths is non-empty, submit ONLY the listed input paths
+    /// (retry-failed flow) instead of re-converting the whole queue.
+    void submitConversionTasks(const QSet<QString>& onlyPaths = QSet<QString>());
     void showConversionSummary();
     void showErrorDialog(const struct ErrorInfo& error);
     void updateErrorIcon();

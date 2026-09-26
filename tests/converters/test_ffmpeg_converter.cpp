@@ -151,3 +151,48 @@ void TestFFmpegConverter::testSpeedMetrics() {
     QCOMPARE(converter.currentBitrate(), 0.0);
     QCOMPARE(converter.processedBytes(), qint64(0));
 }
+
+// §3.3 contract regression: every audio-codec choice exposed by
+// video_params_widget must survive validateParams, or "optional = broken".
+void TestFFmpegConverter::testUiCodecOptionsPassValidation() {
+    struct { const char* key; const char* value; } uiOptions[] = {
+        {"audioCodec", "aac"},   {"audioCodec", "mp3"},
+        {"audioCodec", "copy"},  {"audioCodec", "none"},
+        {"videoCodec", "libx264"}, {"videoCodec", "libx265"},
+        {"videoCodec", "h264"},    {"videoCodec", "auto"},
+        {"preset", "medium"},
+    };
+    for (const auto& opt : uiOptions) {
+        QVariantMap params;
+        params[opt.key] = QString::fromLatin1(opt.value);
+        QString errorMsg;
+        QVERIFY2(FFmpegConverter::validateParams(params, errorMsg),
+                 qPrintable(QString("%1=%2 rejected: %3")
+                            .arg(opt.key, opt.value, errorMsg)));
+    }
+}
+
+// Audio widget sample-rate / channel options must pass validation too.
+void TestFFmpegConverter::testUiAudioOptionsPassValidation() {
+    const int rates[] = {0, 22050, 44100, 48000, 96000, 192000};
+    const int channels[] = {0, 1, 2, 6};
+    for (int rate : rates) {
+        QVariantMap params;
+        params["sampleRate"] = rate;
+        QString errorMsg;
+        QVERIFY2(FFmpegConverter::validateParams(params, errorMsg),
+                 qPrintable(QString("sampleRate=%1 rejected: %2").arg(rate).arg(errorMsg)));
+    }
+    for (int ch : channels) {
+        QVariantMap params;
+        params["channels"] = ch;
+        QString errorMsg;
+        QVERIFY2(FFmpegConverter::validateParams(params, errorMsg),
+                 qPrintable(QString("channels=%1 rejected: %2").arg(ch).arg(errorMsg)));
+    }
+    // and still reject garbage
+    QVariantMap bad;
+    bad["sampleRate"] = 44101;
+    QString errorMsg;
+    QVERIFY(!FFmpegConverter::validateParams(bad, errorMsg));
+}

@@ -783,9 +783,29 @@ void MainWindow::onShowSummary() {
 void MainWindow::onRetryFailed(const QList<QString>& inputPaths) {
     if (inputPaths.isEmpty()) return;
     addFilesAndAutoRoute(inputPaths);
-    m_conversionResults.clear();
+
+    // §3.4 fix: resubmit ONLY the failed files. The old code called
+    // onStartConversion(), which re-converted every file in every tab —
+    // "retry 3 failures" silently re-encoded all previously-succeeded ones.
+    const QSet<QString> retry(inputPaths.begin(), inputPaths.end());
+
+    // Drop the stale failure records so the summary/results show the fresh
+    // attempt instead of duplicates. Successes stay (they aren't re-run).
+    for (auto it = m_conversionResults.begin(); it != m_conversionResults.end();) {
+        if (retry.contains(it->inputPath) && !it->success) {
+            it = m_conversionResults.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     m_startAction->setEnabled(false);
-    onStartConversion();
+    m_summaryAction->setEnabled(false);
+    submitConversionTasks(retry);
+    TaskManager::instance()->start();
+    m_statusLabel->setText(tr("正在重试失败任务..."));
+    m_toolbarStartAction->setEnabled(false);
+    LOG_INFO("MainWindow", QString("重试 %1 个失败任务").arg(retry.size()));
 }
 
 void MainWindow::updateStatusBar() {
@@ -924,7 +944,7 @@ static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
     return merged;
 }
 
-void MainWindow::submitConversionTasks() {
+void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
     const auto& reg = FormatRegistry::instance();
     QString outputDir = m_outputDirEdit->text();
     if (outputDir.isEmpty()) {
@@ -950,6 +970,10 @@ void MainWindow::submitConversionTasks() {
         QVariantMap dialogParams = m_conversionParams.value(cat);
 
         for (const FileInfo& fileInfo : files) {
+            // Retry mode: skip anything not in the requested path set.
+            if (!onlyPaths.isEmpty() && !onlyPaths.contains(fileInfo.filePath)) {
+                continue;
+            }
             QFileInfo fi(fileInfo.filePath);
             QString baseName = fi.completeBaseName();
             QString outputFile = outputDir + "/" + baseName + "." + outputFormat;
