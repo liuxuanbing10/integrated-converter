@@ -733,8 +733,7 @@ void MainWindow::onTaskStarted(const QString& taskId) {
 }
 
 void MainWindow::onTaskProgressChanged(const QString& taskId, int progress) {
-    Q_UNUSED(taskId);
-    Q_UNUSED(progress);
+    m_taskListWidget->updateTaskProgress(taskId, progress);
     updateProgressWidget();
 }
 

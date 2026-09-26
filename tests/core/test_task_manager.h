@@ -20,6 +20,9 @@ private slots:
     void testTaskCounts();
     void testGetTasksByStatus();
     void testStart();
+    void testParallelTasksAllSucceed();
+    void testProgressPropagation();
+    void testCancelIsPerTask();
     void testTaskAddedSignal();
     void testTaskRemovedSignal();
     void testSingleton();

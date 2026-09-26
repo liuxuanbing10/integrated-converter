@@ -5,6 +5,7 @@
 #include "error_types.h"
 #include <QProcess>
 #include <QSet>
+#include <atomic>
 #include <memory>
 
 class ImageMagickConverter : public QObject, public IConverter {
@@ -12,6 +13,9 @@ class ImageMagickConverter : public QObject, public IConverter {
 
 public:
     explicit ImageMagickConverter(QObject* parent = nullptr);
+    // Cloneable: one independent instance per concurrent task (see IConverter).
+    ImageMagickConverter(const ImageMagickConverter& other);
+    std::unique_ptr<IConverter> clone() const override;
     ~ImageMagickConverter() override;
 
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
@@ -53,7 +57,7 @@ private:
     QSet<QString> m_inputFormats;
     QSet<QString> m_outputFormats;
     std::unique_ptr<QProcess> m_process;
-    bool m_isRunning;
+    std::atomic<bool> m_isRunning;
     QString m_currentInputFile;
     QString m_currentOutputFile;
     QString m_errorBuffer;

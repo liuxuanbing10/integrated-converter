@@ -41,17 +41,20 @@ void ConversionTask::setStatus(Status status) {
     Status oldStatus = static_cast<Status>(m_status.loadRelaxed());
     if (oldStatus != status) {
         m_status.storeRelaxed(std::to_underlying(status));
-        if (status == Status::Running) {
-            m_startTime = QDateTime::currentDateTime();
-            m_endTime = QDateTime();
-        } else if (status == Status::Completed || status == Status::Failed || status == Status::Cancelled) {
-            m_endTime = QDateTime::currentDateTime();
+        {
+            QMutexLocker l(&m_dataMutex);
+            if (status == Status::Running) {
+                m_startTime = QDateTime::currentDateTime();
+                m_endTime = QDateTime();
+            } else if (status == Status::Completed || status == Status::Failed || status == Status::Cancelled) {
+                m_endTime = QDateTime::currentDateTime();
+            }
         }
         emit statusChanged(status);
         if (status == Status::Completed) {
             emit finished(true, QString());
         } else if (status == Status::Failed) {
-            emit finished(false, m_errorMessage);
+            emit finished(false, errorMessage());
         } else if (status == Status::Cancelled) {
             emit finished(false, tr("任务已取消"));
         }

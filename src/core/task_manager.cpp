@@ -24,9 +24,15 @@ TaskManager::TaskManager()
 TaskManager::~TaskManager() {
     QMutexLocker locker(&m_mutex);
     cancelAllTasksInternal();
+    locker.unlock();
     m_threadPool->waitForDone(5000);
+    locker.relock();
     qDeleteAll(m_tasks);
     m_tasks.clear();
+    // Workers have returned (waitForDone), so deferred-erase tasks are safe.
+    // Queued onTaskFinished slots never run during static destruction.
+    qDeleteAll(m_orphanedTasks);
+    m_orphanedTasks.clear();
     m_runningTasks.clear();
     m_pendingQueue.clear();
 }
@@ -128,51 +134,58 @@ QString TaskManager::addTask(const QString& inputFile, const QString& outputFile
 }
 
 void TaskManager::removeTask(const QString& taskId) {
+    ConversionTask* task = nullptr;
     {
         QMutexLocker locker(&m_mutex);
         if (!m_tasks.contains(taskId)) {
             return;
         }
-        // Cancel inline to avoid re-entering mutex via cancelTask()
-        ConversionTask* task = m_tasks.value(taskId);
+        task = m_tasks.take(taskId);
+        m_runningTasks.remove(taskId);
         if (task) {
             ConversionTask::Status status = task->status();
             if (status == ConversionTask::Status::Running) {
+                // Worker thread still owns this task until run() returns —
+                // defer deletion to onTaskFinished.
                 task->requestCancel();
+                m_orphanedTasks[taskId] = task;
+                task = nullptr;
             } else if (status == ConversionTask::Status::Pending) {
                 task->setStatus(ConversionTask::Status::Cancelled);
                 m_pendingQueue.removeAll(taskId);
             }
         }
-        task = m_tasks.take(taskId);
-        m_runningTasks.remove(taskId);
-        if (task) {
-            task->deleteLater();
-        }
         LOG_INFO("TaskManager", QString("移除任务: %1").arg(taskId));
+    }
+    if (task) {
+        task->deleteLater();
     }
     emit taskRemoved(taskId);
 }
 
 void TaskManager::cancelTask(const QString& taskId) {
-    QMutexLocker locker(&m_mutex);
-    ConversionTask* task = m_tasks.value(taskId);
-    if (!task) {
-        return;
-    }
-    ConversionTask::Status status = task->status();
-    if (status == ConversionTask::Status::Running) {
-        task->requestCancel();
-        // Actually kill the underlying process so orphaned children don't survive
-        QString converterName = task->params().value("converter").toString();
-        if (m_converters.contains(converterName)) {
-            m_converters.value(converterName)->cancel();
+    ConversionTask* task = nullptr;
+    {
+        QMutexLocker locker(&m_mutex);
+        task = m_tasks.value(taskId);
+        if (!task) {
+            return;
         }
-        LOG_INFO("TaskManager", QString("请求取消运行中任务: %1").arg(taskId));
-    } else if (status == ConversionTask::Status::Pending) {
-        task->setStatus(ConversionTask::Status::Cancelled);
-        m_pendingQueue.removeAll(taskId);
-        LOG_INFO("TaskManager", QString("取消等待中任务: %1").arg(taskId));
+        ConversionTask::Status status = task->status();
+        if (status == ConversionTask::Status::Running) {
+            // Cooperative: flip the atomic flag the dedicated converter clone
+            // polls in its wait-loop; the WORKER thread kills its own process.
+            // (The old design called shared->cancel() under m_mutex: a
+            // blocking kill()+waitForFinished(3000) that froze every other
+            // TaskManager call for up to 3s — and killed the WRONG task's
+            // process when several shared one converter instance.)
+            task->requestCancel();
+            LOG_INFO("TaskManager", QString("请求取消运行中任务: %1").arg(taskId));
+        } else if (status == ConversionTask::Status::Pending) {
+            task->setStatus(ConversionTask::Status::Cancelled);
+            m_pendingQueue.removeAll(taskId);
+            LOG_INFO("TaskManager", QString("取消等待中任务: %1").arg(taskId));
+        }
     }
 }
 
@@ -183,20 +196,10 @@ void TaskManager::cancelAllTasks() {
 
 void TaskManager::cancelAllTasksInternal() {
     // NOTE: caller MUST already hold m_mutex (no lock here!)
-    // First: kill all running converter processes to avoid orphaned children
-    QSet<QString> convertersToCancel;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        ConversionTask* task = it.value();
-        if (task && task->status() == ConversionTask::Status::Running) {
-            convertersToCancel.insert(task->params().value("converter").toString());
-        }
-    }
-    for (const auto& name : convertersToCancel) {
-        if (m_converters.contains(name)) {
-            m_converters.value(name)->cancel();
-        }
-    }
-    // Then: set cancel flags and clean up task state
+    // Cooperative cancel: flip the atomic flag on every running task — each
+    // task's dedicated converter clone polls it on its worker thread and
+    // kills its OWN child process. No shared-instance cancel() calls here,
+    // so no blocking kill() under the mutex and no cross-task friendly fire.
     for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
         ConversionTask* task = it.value();
         if (task) {
@@ -209,7 +212,7 @@ void TaskManager::cancelAllTasksInternal() {
         }
     }
     m_pendingQueue.clear();
-    m_threadPool->clear();
+    m_threadPool->clear();   // drops not-yet-started runnables (autoDelete)
     LOG_INFO("TaskManager", "取消所有任务");
 }
 
@@ -382,8 +385,12 @@ void TaskManager::processQueue() {
             LOG_ERROR("TaskManager", QString("未找到转换器: %1").arg(converterName));
             continue;
         }
-        auto converterPtr = m_converters.value(converterName);
-        TaskRunnable* runnable = new TaskRunnable(task, converterName, converterPtr);
+        // Clone a DEDICATED converter instance for this task. Sharing one
+        // instance across concurrent TaskRunables was the root cause of
+        // "已有转换任务在运行" failures in batch mode (and of cross-task
+        // progress/error state bleed).
+        std::unique_ptr<IConverter> instance = m_converters.value(converterName)->clone();
+        TaskRunnable* runnable = new TaskRunnable(task, converterName, std::move(instance));
         m_runningTasks[taskId] = runnable;
         connect(runnable, &TaskRunnable::started,
                 this, &TaskManager::onTaskStarted, Qt::QueuedConnection);
@@ -408,13 +415,20 @@ void TaskManager::onTaskProgressChanged(const QString& taskId, int progress) {
 void TaskManager::onTaskFinished(const QString& taskId, bool success, const QString& message) {
     Q_UNUSED(message);
     bool allDone = false;
+    ConversionTask* orphan = nullptr;
     {
         QMutexLocker locker(&m_mutex);
         m_runningTasks.remove(taskId);
+        orphan = m_orphanedTasks.take(taskId);
         LOG_INFO("TaskManager", QString("任务完成: %1, 成功: %2").arg(taskId).arg(success));
         allDone = m_runningTasks.isEmpty() && m_pendingQueue.isEmpty();
     }
     // Emit signals OUTSIDE mutex
+    if (orphan) {
+        // removeTask deferred deletion of this task because its worker was
+        // still live; the worker has now returned, so it is safe to release.
+        delete orphan;
+    }
     emit taskCompleted(taskId, success);
     if (allDone) {
         LOG_INFO("TaskManager", "所有任务已完成");
@@ -422,4 +436,10 @@ void TaskManager::onTaskFinished(const QString& taskId, bool success, const QStr
     } else {
         processQueue();
     }
+}
+
+void TaskManager::waitForTasks(int timeoutMs) {
+    // NOTE: must NOT hold m_mutex — worker completions land as queued
+    // onTaskFinished slots that re-enter TaskManager on this thread.
+    m_threadPool->waitForDone(timeoutMs);
 }

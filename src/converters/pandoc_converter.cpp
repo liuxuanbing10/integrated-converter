@@ -15,6 +15,21 @@ PandocConverter::PandocConverter(QObject* parent)
     m_inputFormats = QSet<QString>(reg.documentInputFormats().begin(), reg.documentInputFormats().end());
     m_outputFormats = QSet<QString>(reg.documentOutputFormats().begin(), reg.documentOutputFormats().end());
 }
+
+// Copy-ctor for clone(): configuration only (path + format knowledge).
+PandocConverter::PandocConverter(const PandocConverter& other)
+    : QObject(nullptr)
+    , m_pandocPath(other.m_pandocPath)
+    , m_inputFormats(other.m_inputFormats)
+    , m_outputFormats(other.m_outputFormats)
+    , m_currentProcess(nullptr)
+    , m_isConverting(false)
+{
+}
+
+std::unique_ptr<IConverter> PandocConverter::clone() const {
+    return std::make_unique<PandocConverter>(*this);
+}
 PandocConverter::~PandocConverter() {
     if (m_currentProcess) {
         m_currentProcess->kill();
@@ -267,17 +282,29 @@ bool PandocConverter::runPandoc(const QStringList& args, QString& output) {
         return false;
     }
     emit statusChanged(tr("正在转换..."));
-    emit progressChanged(50);
-    if (!process.waitForFinished(-1)) {
-        output = tr("Pandoc进程执行超时");
+    reportProgress(5);
+    // Poll with cooperative cancellation: pandoc gives no fine-grained
+    // progress, but a hung document conversion must still be killable per-task.
+    while (!process.waitForFinished(500)) {
+        if (isCancelRequested()) {
+            process.kill();
+            process.waitForFinished(3000);
+            output = tr("用户取消");
+            return false;
+        }
+    }
+    output = QString::fromUtf8(process.readAllStandardError());
+    if (output.isEmpty()) {
+        output = QString::fromUtf8(process.readAllStandardOutput());
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        if (output.trimmed().isEmpty()) {
+            output = tr("退出码: %1").arg(process.exitCode());
+        }
         return false;
     }
-    output = process.readAllStandardError();
-    if (output.isEmpty()) {
-        output = process.readAllStandardOutput();
-    }
-    emit progressChanged(100);
-    return process.exitCode() == 0;
+    reportProgress(100);
+    return true;
 }
 bool PandocConverter::runPandocAsync(const QString& inputFile,
                                     const QString& outputFile,

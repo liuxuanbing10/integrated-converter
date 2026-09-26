@@ -22,6 +22,23 @@ ImageMagickConverter::ImageMagickConverter(QObject* parent)
     m_outputFormats = QSet<QString>(reg.imageOutputFormats().begin(), reg.imageOutputFormats().end());
 }
 
+// Copy-ctor for clone(): carries configuration only (tool path + format
+// knowledge), never per-run state. See FFmpegConverter for rationale.
+ImageMagickConverter::ImageMagickConverter(const ImageMagickConverter& other)
+    : QObject(nullptr)
+    , m_magickPath(other.m_magickPath)
+    , m_inputFormats(other.m_inputFormats)
+    , m_outputFormats(other.m_outputFormats)
+    , m_process(nullptr)
+    , m_isRunning(false)
+    , m_currentProgress(0.0)
+{
+}
+
+std::unique_ptr<IConverter> ImageMagickConverter::clone() const {
+    return std::make_unique<ImageMagickConverter>(*this);
+}
+
 ImageMagickConverter::~ImageMagickConverter() {
     cancel();
 }
@@ -143,21 +160,13 @@ std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile,
 }
 
 bool ImageMagickConverter::runMagick(const QStringList& args) {
-    if (m_isRunning) {
-        LOG_ERROR("ImageMagick", tr("已有转换任务在运行"));
-        return false;
-    }
-
+    // NOTE: no m_isRunning mutual-exclusion guard here anymore — TaskManager
+    // clones one converter per concurrent task (see FFmpegConverter).
+    // Re-create the process to ensure clean state. No signal connections:
+    // the poll loop below drains stderr/exit status on the worker thread.
     m_process = std::make_unique<QProcess>();
     m_process->setProgram(m_magickPath);
     m_process->setArguments(args);
-
-    connect(m_process.get(), &QProcess::readyReadStandardError,
-            this, &ImageMagickConverter::onProcessReadyReadStandardError);
-    connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &ImageMagickConverter::onProcessFinished);
-    connect(m_process.get(), &QProcess::errorOccurred,
-            this, &ImageMagickConverter::onProcessError);
 
     LOG_DEBUG("ImageMagick", QString("执行命令: %1 %2").arg(m_magickPath, args.join(" ")));
 
@@ -180,13 +189,55 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
     }
 
     emit statusChanged(tr("正在转换..."));
-    emit progressChanged(50);
 
-    if (!m_process->waitForFinished(WAIT_FOR_FINISHED_TIMEOUT_MS)) {
-        LOG_WARNING("ImageMagick", tr("ImageMagick 进程超时，正在终止"));
-        m_process->kill();
-        m_process->waitForFinished(5000);
+    // Poll-based wait with cooperative cancellation (see FFmpegConverter):
+    // drains -monitor progress from the worker thread and polls the task's
+    // cancel flag every tick instead of blocking for the full timeout.
+    bool timedOut = false;
+    const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + WAIT_FOR_FINISHED_TIMEOUT_MS;
+    for (;;) {
+        if (m_process->waitForFinished(500)) {
+            break;
+        }
+        QString chunk = QString::fromUtf8(m_process->readAllStandardError());
+        if (!chunk.isEmpty()) {
+            m_errorBuffer += chunk;
+            // ImageMagick -monitor emits "filename.jpg 15.2% ..." tokens
+            static const QRegularExpression progressRe(R"(([\d.]+)%\s+)");
+            auto it = QRegularExpressionMatchIterator(progressRe.globalMatch(chunk));
+            double pct = -1.0;
+            while (it.hasNext()) {
+                pct = it.next().captured(1).toDouble();
+            }
+            if (pct >= 0.0) {
+                m_currentProgress = pct;
+                emit progressChanged(static_cast<int>(pct));
+                reportProgress(static_cast<int>(pct));
+            }
+        }
+        if (isCancelRequested()) {
+            LOG_INFO("ImageMagick", tr("收到取消请求，终止进程"));
+            m_process->kill();
+            m_process->waitForFinished(3000);
+            break;
+        }
+        if (QDateTime::currentMSecsSinceEpoch() > deadline) {
+            timedOut = true;
+            LOG_WARNING("ImageMagick", tr("ImageMagick 进程超时，正在终止"));
+            m_process->kill();
+            m_process->waitForFinished(5000);
+            break;
+        }
+    }
+
+    if (isCancelRequested()) {
         m_isRunning = false;
+        m_process.reset();
+        return false;   // TaskRunnable marks the task Cancelled via its flag
+    }
+    if (timedOut) {
+        m_isRunning = false;
+        m_process.reset();
         ErrorInfo error = ErrorTypes::createError(
             ErrorCode::TaskTimeout,
             tr("ImageMagick 转换超时"),

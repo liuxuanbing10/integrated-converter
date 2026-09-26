@@ -1,6 +1,7 @@
 #include "ffmpeg_converter.h"
 #include "config_manager.h"
 #include "logger.h"
+#include <QDir>
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -25,6 +26,33 @@ FFmpegConverter::FFmpegConverter(QObject* parent)
     const auto& reg = FormatRegistry::instance();
     m_videoFormats = QSet<QString>(reg.videoFormats().begin(), reg.videoFormats().end());
     m_audioFormats = QSet<QString>(reg.audioFormats().begin(), reg.audioFormats().end());
+}
+
+// Copy-ctor for clone(): per-run state is deliberately NOT copied — a fresh
+// converter always starts clean. Only configuration (tool paths, format
+// knowledge) carries over so Settings-dialog overrides survive per-task clones.
+FFmpegConverter::FFmpegConverter(const FFmpegConverter& other)
+    : QObject(nullptr)
+    , IConverter()
+    , m_ffmpegPath(other.m_ffmpegPath)
+    , m_ffprobePath(other.m_ffprobePath)
+    , m_videoFormats(other.m_videoFormats)
+    , m_audioFormats(other.m_audioFormats)
+    , m_process(nullptr)
+    , m_isRunning(false)
+    , m_totalDuration(0.0)
+    , m_currentSpeed(0.0)
+    , m_estimatedRemainingMs(0)
+    , m_currentBitrate(0.0)
+    , m_processedBytes(0)
+    , m_conversionStartTime(0)
+{
+    m_cancelFlag = nullptr;   // injected per-task by TaskRunnable
+    m_progressCb = nullptr;   // injected per-task by TaskRunnable
+}
+
+std::unique_ptr<IConverter> FFmpegConverter::clone() const {
+    return std::make_unique<FFmpegConverter>(*this);
 }
 
 FFmpegConverter::~FFmpegConverter() {
@@ -99,6 +127,7 @@ void FFmpegConverter::handleProgressLine(const FfmpegProgressInfo& info) {
         progress = static_cast<int>((currentSeconds / m_totalDuration) * 100.0);
         progress = qBound(0, progress, 100);
         emit progressChanged(progress);
+        reportProgress(progress);   // TaskManager per-task progress link
     }
     if (info.hasSpeed())   m_currentSpeed   = info.speed;
     if (info.hasBitrate()) m_currentBitrate = info.bitrateKbps;
@@ -463,6 +492,11 @@ std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, cons
         QStringList videoArgs = buildVideoArgs(params);
         QStringList audioArgs = buildAudioArgs(params);
         if (twoPass) {
+            // Per-conversion unique prefix: concurrent 2-pass tasks would
+            // otherwise clobber each other's ffmpeg2pass-0.log(.meta) in CWD.
+            QString passLog = QDir::temp().filePath(
+                QStringLiteral("ic_ffmpeg2pass_%1").arg(QDateTime::currentMSecsSinceEpoch()));
+            videoArgs << "-passlogfile" << passLog;
             // Pass 1: video only, no audio, output to null
             QStringList pass1Args;
             pass1Args << "-y" << "-i" << inputFile
@@ -497,7 +531,13 @@ std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, cons
                  << "-pass" << "2"
                  << outputFile;
             LOG_INFO("FFmpeg", "开始二遍编码第二遍 (输出)");
-            if (runFFmpeg(args)) return std::nullopt;
+            bool pass2Ok = runFFmpeg(args);
+            // Clean up 2-pass stats files (ffmpeg names them <prefix>-0.log[.meta])
+            QFile::remove(passLog + QStringLiteral("-0.log"));
+            QFile::remove(passLog + QStringLiteral("-0.log.meta"));
+            QFile::remove(passLog + QStringLiteral("-0.log.mbtree"));
+            QFile::remove(passLog + QStringLiteral("-0.log.mbtree.meta"));
+            if (pass2Ok) return std::nullopt;
             if (m_lastError.isValid()) return m_lastError;
             return ErrorTypes::createConversionFailedError(
                 tr("FFmpeg 二遍编码第二遍失败"), "FFmpeg", "FFmpeg::convert");
@@ -531,25 +571,22 @@ std::optional<ErrorInfo> FFmpegConverter::convert(const QString& inputFile, cons
 }
 
 bool FFmpegConverter::runFFmpeg(const QStringList& args) {
-    if (m_isRunning) {
-        LOG_ERROR("FFmpeg", tr("已有转换任务在运行"));
-        return false;
-    }
-    // Re-create the process to ensure clean state and fresh connections.
+    // NOTE: no m_isRunning mutual-exclusion guard here anymore — TaskManager
+    // gives every concurrent task its own cloned converter instance, so
+    // "already running" was always a false alarm caused by the shared-singleton
+    // design. A single instance may still be reused sequentially (2-pass).
+    // Re-create the process to ensure clean state.
     // Managed by unique_ptr — no Qt parent to avoid double-delete.
+    // Deliberately NO signal connections: this loop runs on the TaskRunnable
+    // worker thread while the converter object lives on the GUI thread, so
+    // cross-thread queued slots would race on m_process/m_errorBuffer. The
+    // poll loop below drains stderr and harvests the exit status directly.
     m_process = std::make_unique<QProcess>();
     m_process->setProgram(m_ffmpegPath);
     m_process->setArguments(args);
-    // MergedChannels ensures progress text lands in stderr (where ffmpeg writes
-    // -progress data) but also makes stdout accessible if a future caller
-    // needs it. This is the recommended mode for ffmpeg/ffprobe pipelines.
+    // SeparateChannels keeps stdout and stderr apart; progress/stat data is
+    // drained from stderr inside the wait loop below.
     m_process->setProcessChannelMode(QProcess::SeparateChannels);
-    connect(m_process.get(), &QProcess::readyReadStandardError,
-            this, &FFmpegConverter::onProcessReadyReadStandardError);
-    connect(m_process.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            this, &FFmpegConverter::onProcessFinished);
-    connect(m_process.get(), &QProcess::errorOccurred,
-            this, &FFmpegConverter::onProcessError);
     LOG_DEBUG("FFmpeg", QString("执行命令: %1 %2").arg(m_ffmpegPath, args.join(" ")));
     m_isRunning = true;
     emit statusChanged(tr("正在启动FFmpeg..."));
@@ -565,26 +602,53 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args) {
         LOG_ERROR("FFmpeg", error.message);
         emit errorOccurred(error);
         emit conversionFinished(false, error.message);
+        m_process.reset();
         return false;
     }
     emit statusChanged(tr("正在转换..."));
-    // Wait until the process actually finishes (no artificial timeout).
-    // If ffmpeg hangs, the user can cancel via the cancel button, which
-    // kills the process and causes waitForFinished to return immediately.
-    m_process->waitForFinished(-1);
+    // Poll-based wait: waitForFinished(-1) blocks the worker thread while the
+    // QProcess readyRead signals queue up on the GUI thread (cross-thread
+    // auto-connection) and never get processed by THIS invocation. Draining
+    // stderr in the loop makes per-task progress AND cooperative cancellation
+    // work from the worker thread directly.
+    for (;;) {
+        if (m_process->waitForFinished(500)) {
+            break;
+        }
+        QString chunk = QString::fromUtf8(m_process->readAllStandardError());
+        if (!chunk.isEmpty()) {
+            m_errorBuffer += chunk;
+            const QStringList lines = chunk.split('\n', Qt::SkipEmptyParts);
+            for (const QString& line : lines) {
+                handleProgressLine(m_progressParser.parseLine(line));
+            }
+        }
+        if (isCancelRequested()) {
+            LOG_INFO("FFmpeg", tr("收到取消请求，终止进程"));
+            m_process->kill();
+            m_process->waitForFinished(3000);
+            break;
+        }
+    }
     bool success = m_process->exitStatus() == QProcess::NormalExit && m_process->exitCode() == 0;
 
-    // Read stderr directly — the onProcessReadyReadStandardError signal may
+    // Read remaining stderr — the readyReadStandardError signal may
     // never fire because QProcess lives in the worker thread while
     // FFmpegConverter lives in the main thread (cross-thread = queued
     // connection).  Collect output here while the process still exists.
     QString stderrOutput = QString::fromUtf8(m_process->readAllStandardError());
     m_errorBuffer += stderrOutput;
 
+    if (isCancelRequested()) {
+        m_isRunning = false;
+        m_process.reset();
+        return false;   // TaskRunnable marks the task Cancelled via its flag
+    }
+
     if (!success) {
         // Build a detailed error so the user sees what FFmpeg actually reported.
         QString detailMsg;
-        QStringList lines = stderrOutput.split('\n', Qt::SkipEmptyParts);
+        QStringList lines = m_errorBuffer.split('\n', Qt::SkipEmptyParts);
         for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i) {
             if (lines[i].contains("Error") || lines[i].contains("error") ||
                 lines[i].contains("Invalid") || lines[i].contains("failed")) {

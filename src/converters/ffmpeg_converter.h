@@ -9,6 +9,7 @@
 #include <QTimer>
 #include <QMap>
 #include <QSet>
+#include <atomic>
 #include <memory>
 
 class FFmpegConverter : public QObject, public IConverter {
@@ -16,6 +17,11 @@ class FFmpegConverter : public QObject, public IConverter {
 
 public:
     explicit FFmpegConverter(QObject* parent = nullptr);
+    // Cloneable: TaskManager builds one independent instance per concurrent
+    // task so per-run state (QProcess, buffers, progress) never overlaps.
+    // Paths are copied so Settings-dialog overrides survive the clone.
+    FFmpegConverter(const FFmpegConverter& other);
+    std::unique_ptr<IConverter> clone() const override;
     ~FFmpegConverter() override;
 
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
@@ -80,7 +86,9 @@ private:
     // Reserved for future use; kept as a smart pointer to avoid ownership
     // ambiguity if a feature that needs it is added later.
     std::unique_ptr<QTimer> m_timeoutTimer;
-    bool m_isRunning;
+    // Atomic: written by the worker thread running convert(), read by
+    // cancel()/isRunning() which may land on a different thread.
+    std::atomic<bool> m_isRunning;
     double m_totalDuration;
     QString m_currentOutputFile;
     QString m_currentInputFile;

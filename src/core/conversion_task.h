@@ -6,6 +6,7 @@
 #include <QVariantMap>
 #include <QUuid>
 #include <QDateTime>
+#include <QMutex>
 #include <QAtomicInt>
 #include <QAtomicInteger>
 
@@ -45,13 +46,16 @@ public:
     QVariantMap params() const { return m_params; }
     Status status() const { return static_cast<Status>(m_status.loadRelaxed()); }
     int progress() const { return m_progress.loadRelaxed(); }
-    QString errorMessage() const { return m_errorMessage; }
+    QString errorMessage() const { QMutexLocker l(&m_dataMutex); return m_errorMessage; }
     ConverterType converterType() const { return m_converterType; }
     Priority priority() const { return m_priority; }
-    QDateTime startTime() const { return m_startTime; }
-    QDateTime endTime() const { return m_endTime; }
+    QDateTime startTime() const { QMutexLocker l(&m_dataMutex); return m_startTime; }
+    QDateTime endTime() const { QMutexLocker l(&m_dataMutex); return m_endTime; }
     qint64 durationMs() const;
     bool isCancelled() const { return m_cancelled.loadRelaxed() != 0; }
+    /// Raw pointer to the atomic cancel flag — injected into the converter
+    /// clone so its worker-thread wait-loop can poll cancellation.
+    const QAtomicInt* cancelFlag() const { return &m_cancelled; }
     qint64 fileSize() const { return m_fileSize; }
 
     void setInputFile(const QString& file) { m_inputFile = file; }
@@ -61,10 +65,12 @@ public:
     void setPriority(Priority priority) { m_priority = priority; }
     void setStatus(Status status);
     void setProgress(int progress);
-    void setErrorMessage(const QString& message) { m_errorMessage = message; }
+    void setErrorMessage(const QString& message) { QMutexLocker l(&m_dataMutex); m_errorMessage = message; }
     void requestCancel() { m_cancelled.storeRelease(1); }
     void resetCancelFlag() { m_cancelled.storeRelaxed(0); }
     void setFileSize(qint64 size) { m_fileSize = size; }
+    void setStartTime(const QDateTime& t) { QMutexLocker l(&m_dataMutex); m_startTime = t; }
+    void setEndTime(const QDateTime& t) { QMutexLocker l(&m_dataMutex); m_endTime = t; }
 
     static QString statusToString(Status status);
     static QString converterTypeToString(ConverterType type);
@@ -83,6 +89,9 @@ private:
     QVariantMap m_params;
     QAtomicInteger<int> m_status;
     QAtomicInt m_progress;
+    // Guards the non-atomic members touched from both worker and GUI threads
+    // (m_errorMessage, m_startTime, m_endTime).
+    mutable QMutex m_dataMutex;
     QString m_errorMessage;
     ConverterType m_converterType;
     Priority m_priority;

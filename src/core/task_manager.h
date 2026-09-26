@@ -42,6 +42,10 @@ public:
 
     void start();
     bool isRunning() const;
+    /// Blocks until all worker threads finish (after cooperative cancel).
+    /// Call on app exit BEFORE releasing the event loop so queued
+    /// onTaskFinished slots still run and orphaned tasks get deleted.
+    void waitForTasks(int timeoutMs = 5000);
 
     void setMaxParallelTasks(int max);
     int maxParallelTasks() const;
@@ -90,6 +94,11 @@ private:
     QMap<QString, std::shared_ptr<IConverter>> m_converters;
     QMap<QString, ConversionTask*> m_tasks;
     QMap<QString, TaskRunnable*> m_runningTasks;
+    // Tasks removed while still Running: the worker thread may still touch
+    // them until TaskRunnable::run() returns. Ownership moves here and the
+    // delete happens in onTaskFinished instead of removeTask (fixes the old
+    // use-after-free where removeTask deleteLater()'d a live task).
+    QMap<QString, ConversionTask*> m_orphanedTasks;
     QList<QString> m_pendingQueue;
     mutable QMutex m_mutex;
     QThreadPool* m_threadPool;

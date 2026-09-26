@@ -4,11 +4,15 @@
 #include "error_types.h"
 #include <QProcess>
 #include <QSet>
+#include <atomic>
 #include <memory>
 class PandocConverter : public QObject, public IConverter {
     Q_OBJECT
 public:
     explicit PandocConverter(QObject* parent = nullptr);
+    // Cloneable: one independent instance per concurrent task (see IConverter).
+    PandocConverter(const PandocConverter& other);
+    std::unique_ptr<IConverter> clone() const override;
     ~PandocConverter() override;
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
                                       const QVariantMap& params) override;
@@ -46,7 +50,7 @@ private:
     std::unique_ptr<QProcess> m_currentProcess;
     QString m_currentInputFile;
     QString m_currentOutputFile;
-    bool m_isConverting;
+    std::atomic<bool> m_isConverting;
     ErrorInfo m_lastError;
 };
 #endif // PANDOC_CONVERTER_H

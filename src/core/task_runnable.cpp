@@ -2,7 +2,7 @@
 #include "logger.h"
 
 TaskRunnable::TaskRunnable(ConversionTask* task, const QString& converterName,
-                           std::shared_ptr<IConverter> converter, QObject* parent)
+                           std::unique_ptr<IConverter> converter, QObject* parent)
     : QObject(parent)
     , m_task(task)
     , m_converterName(converterName)
@@ -46,6 +46,15 @@ void TaskRunnable::run() {
         m_running.storeRelaxed(0);
         return;
     }
+
+    // Wire the per-task cancel flag + progress reporting INTO the dedicated
+    // converter clone. The converter's wait-loop polls the flag on THIS
+    // (worker) thread; progress arrives via the callback on THIS thread too.
+    m_converter->setCancelFlag(m_task->cancelFlag());
+    m_converter->setProgressCallback([this](int percent) {
+        m_task->setProgress(percent);
+        emit progressChanged(m_taskId, percent);
+    });
 
     try {
         auto result = m_converter->convert(m_task->inputFile(), m_task->outputFile(), m_task->params());
