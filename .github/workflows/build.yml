@@ -53,6 +53,10 @@ jobs:
           & ".\tests\test_runner.exe"
           $rc = $LASTEXITCODE
           Write-Host "direct-run exit: $rc"
+          Get-ChildItem -Filter "*.qtest.log" | ForEach-Object {
+            Write-Host "--- $($_.Name) ---"
+            Select-String -Path $_.FullName -Pattern "FAIL!|\*\*\* Loc:|Totals" | ForEach-Object { $_.Line }
+          }
           if ($rc -ne 0 -and (Test-Path qtest.log)) {
             Write-Host "===== qtest.log (per-failure detail) ====="
             Select-String -Path qtest.log -Pattern "FAIL!|\*\*\* Loc:" -Context 0,2

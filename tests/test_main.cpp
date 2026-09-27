@@ -19,12 +19,24 @@
 #include <cstdio>
 #include <cstdlib>
 
-// Run a test suite and log result to file via QFile (bypasses stdio buffering)
+// Run a test suite and log result to file via QFile (bypasses stdio buffering).
+// QTest's own per-function output is redirected with -o into a sibling file:
+// on CI runners stdout can be lost entirely, and QTEST_LOGFILE proved
+// unreliable on some Qt 6.12 builds.
 static int runSuite(QObject* test, int argc, char** argv, const QString& name, QTextStream& log)
 {
     log << "=== " << name << " ===\n";
     log.flush();
-    int result = QTest::qExec(test, argc, argv);
+    QByteArray outArg("-o");
+    QByteArray outFile = (name + QStringLiteral(".qtest.log")).toUtf8();
+    char* effArgv[32];
+    int effArgc = 0;
+    for (int i = 0; i < argc && effArgc < 29; ++i) {
+        effArgv[effArgc++] = argv[i];
+    }
+    effArgv[effArgc++] = outArg.data();
+    effArgv[effArgc++] = outFile.data();
+    int result = QTest::qExec(test, effArgc, effArgv);
     log << "=== " << name << ": " << (result == 0 ? "PASS" : "FAIL") << " (exit=" << result << ") ===\n\n";
     log.flush();
     return result;
