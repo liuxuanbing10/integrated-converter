@@ -115,6 +115,14 @@ int main(int argc, char* argv[])
         coreApp.setApplicationVersion(QStringLiteral(APP_VERSION));
         coreApp.setOrganizationName("ConverterTools");
 
+        // Install the global logger so LOG_* calls inside the converters
+        // actually emit (previously g_logger was null in CLI mode and every
+        // log line was a no-op). --verbose/-v raises the level to Debug;
+        // default Info. Output goes to stderr via the console handler.
+        Logger cliLogger;
+        g_logger = &cliLogger;
+        cliLogger.setFileOutput(false);
+
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
         auto pandocConverter = std::make_shared<PandocConverter>();
         auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
@@ -145,6 +153,13 @@ int main(int argc, char* argv[])
             CliRunner::printFormats();
             return 0;
         }
+        // Wire the advertised --verbose flag: without this the option was parsed,
+        // printed in help, and then ignored.
+        if (Logger* lg = g_logger.load())
+        {
+            lg->setLevel(opts.verbose ? Logger::Level::Debug : Logger::Level::Info);
+        }
+
         QString runErr;
         int rc = CliRunner::run(opts, byName, &runErr);
         if (!runErr.isEmpty())
