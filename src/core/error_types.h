@@ -1,11 +1,13 @@
 #ifndef ERROR_TYPES_H
 #define ERROR_TYPES_H
 
-#include <QString>
 #include <QDateTime>
+#include <QProcess>
+#include <QString>
 #include <QVariant>
 
-enum class ErrorCode {
+enum class ErrorCode
+{
     Unknown = 0,
     InvalidParameter = 1,
     FileNotFound = 2,
@@ -21,7 +23,8 @@ enum class ErrorCode {
     ProcessFailedToStart = 302
 };
 
-struct ErrorInfo {
+struct ErrorInfo
+{
     ErrorCode code = ErrorCode::Unknown;
     QString message;
     QString details;
@@ -34,35 +37,44 @@ struct ErrorInfo {
     QDateTime timestamp;
     int retryCount = 0;
     bool recoverable = false;
-    ErrorInfo() : timestamp(QDateTime::currentDateTime()) {}
-    ErrorInfo(ErrorCode c, const QString& msg)
-        : code(c), message(msg), timestamp(QDateTime::currentDateTime()) {}
-    bool isValid() const { return code != ErrorCode::Unknown || !message.isEmpty(); }
-    QString fullMessage() const {
+    ErrorInfo() : timestamp(QDateTime::currentDateTime())
+    { }
+    ErrorInfo(ErrorCode c, const QString& msg) : code(c), message(msg), timestamp(QDateTime::currentDateTime())
+    { }
+    bool isValid() const
+    {
+        return code != ErrorCode::Unknown || !message.isEmpty();
+    }
+    QString fullMessage() const
+    {
         QString result = message;
-        if (!details.isEmpty()) {
+        if (!details.isEmpty())
+        {
             result += "\n" + details;
         }
         return result;
     }
 };
 
-namespace ErrorTypes {
-    QString errorCodeToString(ErrorCode code);
-    ErrorCode stringToErrorCode(const QString& str);
-    QString defaultSuggestion(ErrorCode code);
-    bool isRecoverable(ErrorCode code);
-    ErrorInfo createError(ErrorCode code, const QString& message,
-                         const QString& context = QString(),
-                         const QString& taskId = QString());
-    ErrorInfo createFileNotFoundError(const QString& filePath,
-                                     const QString& context = QString());
-    ErrorInfo createConversionFailedError(const QString& details,
-                                         const QString& converterName = QString(),
-                                         const QString& context = QString());
-    ErrorInfo createProcessError(ErrorCode code, const QString& processName,
-                                const QString& details = QString(),
-                                const QString& context = QString());
-}
+namespace ErrorTypes
+{
+QString errorCodeToString(ErrorCode code);
+ErrorCode stringToErrorCode(const QString& str);
+QString defaultSuggestion(ErrorCode code);
+bool isRecoverable(ErrorCode code);
+ErrorInfo createError(ErrorCode code, const QString& message, const QString& context = QString(),
+                      const QString& taskId = QString());
+ErrorInfo createFileNotFoundError(const QString& filePath, const QString& context = QString());
+ErrorInfo createConversionFailedError(const QString& details, const QString& converterName = QString(),
+                                      const QString& context = QString());
+ErrorInfo createProcessError(ErrorCode code, const QString& processName, const QString& details = QString(),
+                             const QString& context = QString());
+/// Map a QProcess::ProcessError to our ErrorCode (shared by all
+/// converter wrappers — identical switch in three places before).
+ErrorCode fromProcessError(QProcess::ProcessError error);
+/// Scan process stderr tail-first for lines that look like real errors,
+/// capped at ~500 chars (was copy-pasted three times: ffmpeg x2, magick).
+QString extractErrorLines(const QString& stderrText, int maxChars = 500);
+} // namespace ErrorTypes
 
 #endif // ERROR_TYPES_H

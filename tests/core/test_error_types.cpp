@@ -1,9 +1,13 @@
-#include <QTest>
-#include <optional>
-#include "../../src/core/error_types.h"
 #include "test_error_types.h"
 
-void TestErrorTypes::testDefaultConstructor() {
+#include "../../src/core/error_types.h"
+
+#include <QTest>
+
+#include <optional>
+
+void TestErrorTypes::testDefaultConstructor()
+{
     ErrorInfo error;
     QCOMPARE(error.code, ErrorCode::Unknown);
     QVERIFY(error.message.isEmpty());
@@ -11,7 +15,8 @@ void TestErrorTypes::testDefaultConstructor() {
     QVERIFY(!error.isValid());
 }
 
-void TestErrorTypes::testParameterizedConstructor() {
+void TestErrorTypes::testParameterizedConstructor()
+{
     ErrorInfo error(ErrorCode::ConversionFailed, "Something went wrong");
     QCOMPARE(error.code, ErrorCode::ConversionFailed);
     QCOMPARE(error.message, QString("Something went wrong"));
@@ -19,7 +24,8 @@ void TestErrorTypes::testParameterizedConstructor() {
     QVERIFY(error.isValid());
 }
 
-void TestErrorTypes::testIsValid() {
+void TestErrorTypes::testIsValid()
+{
     ErrorInfo empty;
     QVERIFY(!empty.isValid());
 
@@ -32,7 +38,8 @@ void TestErrorTypes::testIsValid() {
     QVERIFY(byMsg.isValid());
 }
 
-void TestErrorTypes::testFullMessage() {
+void TestErrorTypes::testFullMessage()
+{
     ErrorInfo withoutDetails(ErrorCode::Unknown, "simple message");
     QCOMPARE(withoutDetails.fullMessage(), QString("simple message"));
 
@@ -41,7 +48,8 @@ void TestErrorTypes::testFullMessage() {
     QCOMPARE(withDetails.fullMessage(), QString("main message\ndetailed info"));
 }
 
-void TestErrorTypes::testErrorCodeToString() {
+void TestErrorTypes::testErrorCodeToString()
+{
     QCOMPARE(ErrorTypes::errorCodeToString(ErrorCode::Unknown), QString("Unknown"));
     QCOMPARE(ErrorTypes::errorCodeToString(ErrorCode::FileNotFound), QString("FileNotFound"));
     QCOMPARE(ErrorTypes::errorCodeToString(ErrorCode::ConversionFailed), QString("ConversionFailed"));
@@ -49,7 +57,8 @@ void TestErrorTypes::testErrorCodeToString() {
     QCOMPARE(ErrorTypes::errorCodeToString(ErrorCode::ProcessCrashed), QString("ProcessCrashed"));
 }
 
-void TestErrorTypes::testStringToErrorCode() {
+void TestErrorTypes::testStringToErrorCode()
+{
     QCOMPARE(ErrorTypes::stringToErrorCode("Unknown"), ErrorCode::Unknown);
     QCOMPARE(ErrorTypes::stringToErrorCode("FileNotFound"), ErrorCode::FileNotFound);
     QCOMPARE(ErrorTypes::stringToErrorCode("ConversionFailed"), ErrorCode::ConversionFailed);
@@ -59,24 +68,38 @@ void TestErrorTypes::testStringToErrorCode() {
     QCOMPARE(ErrorTypes::stringToErrorCode("NonExistent"), ErrorCode::Unknown);
 }
 
-void TestErrorTypes::testRoundTripAllCodes() {
+void TestErrorTypes::testRoundTripAllCodes()
+{
     // Verify all ErrorCode values survive a round-trip through errorCodeToString + stringToErrorCode
     QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::Unknown)), ErrorCode::Unknown);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::InvalidParameter)), ErrorCode::InvalidParameter);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::FileNotFound)), ErrorCode::FileNotFound);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::PermissionDenied)), ErrorCode::PermissionDenied);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::DiskSpaceInsufficient)), ErrorCode::DiskSpaceInsufficient);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConverterNotFound)), ErrorCode::ConverterNotFound);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConverterNotAvailable)), ErrorCode::ConverterNotAvailable);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::UnsupportedFormat)), ErrorCode::UnsupportedFormat);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConversionFailed)), ErrorCode::ConversionFailed);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskCancelled)), ErrorCode::TaskCancelled);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskTimeout)), ErrorCode::TaskTimeout);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessCrashed)), ErrorCode::ProcessCrashed);
-    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessFailedToStart)), ErrorCode::ProcessFailedToStart);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::InvalidParameter)),
+             ErrorCode::InvalidParameter);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::FileNotFound)),
+             ErrorCode::FileNotFound);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::PermissionDenied)),
+             ErrorCode::PermissionDenied);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::DiskSpaceInsufficient)),
+             ErrorCode::DiskSpaceInsufficient);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConverterNotFound)),
+             ErrorCode::ConverterNotFound);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConverterNotAvailable)),
+             ErrorCode::ConverterNotAvailable);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::UnsupportedFormat)),
+             ErrorCode::UnsupportedFormat);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ConversionFailed)),
+             ErrorCode::ConversionFailed);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskCancelled)),
+             ErrorCode::TaskCancelled);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::TaskTimeout)),
+             ErrorCode::TaskTimeout);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessCrashed)),
+             ErrorCode::ProcessCrashed);
+    QCOMPARE(ErrorTypes::stringToErrorCode(ErrorTypes::errorCodeToString(ErrorCode::ProcessFailedToStart)),
+             ErrorCode::ProcessFailedToStart);
 }
 
-void TestErrorTypes::testDefaultSuggestion() {
+void TestErrorTypes::testDefaultSuggestion()
+{
     // All error codes should have a non-empty default suggestion
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::Unknown).isEmpty());
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::FileNotFound).isEmpty());
@@ -92,7 +115,8 @@ void TestErrorTypes::testDefaultSuggestion() {
     QVERIFY(!ErrorTypes::defaultSuggestion(ErrorCode::ProcessFailedToStart).isEmpty());
 }
 
-void TestErrorTypes::testIsRecoverable() {
+void TestErrorTypes::testIsRecoverable()
+{
     // Recoverable errors
     QVERIFY(ErrorTypes::isRecoverable(ErrorCode::FileNotFound));
     QVERIFY(ErrorTypes::isRecoverable(ErrorCode::PermissionDenied));
@@ -111,9 +135,9 @@ void TestErrorTypes::testIsRecoverable() {
     QVERIFY(!ErrorTypes::isRecoverable(ErrorCode::ProcessFailedToStart));
 }
 
-void TestErrorTypes::testCreateError() {
-    ErrorInfo error = ErrorTypes::createError(ErrorCode::InvalidParameter, "bad param",
-                                              "test_context", "task-42");
+void TestErrorTypes::testCreateError()
+{
+    ErrorInfo error = ErrorTypes::createError(ErrorCode::InvalidParameter, "bad param", "test_context", "task-42");
     QCOMPARE(error.code, ErrorCode::InvalidParameter);
     QCOMPARE(error.message, QString("bad param"));
     QCOMPARE(error.context, QString("test_context"));
@@ -123,7 +147,8 @@ void TestErrorTypes::testCreateError() {
     QVERIFY(error.timestamp.isValid());
 }
 
-void TestErrorTypes::testCreateFileNotFoundError() {
+void TestErrorTypes::testCreateFileNotFoundError()
+{
     ErrorInfo error = ErrorTypes::createFileNotFoundError("/path/to/missing.txt", "test");
     QCOMPARE(error.code, ErrorCode::FileNotFound);
     QVERIFY(!error.message.isEmpty());
@@ -134,7 +159,8 @@ void TestErrorTypes::testCreateFileNotFoundError() {
     QVERIFY(!error.suggestion.isEmpty());
 }
 
-void TestErrorTypes::testCreateConversionFailedError() {
+void TestErrorTypes::testCreateConversionFailedError()
+{
     ErrorInfo error = ErrorTypes::createConversionFailedError("ffmpeg crashed", "FFmpeg", "convert");
     QCOMPARE(error.code, ErrorCode::ConversionFailed);
     QCOMPARE(error.details, QString("ffmpeg crashed"));
@@ -143,10 +169,37 @@ void TestErrorTypes::testCreateConversionFailedError() {
     QVERIFY(error.recoverable);
 }
 
-void TestErrorTypes::testCreateProcessError() {
+void TestErrorTypes::testFromProcessError()
+{
+    QCOMPARE(ErrorTypes::fromProcessError(QProcess::FailedToStart), ErrorCode::ProcessFailedToStart);
+    QCOMPARE(ErrorTypes::fromProcessError(QProcess::Crashed), ErrorCode::ProcessCrashed);
+    QCOMPARE(ErrorTypes::fromProcessError(QProcess::Timedout), ErrorCode::TaskTimeout);
+    QCOMPARE(ErrorTypes::fromProcessError(QProcess::UnknownError), ErrorCode::Unknown);
+}
+
+void TestErrorTypes::testExtractErrorLines()
+{
+    QVERIFY(ErrorTypes::extractErrorLines(QString()).isEmpty());
+    // tail-first scan: later error lines come back first
+    const QString stderr1 = "info line\nError: bad thing\nmore info\nfailed at step 2\n";
+    const QString out = ErrorTypes::extractErrorLines(stderr1);
+    QVERIFY(out.startsWith("failed at step 2"));
+    QVERIFY(out.contains("Error: bad thing"));
+    QVERIFY(!out.contains("info line"));
+    QVERIFY(!out.contains("more info"));
+    // case-insensitive "error" also matches (old call sites matched both)
+    QVERIFY(ErrorTypes::extractErrorLines("myError happened").contains("myError"));
+    // maxChars cap respected
+    QString many;
+    for (int i = 0; i < 200; ++i)
+        many += QStringLiteral("Error line number %1\n").arg(i, 4, 10, QChar('0'));
+    QVERIFY(ErrorTypes::extractErrorLines(many, 100).length() <= 100 + 60);
+}
+
+void TestErrorTypes::testCreateProcessError()
+{
     // Process crash
-    ErrorInfo crash = ErrorTypes::createProcessError(ErrorCode::ProcessCrashed, "ffmpeg",
-                                                     "segfault", "convert");
+    ErrorInfo crash = ErrorTypes::createProcessError(ErrorCode::ProcessCrashed, "ffmpeg", "segfault", "convert");
     QCOMPARE(crash.code, ErrorCode::ProcessCrashed);
     QVERIFY(!crash.message.isEmpty());
     QVERIFY(crash.details.contains("ffmpeg"));
@@ -154,8 +207,7 @@ void TestErrorTypes::testCreateProcessError() {
     QVERIFY(!crash.recoverable);
 
     // Process failed to start
-    ErrorInfo noStart = ErrorTypes::createProcessError(ErrorCode::ProcessFailedToStart,
-                                                       "pandoc", "", "test");
+    ErrorInfo noStart = ErrorTypes::createProcessError(ErrorCode::ProcessFailedToStart, "pandoc", "", "test");
     QCOMPARE(noStart.code, ErrorCode::ProcessFailedToStart);
     QVERIFY(!noStart.message.isEmpty());
     QVERIFY(!noStart.recoverable);

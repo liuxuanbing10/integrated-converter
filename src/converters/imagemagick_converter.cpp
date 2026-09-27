@@ -429,19 +429,7 @@ void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus 
         }
         else
         {
-            QString detailMsg;
-            if (!m_errorBuffer.isEmpty())
-            {
-                QStringList lines = m_errorBuffer.split('\n', Qt::SkipEmptyParts);
-                for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i)
-                {
-                    if (lines[i].contains("Error") || lines[i].contains("error") || lines[i].contains("Invalid") ||
-                        lines[i].contains("failed"))
-                    {
-                        detailMsg += lines[i].trimmed() + "\n";
-                    }
-                }
-            }
+            const QString detailMsg = ErrorTypes::extractErrorLines(m_errorBuffer);
             error = ErrorTypes::createConversionFailedError(
                 detailMsg.trimmed().isEmpty() ? tr("退出码: %1").arg(exitCode) : detailMsg.trimmed(), "ImageMagick",
                 "ImageMagick::onProcessFinished");
@@ -462,22 +450,7 @@ void ImageMagickConverter::onProcessError(QProcess::ProcessError error)
     if (!m_isRunning)
         return;
     m_isRunning = false;
-    ErrorCode errorCode;
-    switch (error)
-    {
-        case QProcess::FailedToStart:
-            errorCode = ErrorCode::ProcessFailedToStart;
-            break;
-        case QProcess::Crashed:
-            errorCode = ErrorCode::ProcessCrashed;
-            break;
-        case QProcess::Timedout:
-            errorCode = ErrorCode::TaskTimeout;
-            break;
-        default:
-            errorCode = ErrorCode::Unknown;
-            break;
-    }
+    const ErrorCode errorCode = ErrorTypes::fromProcessError(error);
     ErrorInfo err = ErrorTypes::createProcessError(errorCode, "ImageMagick", QString(), "ImageMagick::onProcessError");
     err.inputFile = m_currentInputFile;
     err.outputFile = m_currentOutputFile;

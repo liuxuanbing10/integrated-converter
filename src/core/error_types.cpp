@@ -1,30 +1,49 @@
 #include "error_types.h"
+
 #include <algorithm>
 #include <array>
 #include <ranges>
 
-namespace ErrorTypes {
+namespace ErrorTypes
+{
 
-QString errorCodeToString(ErrorCode code) {
-    switch (code) {
-        case ErrorCode::Unknown: return QStringLiteral("Unknown");
-        case ErrorCode::InvalidParameter: return QStringLiteral("InvalidParameter");
-        case ErrorCode::FileNotFound: return QStringLiteral("FileNotFound");
-        case ErrorCode::PermissionDenied: return QStringLiteral("PermissionDenied");
-        case ErrorCode::DiskSpaceInsufficient: return QStringLiteral("DiskSpaceInsufficient");
-        case ErrorCode::ConverterNotFound: return QStringLiteral("ConverterNotFound");
-        case ErrorCode::ConverterNotAvailable: return QStringLiteral("ConverterNotAvailable");
-        case ErrorCode::UnsupportedFormat: return QStringLiteral("UnsupportedFormat");
-        case ErrorCode::ConversionFailed: return QStringLiteral("ConversionFailed");
-        case ErrorCode::TaskCancelled: return QStringLiteral("TaskCancelled");
-        case ErrorCode::TaskTimeout: return QStringLiteral("TaskTimeout");
-        case ErrorCode::ProcessCrashed: return QStringLiteral("ProcessCrashed");
-        case ErrorCode::ProcessFailedToStart: return QStringLiteral("ProcessFailedToStart");
-        default: return QStringLiteral("Unknown");
+QString errorCodeToString(ErrorCode code)
+{
+    switch (code)
+    {
+        case ErrorCode::Unknown:
+            return QStringLiteral("Unknown");
+        case ErrorCode::InvalidParameter:
+            return QStringLiteral("InvalidParameter");
+        case ErrorCode::FileNotFound:
+            return QStringLiteral("FileNotFound");
+        case ErrorCode::PermissionDenied:
+            return QStringLiteral("PermissionDenied");
+        case ErrorCode::DiskSpaceInsufficient:
+            return QStringLiteral("DiskSpaceInsufficient");
+        case ErrorCode::ConverterNotFound:
+            return QStringLiteral("ConverterNotFound");
+        case ErrorCode::ConverterNotAvailable:
+            return QStringLiteral("ConverterNotAvailable");
+        case ErrorCode::UnsupportedFormat:
+            return QStringLiteral("UnsupportedFormat");
+        case ErrorCode::ConversionFailed:
+            return QStringLiteral("ConversionFailed");
+        case ErrorCode::TaskCancelled:
+            return QStringLiteral("TaskCancelled");
+        case ErrorCode::TaskTimeout:
+            return QStringLiteral("TaskTimeout");
+        case ErrorCode::ProcessCrashed:
+            return QStringLiteral("ProcessCrashed");
+        case ErrorCode::ProcessFailedToStart:
+            return QStringLiteral("ProcessFailedToStart");
+        default:
+            return QStringLiteral("Unknown");
     }
 }
 
-ErrorCode stringToErrorCode(const QString& str) {
+ErrorCode stringToErrorCode(const QString& str)
+{
     // C++23: constexpr lookup table using CTAD + ranges
     static constexpr std::array table = {
         std::pair{"ConversionFailed", ErrorCode::ConversionFailed},
@@ -42,14 +61,14 @@ ErrorCode stringToErrorCode(const QString& str) {
         std::pair{"UnsupportedFormat", ErrorCode::UnsupportedFormat},
     };
 
-    auto it = std::ranges::find_if(table, [&str](const auto& pair) {
-        return str == pair.first;
-    });
+    auto it = std::ranges::find_if(table, [&str](const auto& pair) { return str == pair.first; });
     return it != table.end() ? it->second : ErrorCode::Unknown;
 }
 
-QString defaultSuggestion(ErrorCode code) {
-    switch (code) {
+QString defaultSuggestion(ErrorCode code)
+{
+    switch (code)
+    {
         case ErrorCode::FileNotFound:
             return QObject::tr("请检查文件路径是否正确，确认文件是否存在");
         case ErrorCode::PermissionDenied:
@@ -77,8 +96,10 @@ QString defaultSuggestion(ErrorCode code) {
     }
 }
 
-bool isRecoverable(ErrorCode code) {
-    switch (code) {
+bool isRecoverable(ErrorCode code)
+{
+    switch (code)
+    {
         case ErrorCode::FileNotFound:
         case ErrorCode::PermissionDenied:
         case ErrorCode::DiskSpaceInsufficient:
@@ -91,8 +112,8 @@ bool isRecoverable(ErrorCode code) {
     }
 }
 
-ErrorInfo createError(ErrorCode code, const QString& message,
-                     const QString& context, const QString& taskId) {
+ErrorInfo createError(ErrorCode code, const QString& message, const QString& context, const QString& taskId)
+{
     ErrorInfo error;
     error.code = code;
     error.message = message;
@@ -103,7 +124,8 @@ ErrorInfo createError(ErrorCode code, const QString& message,
     return error;
 }
 
-ErrorInfo createFileNotFoundError(const QString& filePath, const QString& context) {
+ErrorInfo createFileNotFoundError(const QString& filePath, const QString& context)
+{
     ErrorInfo error;
     error.code = ErrorCode::FileNotFound;
     error.message = QObject::tr("文件不存在");
@@ -115,9 +137,8 @@ ErrorInfo createFileNotFoundError(const QString& filePath, const QString& contex
     return error;
 }
 
-ErrorInfo createConversionFailedError(const QString& details,
-                                     const QString& converterName,
-                                     const QString& context) {
+ErrorInfo createConversionFailedError(const QString& details, const QString& converterName, const QString& context)
+{
     ErrorInfo error;
     error.code = ErrorCode::ConversionFailed;
     error.message = QObject::tr("转换失败");
@@ -129,13 +150,14 @@ ErrorInfo createConversionFailedError(const QString& details,
     return error;
 }
 
-ErrorInfo createProcessError(ErrorCode code, const QString& processName,
-                            const QString& details, const QString& context) {
+ErrorInfo createProcessError(ErrorCode code, const QString& processName, const QString& details, const QString& context)
+{
     ErrorInfo error;
     error.code = code;
     error.converterName = processName;
     error.context = context;
-    switch (code) {
+    switch (code)
+    {
         case ErrorCode::ProcessCrashed:
             error.message = QObject::tr("进程崩溃");
             break;
@@ -149,12 +171,16 @@ ErrorInfo createProcessError(ErrorCode code, const QString& processName,
             error.message = QObject::tr("进程错误");
             break;
     }
-    if (!processName.isEmpty()) {
+    if (!processName.isEmpty())
+    {
         error.details = QObject::tr("进程: %1").arg(processName);
-        if (!details.isEmpty()) {
+        if (!details.isEmpty())
+        {
             error.details += "\n" + details;
         }
-    } else {
+    }
+    else
+    {
         error.details = details;
     }
     error.suggestion = defaultSuggestion(code);
@@ -162,4 +188,42 @@ ErrorInfo createProcessError(ErrorCode code, const QString& processName,
     return error;
 }
 
+} // namespace ErrorTypes
+
+ErrorCode ErrorTypes::fromProcessError(QProcess::ProcessError error)
+{
+    switch (error)
+    {
+        case QProcess::FailedToStart:
+            return ErrorCode::ProcessFailedToStart;
+        case QProcess::Crashed:
+            return ErrorCode::ProcessCrashed;
+        case QProcess::Timedout:
+            return ErrorCode::TaskTimeout;
+        case QProcess::ReadError:
+        case QProcess::WriteError:
+        case QProcess::UnknownError:
+            break;
+    }
+    return ErrorCode::Unknown;
+}
+
+QString ErrorTypes::extractErrorLines(const QString& stderrText, int maxChars)
+{
+    QString detailMsg;
+    if (stderrText.isEmpty())
+    {
+        return detailMsg;
+    }
+    const QStringList lines = stderrText.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < maxChars; --i)
+    {
+        const QString& line = lines[i];
+        if (line.contains(QLatin1String("Error"), Qt::CaseInsensitive) || line.contains(QLatin1String("Invalid")) ||
+            line.contains(QLatin1String("failed"), Qt::CaseInsensitive))
+        {
+            detailMsg += line.trimmed() + QLatin1Char('\n');
+        }
+    }
+    return detailMsg;
 }

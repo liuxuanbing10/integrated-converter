@@ -389,22 +389,7 @@ void PandocConverter::onProcessError(QProcess::ProcessError error)
 {
     m_isConverting = false;
     m_currentProcess.reset();
-    ErrorCode errorCode;
-    switch (error)
-    {
-        case QProcess::FailedToStart:
-            errorCode = ErrorCode::ProcessFailedToStart;
-            break;
-        case QProcess::Crashed:
-            errorCode = ErrorCode::ProcessCrashed;
-            break;
-        case QProcess::Timedout:
-            errorCode = ErrorCode::TaskTimeout;
-            break;
-        default:
-            errorCode = ErrorCode::Unknown;
-            break;
-    }
+    const ErrorCode errorCode = ErrorTypes::fromProcessError(error);
     ErrorInfo err = ErrorTypes::createProcessError(errorCode, "Pandoc", QString(), "Pandoc::onProcessError");
     err.inputFile = m_currentInputFile;
     err.outputFile = m_currentOutputFile;

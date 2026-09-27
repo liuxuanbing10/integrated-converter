@@ -3,10 +3,12 @@
 
 #include <QObject>
 
-class TestErrorTypes : public QObject {
+class TestErrorTypes : public QObject
+{
     Q_OBJECT
 public:
-    explicit TestErrorTypes(QObject* parent = nullptr) : QObject(parent) {}
+    explicit TestErrorTypes(QObject* parent = nullptr) : QObject(parent)
+    { }
 private slots:
     // ErrorInfo construction
     void testDefaultConstructor();
@@ -25,6 +27,8 @@ private slots:
     void testCreateFileNotFoundError();
     void testCreateConversionFailedError();
     void testCreateProcessError();
+    void testFromProcessError();
+    void testExtractErrorLines();
 };
 
 #endif // TEST_ERROR_TYPES_H

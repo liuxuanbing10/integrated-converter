@@ -772,16 +772,7 @@ bool FFmpegConverter::runFFmpeg(const QStringList& args)
     if (!success)
     {
         // Build a detailed error so the user sees what FFmpeg actually reported.
-        QString detailMsg;
-        QStringList lines = m_errorBuffer.split('\n', Qt::SkipEmptyParts);
-        for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i)
-        {
-            if (lines[i].contains("Error") || lines[i].contains("error") || lines[i].contains("Invalid") ||
-                lines[i].contains("failed"))
-            {
-                detailMsg += lines[i].trimmed() + "\n";
-            }
-        }
+        const QString detailMsg = ErrorTypes::extractErrorLines(m_errorBuffer);
         ErrorInfo error;
         if (m_process->exitStatus() == QProcess::CrashExit)
         {
@@ -870,19 +861,8 @@ void FFmpegConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitS
         }
         else
         {
-            QString detailMsg;
-            if (!m_errorBuffer.isEmpty())
-            {
-                QStringList lines = m_errorBuffer.split('\n', Qt::SkipEmptyParts);
-                for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i)
-                {
-                    if (lines[i].contains("Error") || lines[i].contains("error") || lines[i].contains("Invalid") ||
-                        lines[i].contains("failed"))
-                    {
-                        detailMsg += lines[i].trimmed() + "\n";
-                    }
-                }
-            }
+            const QString detailMsg = ErrorTypes::extractErrorLines(m_errorBuffer);
+
             error = ErrorTypes::createConversionFailedError(
                 detailMsg.trimmed().isEmpty() ? tr("退出码: %1").arg(exitCode) : detailMsg.trimmed(), "FFmpeg",
                 "FFmpeg::onProcessFinished");
@@ -904,22 +884,7 @@ void FFmpegConverter::onProcessError(QProcess::ProcessError error)
     if (!m_isRunning)
         return;
     m_isRunning = false;
-    ErrorCode errorCode;
-    switch (error)
-    {
-        case QProcess::FailedToStart:
-            errorCode = ErrorCode::ProcessFailedToStart;
-            break;
-        case QProcess::Crashed:
-            errorCode = ErrorCode::ProcessCrashed;
-            break;
-        case QProcess::Timedout:
-            errorCode = ErrorCode::TaskTimeout;
-            break;
-        default:
-            errorCode = ErrorCode::Unknown;
-            break;
-    }
+    const ErrorCode errorCode = ErrorTypes::fromProcessError(error);
     ErrorInfo err = ErrorTypes::createProcessError(errorCode, "FFmpeg", QString(), "FFmpeg::onProcessError");
     err.inputFile = m_currentInputFile;
     err.outputFile = m_currentOutputFile;
