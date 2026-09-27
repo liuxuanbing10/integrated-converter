@@ -45,4 +45,16 @@ jobs:
 
       - name: ctest
         working-directory: build/debug
-        run: ctest --output-on-failure
+        run: |
+          # test_runner writes detail to test_results.log and can die at
+          # startup (missing DLL etc.) with ctest swallowing the cause;
+          # run it directly first so its exit code and stdout are visible.
+          & ".\tests\test_runner.exe"
+          Write-Host "direct-run exit: $LASTEXITCODE"
+          ctest --output-on-failure
+          $ctest = $LASTEXITCODE
+          if (Test-Path tests\test_results.log) {
+            Write-Host "===== tests\test_results.log ====="
+            Get-Content tests\test_results.log
+          }
+          exit $ctest
