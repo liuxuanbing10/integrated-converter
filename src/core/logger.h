@@ -1,17 +1,19 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <QString>
-#include <QFile>
-#include <QTextStream>
-#include <QMutex>
 #include <QDateTime>
-#include <QSet>
+#include <QFile>
 #include <QFileInfo>
+#include <QMutex>
+#include <QSet>
+#include <QString>
+#include <QTextStream>
 
-class Logger {
+class Logger
+{
 public:
-    enum class Level {
+    enum class Level
+    {
         Debug,
         Info,
         Warning,
@@ -83,9 +85,33 @@ extern std::atomic<Logger*> g_logger;
 
 // Convenience macros — load g_logger once into a local so the null check
 // and the call can never race with ~Logger clearing it.
-#define LOG_DEBUG(module, message)   do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->debug(module, message); } while(0)
-#define LOG_INFO(module, message)    do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->info(module, message); } while(0)
-#define LOG_WARNING(module, message) do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->warning(module, message); } while(0)
-#define LOG_ERROR(module, message)   do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->error(module, message); } while(0)
+#define LOG_DEBUG(module, message)                              \
+    do                                                          \
+    {                                                           \
+        auto* _lg = ::g_logger.load(std::memory_order_acquire); \
+        if (_lg)                                                \
+            _lg->debug(module, message);                        \
+    } while (0)
+#define LOG_INFO(module, message)                               \
+    do                                                          \
+    {                                                           \
+        auto* _lg = ::g_logger.load(std::memory_order_acquire); \
+        if (_lg)                                                \
+            _lg->info(module, message);                         \
+    } while (0)
+#define LOG_WARNING(module, message)                            \
+    do                                                          \
+    {                                                           \
+        auto* _lg = ::g_logger.load(std::memory_order_acquire); \
+        if (_lg)                                                \
+            _lg->warning(module, message);                      \
+    } while (0)
+#define LOG_ERROR(module, message)                              \
+    do                                                          \
+    {                                                           \
+        auto* _lg = ::g_logger.load(std::memory_order_acquire); \
+        if (_lg)                                                \
+            _lg->error(module, message);                        \
+    } while (0)
 
 #endif // LOGGER_H

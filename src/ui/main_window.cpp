@@ -1,58 +1,60 @@
 #include "main_window.h"
-#include "task_list_widget.h"
-#include "file_list_widget.h"
-#include "file_category_widget.h"
-#include "progress_widget.h"
+
 #include "batch_conversion_summary.h"
-#include "conversion_params_dialog.h"
-#include "task_manager.h"
 #include "config_manager.h"
-#include "logger.h"
+#include "conversion_params_dialog.h"
 #include "error_types.h"
+#include "file_category_widget.h"
+#include "file_list_widget.h"
 #include "format_registry.h"
-#include <QFileDialog>
-#include <QMessageBox>
+#include "logger.h"
+#include "progress_widget.h"
+#include "task_list_widget.h"
+#include "task_manager.h"
+
 #include <QApplication>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QPushButton>
-#include <QDir>
-#include <QFileInfo>
-#include <QStyle>
-#include <QStyleHints>
 #include <QCloseEvent>
+#include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QMessageBox>
 #include <QMimeData>
+#include <QPushButton>
+#include <QStyle>
+#include <QStyleHints>
 #include <QUrl>
+#include <QVBoxLayout>
 
-MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent)
-    , m_tabWidget(nullptr)
-    , m_imageTab(nullptr)
-    , m_docTab(nullptr)
-    , m_audioTab(nullptr)
-    , m_videoTab(nullptr)
-    , m_configPanel(nullptr)
-    , m_formatCombo(nullptr)
-    , m_outputDirEdit(nullptr)
-    , m_convertBtn(nullptr)
-    , m_paramsBtn(nullptr)
-    , m_taskListWidget(nullptr)
-    , m_progressWidget(nullptr)
-    , m_mainSplitter(nullptr)
-    , m_statusLabel(nullptr)
-    , m_taskStatsLabel(nullptr)
-    , m_startAction(nullptr)
-    , m_cancelAction(nullptr)
-    , m_summaryAction(nullptr)
-    , m_darkMode(false)
-    , m_lastActiveCategory(FormatRegistry::Category::Image)
+MainWindow::MainWindow(QWidget* parent) :
+    QMainWindow(parent),
+    m_tabWidget(nullptr),
+    m_imageTab(nullptr),
+    m_docTab(nullptr),
+    m_audioTab(nullptr),
+    m_videoTab(nullptr),
+    m_configPanel(nullptr),
+    m_formatCombo(nullptr),
+    m_outputDirEdit(nullptr),
+    m_convertBtn(nullptr),
+    m_paramsBtn(nullptr),
+    m_taskListWidget(nullptr),
+    m_progressWidget(nullptr),
+    m_mainSplitter(nullptr),
+    m_statusLabel(nullptr),
+    m_taskStatsLabel(nullptr),
+    m_startAction(nullptr),
+    m_cancelAction(nullptr),
+    m_summaryAction(nullptr),
+    m_darkMode(false),
+    m_lastActiveCategory(FormatRegistry::Category::Image)
 {
     setWindowTitle(tr("集成格式转换工具 v1.4.0"));
     resize(1200, 800);
-    setAcceptDrops(true);  // Enable drag-and-drop of files onto the main window
+    setAcceptDrops(true); // Enable drag-and-drop of files onto the main window
     setupMenuBar();
     setupToolBar();
     setupStatusBar();
@@ -61,17 +63,19 @@ MainWindow::MainWindow(QWidget* parent)
     applyLightTheme();
 
     // Qt 6.12: Use QStyleHints for fine-grained tooltip control
-    if (auto* hints = QApplication::styleHints()) {
+    if (auto* hints = QApplication::styleHints())
+    {
         hints->setToolTipWakeUpDelay(500);
     }
 
     LOG_INFO("MainWindow", "主窗口初始化完成 (外部配置面板)");
 }
 
-MainWindow::~MainWindow() {
-}
+MainWindow::~MainWindow()
+{ }
 
-void MainWindow::setupMenuBar() {
+void MainWindow::setupMenuBar()
+{
     QMenuBar* menuBar = this->menuBar();
     QMenu* fileMenu = menuBar->addMenu(tr("文件(&F)"));
     QAction* addFilesAction = fileMenu->addAction(tr("添加文件(&A)"));
@@ -107,7 +111,8 @@ void MainWindow::setupMenuBar() {
     connect(aboutAction, &QAction::triggered, this, &MainWindow::onAbout);
 }
 
-void MainWindow::setupToolBar() {
+void MainWindow::setupToolBar()
+{
     QToolBar* toolBar = addToolBar(tr("主工具栏"));
     toolBar->setMovable(false);
     toolBar->setIconSize(QSize(24, 24));
@@ -121,7 +126,8 @@ void MainWindow::setupToolBar() {
     connect(m_toolbarStartAction, &QAction::triggered, this, &MainWindow::onStartConversion);
 }
 
-void MainWindow::setupStatusBar() {
+void MainWindow::setupStatusBar()
+{
     QStatusBar* statusBar = this->statusBar();
     m_statusLabel = new QLabel(tr("就绪"));
     m_statusLabel->setStyleSheet("padding: 2px 8px;");
@@ -131,7 +137,8 @@ void MainWindow::setupStatusBar() {
     statusBar->addPermanentWidget(m_taskStatsLabel);
 }
 
-void MainWindow::setupCentralWidget() {
+void MainWindow::setupCentralWidget()
+{
     QWidget* centralWidget = new QWidget(this);
     QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(8, 8, 8, 8);
@@ -139,15 +146,12 @@ void MainWindow::setupCentralWidget() {
 
     // ── Global action bar (above tabs) ────────────────────────────
     QHBoxLayout* globalBar = new QHBoxLayout();
-    QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"),
-        tr(" 选择文件（自动识别分类）"));
-    globalAddBtn->setStyleSheet(
-        "QPushButton { padding: 10px 24px; border: none; "
-        "border-radius: 8px; background-color: #1664ff; color: #ffffff; "
-        "font-size: 14px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #0055ff; }"
-        "QPushButton:pressed { background-color: #387bff; }"
-    );
+    QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"), tr(" 选择文件（自动识别分类）"));
+    globalAddBtn->setStyleSheet("QPushButton { padding: 10px 24px; border: none; "
+                                "border-radius: 8px; background-color: #1664ff; color: #ffffff; "
+                                "font-size: 14px; font-weight: 600; }"
+                                "QPushButton:hover { background-color: #0055ff; }"
+                                "QPushButton:pressed { background-color: #387bff; }");
     connect(globalAddBtn, &QPushButton::clicked, this, &MainWindow::onAddFiles);
 
     QLabel* globalHint = new QLabel(tr("支持图片、文档、音频、视频文件，系统自动识别分类"));
@@ -163,26 +167,24 @@ void MainWindow::setupCentralWidget() {
 
     // -- Tab widget (left, stretchy) --
     m_tabWidget = new QTabWidget();
-    m_tabWidget->setStyleSheet(
-        "QTabWidget::pane { border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #ffffff; padding: 0px; }"
-        "QTabBar::tab { padding: 8px 20px; font-size: 13px; font-weight: 600; "
-        "border: 1px solid #dde2e9; border-bottom: none; border-top-left-radius: 8px; "
-        "border-top-right-radius: 8px; margin-right: 2px; color: #4e5969; }"
-        "QTabBar::tab:selected { background-color: #ffffff; color: #1664ff; "
-        "border-bottom: 2px solid #1664ff; }"
-        "QTabBar::tab:!selected { background-color: #f7f9fb; }"
-        "QTabBar::tab:hover:!selected { background-color: #f3f7ff; }"
-    );
+    m_tabWidget->setStyleSheet("QTabWidget::pane { border: 1px solid #dde2e9; border-radius: 8px; "
+                               "background-color: #ffffff; padding: 0px; }"
+                               "QTabBar::tab { padding: 8px 20px; font-size: 13px; font-weight: 600; "
+                               "border: 1px solid #dde2e9; border-bottom: none; border-top-left-radius: 8px; "
+                               "border-top-right-radius: 8px; margin-right: 2px; color: #4e5969; }"
+                               "QTabBar::tab:selected { background-color: #ffffff; color: #1664ff; "
+                               "border-bottom: 2px solid #1664ff; }"
+                               "QTabBar::tab:!selected { background-color: #f7f9fb; }"
+                               "QTabBar::tab:hover:!selected { background-color: #f3f7ff; }");
 
     using Cat = FormatRegistry::Category;
     m_imageTab = new FileCategoryWidget(Cat::Image);
-    m_docTab   = new FileCategoryWidget(Cat::Document);
+    m_docTab = new FileCategoryWidget(Cat::Document);
     m_audioTab = new FileCategoryWidget(Cat::Audio);
     m_videoTab = new FileCategoryWidget(Cat::Video);
 
     m_tabWidget->addTab(m_imageTab, QString::fromUtf8("\xF0\x9F\x96\xBC") + tr(" 图片转换"));
-    m_tabWidget->addTab(m_docTab,   QString::fromUtf8("\xF0\x9F\x93\x84") + tr(" 文档转换"));
+    m_tabWidget->addTab(m_docTab, QString::fromUtf8("\xF0\x9F\x93\x84") + tr(" 文档转换"));
     m_tabWidget->addTab(m_audioTab, QString::fromUtf8("\xF0\x9F\x8E\xB5") + tr(" 音频转换"));
     m_tabWidget->addTab(m_videoTab, QString::fromUtf8("\xF0\x9F\x8E\xAC") + tr(" 视频转换"));
 
@@ -197,8 +199,7 @@ void MainWindow::setupCentralWidget() {
         "background-color: #ffffff; }"
         "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
         "#configTitleTxt { color: #1664ff; font-size: 14px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: 600; color: #4e5969; }"
-    );
+        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: 600; color: #4e5969; }");
 
     QVBoxLayout* configLayout = new QVBoxLayout(m_configPanel);
     configLayout->setContentsMargins(12, 14, 12, 12);
@@ -226,17 +227,15 @@ void MainWindow::setupCentralWidget() {
     // Format combo — solid background explicitly
     m_formatCombo = new QComboBox();
     m_formatCombo->setMinimumHeight(28);
-    m_formatCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
-        "QComboBox::drop-down { border: none; width: 22px; "
-        "background-color: #ffffff; }"
-        "QComboBox::down-arrow { width: 10px; height: 10px; }"
-        "QComboBox QAbstractItemView { "
-        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
-        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
-        "font-size: 12px; }"
-    );
+    m_formatCombo->setStyleSheet("QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+                                 "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
+                                 "QComboBox::drop-down { border: none; width: 22px; "
+                                 "background-color: #ffffff; }"
+                                 "QComboBox::down-arrow { width: 10px; height: 10px; }"
+                                 "QComboBox QAbstractItemView { "
+                                 "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
+                                 "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
+                                 "font-size: 12px; }");
     configLayout->addWidget(m_formatCombo);
 
     // Output directory label
@@ -252,24 +251,20 @@ void MainWindow::setupCentralWidget() {
     m_outputDirEdit = new QLineEdit();
     m_outputDirEdit->setPlaceholderText(tr("留空则使用源文件所在目录"));
     m_outputDirEdit->setMinimumHeight(28);
-    m_outputDirEdit->setStyleSheet(
-        "QLineEdit { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #ffffff; color: #1d2129; font-size: 12px; }"
-    );
+    m_outputDirEdit->setStyleSheet("QLineEdit { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+                                   "background-color: #ffffff; color: #1d2129; font-size: 12px; }");
     dirRow->addWidget(m_outputDirEdit, 1);
 
     QPushButton* browseBtn = new QPushButton(tr("浏览"));
     browseBtn->setMinimumHeight(28);
     browseBtn->setFixedWidth(50);
-    browseBtn->setStyleSheet(
-        "QPushButton { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #f7f9fb; color: #4e5969; font-size: 12px; }"
-        "QPushButton:hover { background-color: #f1f4f8; }"
-    );
+    browseBtn->setStyleSheet("QPushButton { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+                             "background-color: #f7f9fb; color: #4e5969; font-size: 12px; }"
+                             "QPushButton:hover { background-color: #f1f4f8; }");
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
-        QString dir = QFileDialog::getExistingDirectory(this,
-            tr("选择输出目录"), m_outputDirEdit->text());
-        if (!dir.isEmpty()) {
+        QString dir = QFileDialog::getExistingDirectory(this, tr("选择输出目录"), m_outputDirEdit->text());
+        if (!dir.isEmpty())
+        {
             m_outputDirEdit->setText(dir);
         }
     });
@@ -281,31 +276,25 @@ void MainWindow::setupCentralWidget() {
     configLayout->addStretch(1);
 
     // ── Parameter settings button ─────────────────────────────────
-    m_paramsBtn = new QPushButton(QIcon(":/icons/settings.svg"),
-        tr(" 参数设置"));
+    m_paramsBtn = new QPushButton(QIcon(":/icons/settings.svg"), tr(" 参数设置"));
     m_paramsBtn->setMinimumHeight(28);
     m_paramsBtn->setCursor(Qt::PointingHandCursor);
-    m_paramsBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-        "background-color: #f3f7ff; color: #1664ff; font-size: 12px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #ebf1ff; }"
-        "QPushButton:pressed { background-color: #ccddff; }"
-    );
+    m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+                               "background-color: #f3f7ff; color: #1664ff; font-size: 12px; font-weight: 600; }"
+                               "QPushButton:hover { background-color: #ebf1ff; }"
+                               "QPushButton:pressed { background-color: #ccddff; }");
     m_paramsBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_paramsBtn);
 
     // Convert button
-    m_convertBtn = new QPushButton(QIcon(":/icons/play.svg"),
-        tr(" 开始转换"));
+    m_convertBtn = new QPushButton(QIcon(":/icons/play.svg"), tr(" 开始转换"));
     m_convertBtn->setMinimumHeight(30);
     m_convertBtn->setCursor(Qt::PointingHandCursor);
-    m_convertBtn->setStyleSheet(
-        "QPushButton { border: none; border-radius: 8px; "
-        "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #0055ff; }"
-        "QPushButton:pressed { background-color: #387bff; }"
-        "QPushButton:disabled { background-color: #eceded; color: #c9cdd4; }"
-    );
+    m_convertBtn->setStyleSheet("QPushButton { border: none; border-radius: 8px; "
+                                "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
+                                "QPushButton:hover { background-color: #0055ff; }"
+                                "QPushButton:pressed { background-color: #387bff; }"
+                                "QPushButton:disabled { background-color: #eceded; color: #c9cdd4; }");
     m_convertBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_convertBtn);
 
@@ -315,11 +304,9 @@ void MainWindow::setupCentralWidget() {
 
     // ── Bottom: progress + task list ──────────────────────────────
     QGroupBox* taskGroup = new QGroupBox(tr("任务列表"));
-    taskGroup->setStyleSheet(
-        "QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; "
-        "margin-top: 8px; padding-top: 8px; color: #1d2129; }"
-        "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }"
-    );
+    taskGroup->setStyleSheet("QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; "
+                             "margin-top: 8px; padding-top: 8px; color: #1d2129; }"
+                             "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }");
     QVBoxLayout* taskLayout = new QVBoxLayout(taskGroup);
     m_progressWidget = new ProgressWidget();
     taskLayout->addWidget(m_progressWidget);
@@ -333,7 +320,8 @@ void MainWindow::setupCentralWidget() {
     populateFormatCombo(Cat::Image);
 }
 
-void MainWindow::setupConnections() {
+void MainWindow::setupConnections()
+{
     TaskManager* tm = TaskManager::instance();
     connect(tm, &TaskManager::taskAdded, this, &MainWindow::onTaskAdded);
     connect(tm, &TaskManager::taskStarted, this, &MainWindow::onTaskStarted);
@@ -352,28 +340,30 @@ void MainWindow::setupConnections() {
 
     // When files are added to the current tab, auto-populate output dir
     auto updateDirOnAdd = [this](FileCategoryWidget* tab) {
-        if (m_tabWidget->currentWidget() == tab && tab->fileCount() > 0) {
+        if (m_tabWidget->currentWidget() == tab && tab->fileCount() > 0)
+        {
             QFileInfo fi(tab->allFiles().first().filePath);
             m_outputDirEdit->setText(fi.absolutePath());
         }
     };
     connect(m_imageTab, &FileCategoryWidget::filesChanged, this,
-        [this, updateDirOnAdd]() { updateDirOnAdd(m_imageTab); });
-    connect(m_docTab, &FileCategoryWidget::filesChanged, this,
-        [this, updateDirOnAdd]() { updateDirOnAdd(m_docTab); });
+            [this, updateDirOnAdd]() { updateDirOnAdd(m_imageTab); });
+    connect(m_docTab, &FileCategoryWidget::filesChanged, this, [this, updateDirOnAdd]() { updateDirOnAdd(m_docTab); });
     connect(m_audioTab, &FileCategoryWidget::filesChanged, this,
-        [this, updateDirOnAdd]() { updateDirOnAdd(m_audioTab); });
+            [this, updateDirOnAdd]() { updateDirOnAdd(m_audioTab); });
     connect(m_videoTab, &FileCategoryWidget::filesChanged, this,
-        [this, updateDirOnAdd]() { updateDirOnAdd(m_videoTab); });
+            [this, updateDirOnAdd]() { updateDirOnAdd(m_videoTab); });
 }
 
-void MainWindow::populateFormatCombo(FormatRegistry::Category cat) {
+void MainWindow::populateFormatCombo(FormatRegistry::Category cat)
+{
     m_formatCombo->blockSignals(true);
     m_formatCombo->clear();
 
     const auto& reg = FormatRegistry::instance();
     QStringList formats;
-    switch (cat) {
+    switch (cat)
+    {
         case FormatRegistry::Category::Image:
             formats = reg.imageOutputFormats();
             break;
@@ -391,12 +381,14 @@ void MainWindow::populateFormatCombo(FormatRegistry::Category cat) {
             break;
     }
 
-    for (const QString& fmt : formats) {
+    for (const QString& fmt : formats)
+    {
         m_formatCombo->addItem(fmt.toUpper(), fmt.toLower());
     }
 
     // Restore saved selection if any
-    if (m_savedFormats.contains(cat)) {
+    if (m_savedFormats.contains(cat))
+    {
         QVariant saved = m_savedFormats.value(cat);
         int idx = m_formatCombo->findData(saved);
         if (idx >= 0)
@@ -406,20 +398,32 @@ void MainWindow::populateFormatCombo(FormatRegistry::Category cat) {
     m_formatCombo->blockSignals(false);
 }
 
-void MainWindow::onTabChanged(int index) {
+void MainWindow::onTabChanged(int index)
+{
     // Save current format for last active category (before switching)
-    if (m_formatCombo->count() > 0 && m_formatCombo->currentIndex() >= 0) {
+    if (m_formatCombo->count() > 0 && m_formatCombo->currentIndex() >= 0)
+    {
         m_savedFormats[m_lastActiveCategory] = m_formatCombo->currentData();
     }
 
     // Determine new category from the new index
     FormatRegistry::Category newCat = FormatRegistry::Category::Image;
-    switch (index) {
-        case 0: newCat = FormatRegistry::Category::Image; break;
-        case 1: newCat = FormatRegistry::Category::Document; break;
-        case 2: newCat = FormatRegistry::Category::Audio; break;
-        case 3: newCat = FormatRegistry::Category::Video; break;
-        default: break;
+    switch (index)
+    {
+        case 0:
+            newCat = FormatRegistry::Category::Image;
+            break;
+        case 1:
+            newCat = FormatRegistry::Category::Document;
+            break;
+        case 2:
+            newCat = FormatRegistry::Category::Audio;
+            break;
+        case 3:
+            newCat = FormatRegistry::Category::Video;
+            break;
+        default:
+            break;
     }
 
     // Populate format combo for the new tab
@@ -427,14 +431,25 @@ void MainWindow::onTabChanged(int index) {
 
     // Update output dir from the new tab's first file
     FileCategoryWidget* tab = nullptr;
-    switch (index) {
-        case 0: tab = m_imageTab; break;
-        case 1: tab = m_docTab; break;
-        case 2: tab = m_audioTab; break;
-        case 3: tab = m_videoTab; break;
-        default: break;
+    switch (index)
+    {
+        case 0:
+            tab = m_imageTab;
+            break;
+        case 1:
+            tab = m_docTab;
+            break;
+        case 2:
+            tab = m_audioTab;
+            break;
+        case 3:
+            tab = m_videoTab;
+            break;
+        default:
+            break;
     }
-    if (tab && tab->fileCount() > 0 && !tab->allFiles().isEmpty()) {
+    if (tab && tab->fileCount() > 0 && !tab->allFiles().isEmpty())
+    {
         QFileInfo fi(tab->allFiles().first().filePath);
         m_outputDirEdit->setText(fi.absolutePath());
     }
@@ -442,25 +457,34 @@ void MainWindow::onTabChanged(int index) {
     m_lastActiveCategory = newCat;
 }
 
-void MainWindow::onConversionParams() {
+void MainWindow::onConversionParams()
+{
     // Determine current category from active tab
     FormatRegistry::Category currentCat = FormatRegistry::Category::Image;
     int idx = m_tabWidget->currentIndex();
-    switch (idx) {
-        case 0: currentCat = FormatRegistry::Category::Image; break;
-        case 1: currentCat = FormatRegistry::Category::Document; break;
-        case 2: currentCat = FormatRegistry::Category::Audio; break;
-        case 3: currentCat = FormatRegistry::Category::Video; break;
-        default: break;
+    switch (idx)
+    {
+        case 0:
+            currentCat = FormatRegistry::Category::Image;
+            break;
+        case 1:
+            currentCat = FormatRegistry::Category::Document;
+            break;
+        case 2:
+            currentCat = FormatRegistry::Category::Audio;
+            break;
+        case 3:
+            currentCat = FormatRegistry::Category::Video;
+            break;
+        default:
+            break;
     }
 
     // Reset button style before opening dialog
-    m_paramsBtn->setStyleSheet(
-        "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-        "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #ebf1ff; }"
-        "QPushButton:pressed { background-color: #ccddff; }"
-    );
+    m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+                               "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
+                               "QPushButton:hover { background-color: #ebf1ff; }"
+                               "QPushButton:pressed { background-color: #ccddff; }");
 
     ConversionParamsDialog dialog(this);
     dialog.setDarkMode(m_darkMode);
@@ -468,7 +492,8 @@ void MainWindow::onConversionParams() {
 
     // Restore previously saved params for each category
     auto restoreCat = [&](FormatRegistry::Category cat) {
-        if (m_conversionParams.contains(cat)) {
+        if (m_conversionParams.contains(cat))
+        {
             dialog.setParamsForCategory(cat, m_conversionParams[cat]);
         }
     };
@@ -477,7 +502,8 @@ void MainWindow::onConversionParams() {
     restoreCat(FormatRegistry::Category::Audio);
     restoreCat(FormatRegistry::Category::Video);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (dialog.exec() == QDialog::Accepted)
+    {
         // Store params from dialog for all categories
         m_conversionParams[FormatRegistry::Category::Image] =
             dialog.getParamsForCategory(FormatRegistry::Category::Image);
@@ -491,25 +517,28 @@ void MainWindow::onConversionParams() {
         LOG_INFO("MainWindow", "转换参数设置已更新");
 
         // Visual feedback
-        m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 2px solid #1ebf6f; border-radius: 8px; "
-            "background-color: #e2f5eb; color: #2a814b; font-size: 13px; font-weight: 600; }"
-            "QPushButton:hover { background-color: #8dd8b3; }"
-        );
+        m_paramsBtn->setStyleSheet("QPushButton { border: 2px solid #1ebf6f; border-radius: 8px; "
+                                   "background-color: #e2f5eb; color: #2a814b; font-size: 13px; font-weight: 600; }"
+                                   "QPushButton:hover { background-color: #8dd8b3; }");
         m_statusLabel->setText(tr("转换参数已设置"));
     }
 }
 
-void MainWindow::toggleTheme() {
+void MainWindow::toggleTheme()
+{
     m_darkMode = !m_darkMode;
-    if (m_darkMode) {
+    if (m_darkMode)
+    {
         applyDarkTheme();
-    } else {
+    }
+    else
+    {
         applyLightTheme();
     }
 }
 
-void MainWindow::applyLightTheme() {
+void MainWindow::applyLightTheme()
+{
     QString style = R"(
         QMainWindow { background-color: #f7f9fb; }
         QMenuBar { background-color: #ffffff; border-bottom: 1px solid #dde2e9; }
@@ -542,20 +571,19 @@ void MainWindow::applyLightTheme() {
         "background-color: #ffffff; }"
         "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
         "#configTitleTxt { color: #1664ff; font-size: 16px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #4e5969; }"
-    );
+        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #4e5969; }");
     QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#1ebf6f")) {
-        m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-            "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
-            "QPushButton:hover { background-color: #ebf1ff; }"
-            "QPushButton:pressed { background-color: #ccddff; }"
-        );
+    if (!currentBtnStyle.contains("#1ebf6f"))
+    {
+        m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
+                                   "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
+                                   "QPushButton:hover { background-color: #ebf1ff; }"
+                                   "QPushButton:pressed { background-color: #ccddff; }");
     }
 }
 
-void MainWindow::applyDarkTheme() {
+void MainWindow::applyDarkTheme()
+{
     QString style = R"(
         QMainWindow { background-color: #0c0d0e; }
         QMenuBar { background-color: #1d2129; border-bottom: 1px solid #333333; color: #eceded; }
@@ -588,26 +616,27 @@ void MainWindow::applyDarkTheme() {
         "background-color: #1d2129; }"
         "#configPanel QLabel { color: #eceded; background: transparent; border: none; }"
         "#configTitleTxt { color: #387bff; font-size: 16px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #86909c; }"
-    );
+        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #86909c; }");
     QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#1ebf6f")) {
+    if (!currentBtnStyle.contains("#1ebf6f"))
+    {
         m_paramsBtn->setStyleSheet(
             "QPushButton { border: 1px solid #1664ff; border-radius: 8px; "
             "background-color: rgba(22, 100, 255, 0.12); color: #387bff; font-size: 13px; font-weight: 600; }"
             "QPushButton:hover { background-color: rgba(22, 100, 255, 0.24); }"
-            "QPushButton:pressed { background-color: rgba(22, 100, 255, 0.32); }"
-        );
+            "QPushButton:pressed { background-color: rgba(22, 100, 255, 0.32); }");
     }
 }
 
 // ── File handling ────────────────────────────────────────────────
 
-void MainWindow::addFilesAndAutoRoute(const QStringList& filePaths) {
-    if (filePaths.isEmpty()) return;
+void MainWindow::addFilesAndAutoRoute(const QStringList& filePaths)
+{
+    if (filePaths.isEmpty())
+        return;
 
     int imageCount = m_imageTab->addFiles(filePaths);
-    int docCount   = m_docTab->addFiles(filePaths);
+    int docCount = m_docTab->addFiles(filePaths);
     int audioCount = m_audioTab->addFiles(filePaths);
     int videoCount = m_videoTab->addFiles(filePaths);
 
@@ -615,54 +644,68 @@ void MainWindow::addFilesAndAutoRoute(const QStringList& filePaths) {
     int skipped = filePaths.size() - total;
 
     QStringList parts;
-    if (imageCount > 0) parts << tr("%1 个图片").arg(imageCount);
-    if (docCount > 0)   parts << tr("%1 个文档").arg(docCount);
-    if (audioCount > 0) parts << tr("%1 个音频").arg(audioCount);
-    if (videoCount > 0) parts << tr("%1 个视频").arg(videoCount);
+    if (imageCount > 0)
+        parts << tr("%1 个图片").arg(imageCount);
+    if (docCount > 0)
+        parts << tr("%1 个文档").arg(docCount);
+    if (audioCount > 0)
+        parts << tr("%1 个音频").arg(audioCount);
+    if (videoCount > 0)
+        parts << tr("%1 个视频").arg(videoCount);
 
     QString msg;
-    if (total > 0) {
+    if (total > 0)
+    {
         msg = tr("已添加 ") + parts.join("，");
         int maxCount = qMax(qMax(imageCount, docCount), qMax(audioCount, videoCount));
-        if (maxCount == imageCount) m_tabWidget->setCurrentIndex(0);
-        else if (maxCount == docCount) m_tabWidget->setCurrentIndex(1);
-        else if (maxCount == audioCount) m_tabWidget->setCurrentIndex(2);
-        else if (maxCount == videoCount) m_tabWidget->setCurrentIndex(3);
+        if (maxCount == imageCount)
+            m_tabWidget->setCurrentIndex(0);
+        else if (maxCount == docCount)
+            m_tabWidget->setCurrentIndex(1);
+        else if (maxCount == audioCount)
+            m_tabWidget->setCurrentIndex(2);
+        else if (maxCount == videoCount)
+            m_tabWidget->setCurrentIndex(3);
     }
-    if (skipped > 0) {
-        if (!msg.isEmpty()) msg += "；";
+    if (skipped > 0)
+    {
+        if (!msg.isEmpty())
+            msg += "；";
         msg += tr("%1 个文件格式不受支持（已跳过）").arg(skipped);
     }
-    if (!msg.isEmpty()) {
+    if (!msg.isEmpty())
+    {
         m_statusLabel->setText(msg);
     }
 }
 
-void MainWindow::onAddFiles() {
+void MainWindow::onAddFiles()
+{
     const auto& reg = FormatRegistry::instance();
-    QStringList files = QFileDialog::getOpenFileNames(this, tr("选择文件（自动识别分类）"),
-        QString(),
-        tr("所有支持格式 (%1);;"
-           "%2;;"
-           "%3;;"
-           "%4;;"
-           "%5;;"
-           "所有文件 (*)")
-        .arg(reg.fileDialogFilter())
-        .arg(reg.fileDialogImageFilter())
-        .arg(reg.fileDialogVideoFilter())
-        .arg(reg.fileDialogAudioFilter())
-        .arg(reg.fileDialogDocumentFilter())
-    );
-    if (!files.isEmpty()) {
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("选择文件（自动识别分类）"), QString(),
+                                                      tr("所有支持格式 (%1);;"
+                                                         "%2;;"
+                                                         "%3;;"
+                                                         "%4;;"
+                                                         "%5;;"
+                                                         "所有文件 (*)")
+                                                          .arg(reg.fileDialogFilter())
+                                                          .arg(reg.fileDialogImageFilter())
+                                                          .arg(reg.fileDialogVideoFilter())
+                                                          .arg(reg.fileDialogAudioFilter())
+                                                          .arg(reg.fileDialogDocumentFilter()));
+    if (!files.isEmpty())
+    {
         addFilesAndAutoRoute(files);
     }
 }
 
-void MainWindow::onStartConversion() {
-    int totalFiles = m_imageTab->fileCount() + m_docTab->fileCount()
-                   + m_audioTab->fileCount() + m_videoTab->fileCount();
-    if (totalFiles == 0) {
+void MainWindow::onStartConversion()
+{
+    int totalFiles =
+        m_imageTab->fileCount() + m_docTab->fileCount() + m_audioTab->fileCount() + m_videoTab->fileCount();
+    if (totalFiles == 0)
+    {
         QMessageBox::warning(this, tr("警告"), tr("请先添加要转换的文件"));
         return;
     }
@@ -676,10 +719,12 @@ void MainWindow::onStartConversion() {
     LOG_INFO("MainWindow", "开始转换任务");
 }
 
-void MainWindow::onCancelAll() {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("确认"),
-        tr("确定要取消所有任务吗？"), QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::Yes) {
+void MainWindow::onCancelAll()
+{
+    QMessageBox::StandardButton reply =
+        QMessageBox::question(this, tr("确认"), tr("确定要取消所有任务吗？"), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes)
+    {
         TaskManager::instance()->cancelAllTasks();
         m_statusLabel->setText(tr("已取消"));
         m_startAction->setEnabled(true);
@@ -688,25 +733,28 @@ void MainWindow::onCancelAll() {
     }
 }
 
-void MainWindow::onAbout() {
+void MainWindow::onAbout()
+{
     QMessageBox::about(this, tr("关于"),
-        tr("<h3>集成格式转换工具 v1.4.0</h3>"
-           "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
-           "<p>支持功能：</p>"
-           "<ul>"
-           "<li>视频格式转换（MP4, AVI, MKV等）</li>"
-           "<li>音频格式转换（MP3, WAV, FLAC等）</li>"
-           "<li>图片格式转换（PNG, JPG, GIF, WebP等）</li>"
-           "<li>文档格式转换（Markdown, DOCX, PDF等）</li>"
-           "</ul>"
-           "<p> 2024 ConverterTools</p>"));
+                       tr("<h3>集成格式转换工具 v1.4.0</h3>"
+                          "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
+                          "<p>支持功能：</p>"
+                          "<ul>"
+                          "<li>视频格式转换（MP4, AVI, MKV等）</li>"
+                          "<li>音频格式转换（MP3, WAV, FLAC等）</li>"
+                          "<li>图片格式转换（PNG, JPG, GIF, WebP等）</li>"
+                          "<li>文档格式转换（Markdown, DOCX, PDF等）</li>"
+                          "</ul>"
+                          "<p> 2024 ConverterTools</p>"));
 }
 
-void MainWindow::onExit() {
+void MainWindow::onExit()
+{
     close();
 }
 
-void MainWindow::closeEvent(QCloseEvent* event) {
+void MainWindow::closeEvent(QCloseEvent* event)
+{
     // Cancel all running tasks before the window is destroyed.
     // This kills child processes (FFmpeg/Pandoc/ImageMagick) so they don't
     // become orphans that outlive the application.
@@ -714,16 +762,19 @@ void MainWindow::closeEvent(QCloseEvent* event) {
     event->accept();
 }
 
-void MainWindow::onTaskAdded(const QString& taskId) {
+void MainWindow::onTaskAdded(const QString& taskId)
+{
     Q_UNUSED(taskId);
     updateStatusBar();
     updateProgressWidget();
     m_taskListWidget->refreshTaskList();
 }
 
-void MainWindow::onTaskStarted(const QString& taskId) {
+void MainWindow::onTaskStarted(const QString& taskId)
+{
     ConversionTask* task = TaskManager::instance()->getTask(taskId);
-    if (task) {
+    if (task)
+    {
         m_currentConvertingFile = task->inputFile();
         QFileInfo fi(m_currentConvertingFile);
         m_progressWidget->setCurrentFile(fi.fileName());
@@ -732,14 +783,17 @@ void MainWindow::onTaskStarted(const QString& taskId) {
     updateProgressWidget();
 }
 
-void MainWindow::onTaskProgressChanged(const QString& taskId, int progress) {
+void MainWindow::onTaskProgressChanged(const QString& taskId, int progress)
+{
     m_taskListWidget->updateTaskProgress(taskId, progress);
     updateProgressWidget();
 }
 
-void MainWindow::onTaskCompleted(const QString& taskId, bool success) {
+void MainWindow::onTaskCompleted(const QString& taskId, bool success)
+{
     ConversionTask* task = TaskManager::instance()->getTask(taskId);
-    if (task) {
+    if (task)
+    {
         ConversionResult result;
         result.inputPath = task->inputFile();
         result.outputPath = task->outputFile();
@@ -753,7 +807,8 @@ void MainWindow::onTaskCompleted(const QString& taskId, bool success) {
     m_taskListWidget->refreshTaskList();
 }
 
-void MainWindow::onAllTasksCompleted() {
+void MainWindow::onAllTasksCompleted()
+{
     m_statusLabel->setText(tr("所有任务已完成"));
     m_startAction->setEnabled(true);
     m_summaryAction->setEnabled(!m_conversionResults.isEmpty());
@@ -761,27 +816,35 @@ void MainWindow::onAllTasksCompleted() {
     m_progressWidget->setCurrentFile(QString());
     updateProgressWidget();
     m_taskListWidget->refreshTaskList();
-    if (ConfigManager::instance().value("showNotification", true).toBool()) {
+    if (ConfigManager::instance().value("showNotification", true).toBool())
+    {
         auto c = TaskManager::instance()->counters();
         QString msg = tr("转换完成！\n成功: %1\n失败: %2").arg(c.completed).arg(c.failed);
-        if (c.failed > 0) {
+        if (c.failed > 0)
+        {
             QMessageBox::warning(this, tr("转换完成"), msg);
-        } else {
+        }
+        else
+        {
             QMessageBox::information(this, tr("转换完成"), msg);
         }
     }
-    if (!m_conversionResults.isEmpty()) {
+    if (!m_conversionResults.isEmpty())
+    {
         showConversionSummary();
     }
     LOG_INFO("MainWindow", "所有任务已完成");
 }
 
-void MainWindow::onShowSummary() {
+void MainWindow::onShowSummary()
+{
     showConversionSummary();
 }
 
-void MainWindow::onRetryFailed(const QList<QString>& inputPaths) {
-    if (inputPaths.isEmpty()) return;
+void MainWindow::onRetryFailed(const QList<QString>& inputPaths)
+{
+    if (inputPaths.isEmpty())
+        return;
     addFilesAndAutoRoute(inputPaths);
 
     // §3.4 fix: resubmit ONLY the failed files. The old code called
@@ -791,10 +854,14 @@ void MainWindow::onRetryFailed(const QList<QString>& inputPaths) {
 
     // Drop the stale failure records so the summary/results show the fresh
     // attempt instead of duplicates. Successes stay (they aren't re-run).
-    for (auto it = m_conversionResults.begin(); it != m_conversionResults.end();) {
-        if (retry.contains(it->inputPath) && !it->success) {
+    for (auto it = m_conversionResults.begin(); it != m_conversionResults.end();)
+    {
+        if (retry.contains(it->inputPath) && !it->success)
+        {
             it = m_conversionResults.erase(it);
-        } else {
+        }
+        else
+        {
             ++it;
         }
     }
@@ -808,34 +875,41 @@ void MainWindow::onRetryFailed(const QList<QString>& inputPaths) {
     LOG_INFO("MainWindow", QString("重试 %1 个失败任务").arg(retry.size()));
 }
 
-void MainWindow::updateStatusBar() {
+void MainWindow::updateStatusBar()
+{
     TaskManager* tm = TaskManager::instance();
     auto c = tm->counters();
-    m_taskStatsLabel->setText(
-        tr("总计: %1 | 运行: %2 | 等待: %3 | 完成: %4 | 失败: %5")
-        .arg(c.total).arg(c.running).arg(c.pending).arg(c.completed).arg(c.failed)
-    );
+    m_taskStatsLabel->setText(tr("总计: %1 | 运行: %2 | 等待: %3 | 完成: %4 | 失败: %5")
+                                  .arg(c.total)
+                                  .arg(c.running)
+                                  .arg(c.pending)
+                                  .arg(c.completed)
+                                  .arg(c.failed));
 }
 
-void MainWindow::updateProgressWidget() {
+void MainWindow::updateProgressWidget()
+{
     TaskManager* tm = TaskManager::instance();
     auto c = tm->counters();
-    m_progressWidget->updateFromTaskManager(
-        c.total, c.pending, c.running, c.completed, c.failed
-    );
+    m_progressWidget->updateFromTaskManager(c.total, c.pending, c.running, c.completed, c.failed);
 }
 
 /// Convert bitrate string like "500k", "1M" to int kbps. Returns 0 if auto/empty.
-static int parseBitrateToKbps(const QString& bitrateStr) {
-    if (bitrateStr.isEmpty()) return 0;
+static int parseBitrateToKbps(const QString& bitrateStr)
+{
+    if (bitrateStr.isEmpty())
+        return 0;
     QString str = bitrateStr.trimmed().toLower();
-    if (str == "auto") return 0;
-    if (str.endsWith("k")) {
+    if (str == "auto")
+        return 0;
+    if (str.endsWith("k"))
+    {
         bool ok;
         int val = str.left(str.length() - 1).toInt(&ok);
         return ok ? val : 0;
     }
-    if (str.endsWith("m")) {
+    if (str.endsWith("m"))
+    {
         bool ok;
         int val = str.left(str.length() - 1).toInt(&ok);
         return ok ? val * 1000 : 0;
@@ -846,56 +920,70 @@ static int parseBitrateToKbps(const QString& bitrateStr) {
 }
 
 /// Merge saved conversion params into the task param map, normalizing keys for the converter.
-static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
-                                          const QVariantMap& dialogParams,
-                                          FormatRegistry::Category cat) {
+static QVariantMap mergeConversionParams(const QVariantMap& baseParams, const QVariantMap& dialogParams,
+                                         FormatRegistry::Category cat)
+{
     QVariantMap merged = baseParams;
 
-    for (auto it = dialogParams.begin(); it != dialogParams.end(); ++it) {
+    for (auto it = dialogParams.begin(); it != dialogParams.end(); ++it)
+    {
         const QString& key = it.key();
         const QVariant& value = it.value();
 
         // Skip empty/default values to avoid overwriting base params
-        if (!value.isValid()) continue;
+        if (!value.isValid())
+            continue;
 
-        if (cat == FormatRegistry::Category::Audio || cat == FormatRegistry::Category::Video) {
+        if (cat == FormatRegistry::Category::Audio || cat == FormatRegistry::Category::Video)
+        {
             // Normalize resolution to lowercase (FFmpeg requires lowercase 'x')
-            if (key == "resolution") {
+            if (key == "resolution")
+            {
                 QString res = value.toString().trimmed().toLower();
-                if (!res.isEmpty()) {
+                if (!res.isEmpty())
+                {
                     merged["resolution"] = res;
                 }
                 continue;
             }
-            if (key == "videoBitrate" || key == "audioBitrate") {
+            if (key == "videoBitrate" || key == "audioBitrate")
+            {
                 QString bs = value.toString();
-                if (bs.isEmpty()) continue;
+                if (bs.isEmpty())
+                    continue;
                 int kbps = parseBitrateToKbps(bs);
-                if (kbps > 0) {
+                if (kbps > 0)
+                {
                     merged[key] = kbps;
                 }
                 continue;
             }
-            if (key == "framerate") {
+            if (key == "framerate")
+            {
                 QString fps = value.toString();
-                if (!fps.isEmpty()) {
+                if (!fps.isEmpty())
+                {
                     bool ok;
                     int fpsInt = fps.toInt(&ok);
-                    if (ok) {
+                    if (ok)
+                    {
                         merged["frameRate"] = fpsInt;
                     }
                 }
                 continue;
             }
-            if (key == "twoPass") {
+            if (key == "twoPass")
+            {
                 merged["twoPass"] = value;
                 continue;
             }
         }
 
-        if (cat == FormatRegistry::Category::Document) {
-            if (key == "pageSize" || key == "orientation" || key == "marginTop" ||
-                key == "marginBottom" || key == "marginLeft" || key == "marginRight") {
+        if (cat == FormatRegistry::Category::Document)
+        {
+            if (key == "pageSize" || key == "orientation" || key == "marginTop" || key == "marginBottom" ||
+                key == "marginLeft" || key == "marginRight")
+            {
                 // Collect geometry variables for pandoc
                 continue; // Handled below
             }
@@ -906,19 +994,23 @@ static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
     }
 
     // Build pandoc geometry variables
-    if (cat == FormatRegistry::Category::Document) {
+    if (cat == FormatRegistry::Category::Document)
+    {
         QStringList geoParts;
         QString pageSize = dialogParams.value("pageSize").toString();
-        if (!pageSize.isEmpty() && pageSize != "custom") {
+        if (!pageSize.isEmpty() && pageSize != "custom")
+        {
             geoParts << pageSize;
         }
         QString orientation = dialogParams.value("orientation").toString();
-        if (orientation == "landscape") {
+        if (orientation == "landscape")
+        {
             geoParts << "landscape";
         }
         auto addMargin = [&](const QString& key, const QString& side) {
             double val = dialogParams.value(key, 1.0).toDouble();
-            if (val > 0) {
+            if (val > 0)
+            {
                 geoParts << QString("%1=%2in").arg(side).arg(val, 0, 'f', 1);
             }
         };
@@ -927,14 +1019,16 @@ static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
         addMargin("marginLeft", "left");
         addMargin("marginRight", "right");
 
-        if (!geoParts.isEmpty()) {
+        if (!geoParts.isEmpty())
+        {
             QVariantMap varMap = merged.value("variableMap").toMap();
             varMap["geometry"] = geoParts.join(",");
             merged["variableMap"] = varMap;
         }
 
         // Number sections
-        if (dialogParams.value("numberSections", false).toBool()) {
+        if (dialogParams.value("numberSections", false).toBool())
+        {
             QStringList extraArgs = merged.value("extraArgs").toStringList();
             extraArgs << "--number-sections";
             merged["extraArgs"] = extraArgs;
@@ -944,10 +1038,12 @@ static QVariantMap mergeConversionParams(const QVariantMap& baseParams,
     return merged;
 }
 
-void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
+void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths)
+{
     const auto& reg = FormatRegistry::instance();
     QString outputDir = m_outputDirEdit->text();
-    if (outputDir.isEmpty()) {
+    if (outputDir.isEmpty())
+    {
         outputDir = QDir::homePath();
     }
     QDir().mkpath(outputDir);
@@ -955,23 +1051,29 @@ void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
     // Helper lambda: submit tasks for one category using its saved format
     auto submitTab = [&](FileCategoryWidget* tab, FormatRegistry::Category cat) {
         QList<FileInfo> files = tab->allFiles();
-        if (files.isEmpty()) return;
+        if (files.isEmpty())
+            return;
 
         // Use per-category saved format; fall back to current combo selection
         QString outputFormat;
         QVariant saved = m_savedFormats.value(cat);
-        if (saved.isValid()) {
+        if (saved.isValid())
+        {
             outputFormat = saved.toString();
-        } else {
+        }
+        else
+        {
             outputFormat = m_formatCombo->currentData().toString();
         }
 
         // Get saved conversion params for this category (from dialog)
         QVariantMap dialogParams = m_conversionParams.value(cat);
 
-        for (const FileInfo& fileInfo : files) {
+        for (const FileInfo& fileInfo : files)
+        {
             // Retry mode: skip anything not in the requested path set.
-            if (!onlyPaths.isEmpty() && !onlyPaths.contains(fileInfo.filePath)) {
+            if (!onlyPaths.isEmpty() && !onlyPaths.contains(fileInfo.filePath))
+            {
                 continue;
             }
             QFileInfo fi(fileInfo.filePath);
@@ -979,7 +1081,8 @@ void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
             QString outputFile = outputDir + "/" + baseName + "." + outputFormat;
 
             // Avoid overwriting source
-            if (QFileInfo(outputFile).absoluteFilePath() == QFileInfo(fileInfo.filePath).absoluteFilePath()) {
+            if (QFileInfo(outputFile).absoluteFilePath() == QFileInfo(fileInfo.filePath).absoluteFilePath())
+            {
                 outputFile = outputDir + "/" + baseName + "_converted." + outputFormat;
                 LOG_WARNING("MainWindow", QString("输出路径与输入相同，自动重命名: %1").arg(outputFile));
             }
@@ -988,16 +1091,22 @@ void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
             params["outputFormat"] = outputFormat;
             QString ext = fi.suffix().toLower();
             auto converterType = reg.converterForExt(ext);
-            if (converterType == FormatRegistry::Converter::Pandoc) {
+            if (converterType == FormatRegistry::Converter::Pandoc)
+            {
                 params["converter"] = "Pandoc";
-            } else if (converterType == FormatRegistry::Converter::ImageMagick) {
+            }
+            else if (converterType == FormatRegistry::Converter::ImageMagick)
+            {
                 params["converter"] = "ImageMagick";
-            } else {
+            }
+            else
+            {
                 params["converter"] = "FFmpeg";
             }
 
             // Merge dialog conversion params
-            if (!dialogParams.isEmpty()) {
+            if (!dialogParams.isEmpty())
+            {
                 params = mergeConversionParams(params, dialogParams, cat);
             }
 
@@ -1006,26 +1115,28 @@ void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths) {
     };
 
     submitTab(m_imageTab, FormatRegistry::Category::Image);
-    submitTab(m_docTab,   FormatRegistry::Category::Document);
+    submitTab(m_docTab, FormatRegistry::Category::Document);
     submitTab(m_audioTab, FormatRegistry::Category::Audio);
     submitTab(m_videoTab, FormatRegistry::Category::Video);
 
     LOG_INFO("MainWindow", "已从所有分类标签提交转换任务");
 }
 
-void MainWindow::showConversionSummary() {
+void MainWindow::showConversionSummary()
+{
     BatchConversionSummary summary(this);
     summary.setResults(m_conversionResults);
-    connect(&summary, &BatchConversionSummary::retryRequested,
-            this, &MainWindow::onRetryFailed);
+    connect(&summary, &BatchConversionSummary::retryRequested, this, &MainWindow::onRetryFailed);
     summary.exec();
 }
 
-void MainWindow::onErrorOccurred(const ErrorInfo& error) {
+void MainWindow::onErrorOccurred(const ErrorInfo& error)
+{
     Q_UNUSED(error);
 }
 
-void MainWindow::onRetryTriggered(const QString& taskId, int retryCount) {
+void MainWindow::onRetryTriggered(const QString& taskId, int retryCount)
+{
     Q_UNUSED(taskId);
     Q_UNUSED(retryCount);
 }
@@ -1033,54 +1144,65 @@ void MainWindow::onRetryTriggered(const QString& taskId, int retryCount) {
 // ---------------------------------------------------------------------------
 // Drag-and-drop
 // ---------------------------------------------------------------------------
-void MainWindow::dragEnterEvent(QDragEnterEvent* event) {
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
     // Accept the drop only if the drag payload contains at least one local
     // file URL. Other MIME types (text, images, etc.) are ignored so we
     // don't show the "no entry" cursor for things we can't handle.
     if (event->mimeData()->hasUrls() &&
-        std::any_of(event->mimeData()->urls().cbegin(),
-                    event->mimeData()->urls().cend(),
-                    [](const QUrl& u) { return u.isLocalFile(); })) {
+        std::any_of(event->mimeData()->urls().cbegin(), event->mimeData()->urls().cend(),
+                    [](const QUrl& u) { return u.isLocalFile(); }))
+    {
         event->acceptProposedAction();
     }
 }
 
-void MainWindow::dragMoveEvent(QDragMoveEvent* event) {
+void MainWindow::dragMoveEvent(QDragMoveEvent* event)
+{
     // Mirror dragEnterEvent — without this the cursor reverts to "no entry"
     // while the user moves the file around the window.
-    if (event->mimeData()->hasUrls()) {
+    if (event->mimeData()->hasUrls())
+    {
         event->acceptProposedAction();
     }
 }
 
-void MainWindow::dropEvent(QDropEvent* event) {
-    if (!event->mimeData()->hasUrls()) {
+void MainWindow::dropEvent(QDropEvent* event)
+{
+    if (!event->mimeData()->hasUrls())
+    {
         return;
     }
     QStringList paths;
-    for (const QUrl& url : event->mimeData()->urls()) {
-        if (url.isLocalFile()) {
+    for (const QUrl& url : event->mimeData()->urls())
+    {
+        if (url.isLocalFile())
+        {
             const QString localPath = url.toLocalFile();
             QFileInfo info(localPath);
             // Drop a folder → expand to its immediate children. This matches
             // what most users expect (dragging a folder in should add the
             // folder's contents, not just one "path/to/folder" string).
-            if (info.isDir()) {
+            if (info.isDir())
+            {
                 QDir dir(localPath);
                 const QStringList entries = dir.entryList(QDir::Files);
-                for (const QString& name : entries) {
+                for (const QString& name : entries)
+                {
                     paths << dir.absoluteFilePath(name);
                 }
-            } else if (info.isFile()) {
+            }
+            else if (info.isFile())
+            {
                 paths << localPath;
             }
         }
     }
-    if (paths.isEmpty()) {
+    if (paths.isEmpty())
+    {
         return;
     }
     event->acceptProposedAction();
     addFilesAndAutoRoute(paths);
-    LOG_INFO("MainWindow",
-             QString("Dropped %1 file(s) onto main window").arg(paths.size()));
+    LOG_INFO("MainWindow", QString("Dropped %1 file(s) onto main window").arg(paths.size()));
 }

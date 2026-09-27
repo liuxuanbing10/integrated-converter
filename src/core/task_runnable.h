@@ -1,26 +1,35 @@
 #ifndef TASK_RUNNABLE_H
 #define TASK_RUNNABLE_H
 
-#include <QRunnable>
-#include <QObject>
-#include <QAtomicInt>
-#include <memory>
 #include "conversion_task.h"
 #include "iconverter.h"
 
-class TaskRunnable : public QObject, public QRunnable {
+#include <QAtomicInt>
+#include <QObject>
+#include <QRunnable>
+
+#include <memory>
+
+class TaskRunnable : public QObject, public QRunnable
+{
     Q_OBJECT
 
 public:
     // Takes ownership of a DEDICATED converter instance (TaskManager clones
     // one per task) so concurrent tasks never share QProcess state.
-    explicit TaskRunnable(ConversionTask* task, const QString& converterName,
-                          std::unique_ptr<IConverter> converter, QObject* parent = nullptr);
+    explicit TaskRunnable(ConversionTask* task, const QString& converterName, std::unique_ptr<IConverter> converter,
+                          QObject* parent = nullptr);
     ~TaskRunnable() override;
 
     void run() override;
-    QString taskId() const { return m_taskId; }
-    bool isRunning() const { return m_running.loadRelaxed() != 0; }
+    QString taskId() const
+    {
+        return m_taskId;
+    }
+    bool isRunning() const
+    {
+        return m_running.loadRelaxed() != 0;
+    }
 
 signals:
     void started(const QString& taskId);

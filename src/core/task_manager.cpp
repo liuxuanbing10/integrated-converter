@@ -1,27 +1,28 @@
 #include "task_manager.h"
-#include "task_runnable.h"
-#include "config_manager.h"
-#include "logger.h"
-#include "large_file_handler.h"
-#include <QFileInfo>
-#include <QCoreApplication>
 
-TaskManager* TaskManager::instance() {
+#include "config_manager.h"
+#include "large_file_handler.h"
+#include "logger.h"
+#include "task_runnable.h"
+
+#include <QCoreApplication>
+#include <QFileInfo>
+
+TaskManager* TaskManager::instance()
+{
     static TaskManager s_instance;
     return &s_instance;
 }
 
-TaskManager::TaskManager()
-    : m_threadPool(new QThreadPool(this))
-    , m_maxParallel(4)
-    , m_started(false)
+TaskManager::TaskManager() : m_threadPool(new QThreadPool(this)), m_maxParallel(4), m_started(false)
 {
     m_maxParallel = ConfigManager::instance().maxParallelTasks();
     m_threadPool->setMaxThreadCount(m_maxParallel);
     LOG_INFO("TaskManager", QString("任务管理器初始化，最大并行数: %1").arg(m_maxParallel));
 }
 
-TaskManager::~TaskManager() {
+TaskManager::~TaskManager()
+{
     QMutexLocker locker(&m_mutex);
     cancelAllTasksInternal();
     locker.unlock();
@@ -37,39 +38,47 @@ TaskManager::~TaskManager() {
     m_pendingQueue.clear();
 }
 
-void TaskManager::registerConverter(const QString& name, std::shared_ptr<IConverter> converter) {
+void TaskManager::registerConverter(const QString& name, std::shared_ptr<IConverter> converter)
+{
     QMutexLocker locker(&m_mutex);
     m_converters[name] = converter;
     LOG_INFO("TaskManager", QString("注册转换器: %1").arg(name));
 }
 
-void TaskManager::unregisterConverter(const QString& name) {
+void TaskManager::unregisterConverter(const QString& name)
+{
     QMutexLocker locker(&m_mutex);
     m_converters.remove(name);
     LOG_INFO("TaskManager", QString("注销转换器: %1").arg(name));
 }
 
-QStringList TaskManager::availableConverters() const {
+QStringList TaskManager::availableConverters() const
+{
     QMutexLocker locker(&m_mutex);
     return m_converters.keys();
 }
 
-IConverter* TaskManager::converter(const QString& name) const {
+IConverter* TaskManager::converter(const QString& name) const
+{
     QMutexLocker locker(&m_mutex);
     return m_converters.value(name).get();
 }
 
-void TaskManager::insertTaskByPriority(const QString& taskId) {
+void TaskManager::insertTaskByPriority(const QString& taskId)
+{
     ConversionTask* task = m_tasks.value(taskId);
-    if (!task) {
+    if (!task)
+    {
         m_pendingQueue.append(taskId);
         return;
     }
     int priority = static_cast<int>(task->priority());
     int insertPos = m_pendingQueue.size();
-    for (int i = 0; i < m_pendingQueue.size(); ++i) {
+    for (int i = 0; i < m_pendingQueue.size(); ++i)
+    {
         ConversionTask* existingTask = m_tasks.value(m_pendingQueue[i]);
-        if (existingTask && static_cast<int>(existingTask->priority()) < priority) {
+        if (existingTask && static_cast<int>(existingTask->priority()) < priority)
+        {
             insertPos = i;
             break;
         }
@@ -77,23 +86,28 @@ void TaskManager::insertTaskByPriority(const QString& taskId) {
     m_pendingQueue.insert(insertPos, taskId);
 }
 
-void TaskManager::updateTaskPriority(const QString& taskId) {
+void TaskManager::updateTaskPriority(const QString& taskId)
+{
     ConversionTask* task = m_tasks.value(taskId);
-    if (!task) return;
+    if (!task)
+        return;
     qint64 fileSize = LargeFileHandler::getFileSize(task->inputFile());
     task->setFileSize(fileSize);
     auto category = LargeFileHandler::categorizeBySize(fileSize);
     int recommendedPriority = LargeFileHandler::recommendedPriority(category);
-    if (recommendedPriority < static_cast<int>(task->priority())) {
+    if (recommendedPriority < static_cast<int>(task->priority()))
+    {
         task->setPriority(static_cast<ConversionTask::Priority>(recommendedPriority));
         LOG_DEBUG("TaskManager", QString("根据文件大小调整任务优先级: %1 -> %2")
-                 .arg(taskId)
-                 .arg(ConversionTask::priorityToString(task->priority())));
+                                     .arg(taskId)
+                                     .arg(ConversionTask::priorityToString(task->priority())));
     }
 }
 
-QString TaskManager::addTask(std::unique_ptr<ConversionTask> task) {
-    if (!task) {
+QString TaskManager::addTask(std::unique_ptr<ConversionTask> task)
+{
+    if (!task)
+    {
         return QString();
     }
     QString taskId;
@@ -109,23 +123,25 @@ QString TaskManager::addTask(std::unique_ptr<ConversionTask> task) {
         insertTaskByPriority(taskId);
         shouldProcess = m_started;
         LOG_INFO("TaskManager", QString("添加任务: %1, 优先级: %2")
-                 .arg(taskId)
-                 .arg(ConversionTask::priorityToString(m_tasks.value(taskId)->priority())));
+                                    .arg(taskId)
+                                    .arg(ConversionTask::priorityToString(m_tasks.value(taskId)->priority())));
     }
     // Emit signal OUTSIDE mutex to prevent deadlock when connected slot calls back into TaskManager
     emit taskAdded(taskId);
-    if (shouldProcess) {
+    if (shouldProcess)
+    {
         processQueue();
     }
     return taskId;
 }
 
-QString TaskManager::addTask(const QString& inputFile, const QString& outputFile,
-                             const QVariantMap& params) {
+QString TaskManager::addTask(const QString& inputFile, const QString& outputFile, const QVariantMap& params)
+{
     auto task = std::make_unique<ConversionTask>(inputFile, outputFile, params);
     QString converterName = params.value("converter").toString();
     task->setConverterType(ConversionTask::stringToConverterType(converterName));
-    if (params.contains("priority")) {
+    if (params.contains("priority"))
+    {
         int priorityVal = params.value("priority").toInt();
         task->setPriority(static_cast<ConversionTask::Priority>(
             qBound(0, priorityVal, static_cast<int>(ConversionTask::Priority::High))));
@@ -133,46 +149,56 @@ QString TaskManager::addTask(const QString& inputFile, const QString& outputFile
     return addTask(std::move(task));
 }
 
-void TaskManager::removeTask(const QString& taskId) {
+void TaskManager::removeTask(const QString& taskId)
+{
     ConversionTask* task = nullptr;
     {
         QMutexLocker locker(&m_mutex);
-        if (!m_tasks.contains(taskId)) {
+        if (!m_tasks.contains(taskId))
+        {
             return;
         }
         task = m_tasks.take(taskId);
         m_runningTasks.remove(taskId);
-        if (task) {
+        if (task)
+        {
             ConversionTask::Status status = task->status();
-            if (status == ConversionTask::Status::Running) {
+            if (status == ConversionTask::Status::Running)
+            {
                 // Worker thread still owns this task until run() returns —
                 // defer deletion to onTaskFinished.
                 task->requestCancel();
                 m_orphanedTasks[taskId] = task;
                 task = nullptr;
-            } else if (status == ConversionTask::Status::Pending) {
+            }
+            else if (status == ConversionTask::Status::Pending)
+            {
                 task->setStatus(ConversionTask::Status::Cancelled);
                 m_pendingQueue.removeAll(taskId);
             }
         }
         LOG_INFO("TaskManager", QString("移除任务: %1").arg(taskId));
     }
-    if (task) {
+    if (task)
+    {
         task->deleteLater();
     }
     emit taskRemoved(taskId);
 }
 
-void TaskManager::cancelTask(const QString& taskId) {
+void TaskManager::cancelTask(const QString& taskId)
+{
     ConversionTask* task = nullptr;
     {
         QMutexLocker locker(&m_mutex);
         task = m_tasks.value(taskId);
-        if (!task) {
+        if (!task)
+        {
             return;
         }
         ConversionTask::Status status = task->status();
-        if (status == ConversionTask::Status::Running) {
+        if (status == ConversionTask::Status::Running)
+        {
             // Cooperative: flip the atomic flag the dedicated converter clone
             // polls in its wait-loop; the WORKER thread kills its own process.
             // (The old design called shared->cancel() under m_mutex: a
@@ -181,7 +207,9 @@ void TaskManager::cancelTask(const QString& taskId) {
             // process when several shared one converter instance.)
             task->requestCancel();
             LOG_INFO("TaskManager", QString("请求取消运行中任务: %1").arg(taskId));
-        } else if (status == ConversionTask::Status::Pending) {
+        }
+        else if (status == ConversionTask::Status::Pending)
+        {
             task->setStatus(ConversionTask::Status::Cancelled);
             m_pendingQueue.removeAll(taskId);
             LOG_INFO("TaskManager", QString("取消等待中任务: %1").arg(taskId));
@@ -189,86 +217,108 @@ void TaskManager::cancelTask(const QString& taskId) {
     }
 }
 
-void TaskManager::cancelAllTasks() {
+void TaskManager::cancelAllTasks()
+{
     QMutexLocker locker(&m_mutex);
     cancelAllTasksInternal();
 }
 
-void TaskManager::cancelAllTasksInternal() {
+void TaskManager::cancelAllTasksInternal()
+{
     // NOTE: caller MUST already hold m_mutex (no lock here!)
     // Cooperative cancel: flip the atomic flag on every running task — each
     // task's dedicated converter clone polls it on its worker thread and
     // kills its OWN child process. No shared-instance cancel() calls here,
     // so no blocking kill() under the mutex and no cross-task friendly fire.
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
         ConversionTask* task = it.value();
-        if (task) {
+        if (task)
+        {
             ConversionTask::Status status = task->status();
-            if (status == ConversionTask::Status::Running) {
+            if (status == ConversionTask::Status::Running)
+            {
                 task->requestCancel();
-            } else if (status == ConversionTask::Status::Pending) {
+            }
+            else if (status == ConversionTask::Status::Pending)
+            {
                 task->setStatus(ConversionTask::Status::Cancelled);
             }
         }
     }
     m_pendingQueue.clear();
-    m_threadPool->clear();   // drops not-yet-started runnables (autoDelete)
+    m_threadPool->clear(); // drops not-yet-started runnables (autoDelete)
     LOG_INFO("TaskManager", "取消所有任务");
 }
 
-ConversionTask* TaskManager::getTask(const QString& taskId) const {
+ConversionTask* TaskManager::getTask(const QString& taskId) const
+{
     QMutexLocker locker(&m_mutex);
     return m_tasks.value(taskId);
 }
 
-QList<ConversionTask*> TaskManager::getAllTasks() const {
+QList<ConversionTask*> TaskManager::getAllTasks() const
+{
     QMutexLocker locker(&m_mutex);
     return m_tasks.values();
 }
 
-QList<ConversionTask*> TaskManager::getPendingTasks() const {
+QList<ConversionTask*> TaskManager::getPendingTasks() const
+{
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
     result.reserve(m_pendingQueue.size());
-    for (const auto& id : m_pendingQueue) {
-        if (auto* task = m_tasks.value(id)) {
+    for (const auto& id : m_pendingQueue)
+    {
+        if (auto* task = m_tasks.value(id))
+        {
             result.append(task);
         }
     }
     return result;
 }
 
-QList<ConversionTask*> TaskManager::getRunningTasks() const {
+QList<ConversionTask*> TaskManager::getRunningTasks() const
+{
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
     result.reserve(m_runningTasks.size());
-    for (auto it = m_runningTasks.begin(); it != m_runningTasks.end(); ++it) {
-        if (auto* task = m_tasks.value(it.key())) {
+    for (auto it = m_runningTasks.begin(); it != m_runningTasks.end(); ++it)
+    {
+        if (auto* task = m_tasks.value(it.key()))
+        {
             result.append(task);
         }
     }
     return result;
 }
 
-QList<ConversionTask*> TaskManager::getCompletedTasks() const {
+QList<ConversionTask*> TaskManager::getCompletedTasks() const
+{
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Completed) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
+        if (it.value() && it.value()->status() == ConversionTask::Status::Completed)
+        {
             result.append(it.value());
         }
     }
     return result;
 }
 
-QList<ConversionTask*> TaskManager::getFailedTasks() const {
+QList<ConversionTask*> TaskManager::getFailedTasks() const
+{
     QMutexLocker locker(&m_mutex);
     QList<ConversionTask*> result;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
         ConversionTask* task = it.value();
-        if (task) {
+        if (task)
+        {
             ConversionTask::Status status = task->status();
-            if (status == ConversionTask::Status::Failed || status == ConversionTask::Status::Cancelled) {
+            if (status == ConversionTask::Status::Failed || status == ConversionTask::Status::Cancelled)
+            {
                 result.append(task);
             }
         }
@@ -276,7 +326,8 @@ QList<ConversionTask*> TaskManager::getFailedTasks() const {
     return result;
 }
 
-void TaskManager::start() {
+void TaskManager::start()
+{
     {
         QMutexLocker locker(&m_mutex);
         m_started = true;
@@ -285,77 +336,95 @@ void TaskManager::start() {
     processQueue();
 }
 
-bool TaskManager::isRunning() const {
+bool TaskManager::isRunning() const
+{
     QMutexLocker locker(&m_mutex);
     return m_started;
 }
 
-void TaskManager::setMaxParallelTasks(int max) {
+void TaskManager::setMaxParallelTasks(int max)
+{
     QMutexLocker locker(&m_mutex);
     m_maxParallel = qBound(1, max, QThread::idealThreadCount() * 2);
     m_threadPool->setMaxThreadCount(m_maxParallel);
     LOG_INFO("TaskManager", QString("设置最大并行数: %1").arg(m_maxParallel));
 }
 
-int TaskManager::maxParallelTasks() const {
+int TaskManager::maxParallelTasks() const
+{
     QMutexLocker locker(&m_mutex);
     return m_maxParallel;
 }
 
-int TaskManager::totalTaskCount() const {
+int TaskManager::totalTaskCount() const
+{
     QMutexLocker locker(&m_mutex);
     return m_tasks.size();
 }
 
-int TaskManager::pendingCount() const {
+int TaskManager::pendingCount() const
+{
     QMutexLocker locker(&m_mutex);
     return m_pendingQueue.size();
 }
 
-int TaskManager::runningCount() const {
+int TaskManager::runningCount() const
+{
     QMutexLocker locker(&m_mutex);
     return m_runningTasks.size();
 }
 
-TaskManager::TaskCounters TaskManager::counters() const {
+TaskManager::TaskCounters TaskManager::counters() const
+{
     QMutexLocker locker(&m_mutex);
     TaskCounters c;
     c.total = m_tasks.size();
     c.pending = m_pendingQueue.size();
     c.running = m_runningTasks.size();
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
         ConversionTask* task = it.value();
-        if (!task) continue;
+        if (!task)
+            continue;
         auto status = task->status();
-        if (status == ConversionTask::Status::Completed) {
+        if (status == ConversionTask::Status::Completed)
+        {
             ++c.completed;
-        } else if (status == ConversionTask::Status::Failed ||
-                   status == ConversionTask::Status::Cancelled) {
+        }
+        else if (status == ConversionTask::Status::Failed || status == ConversionTask::Status::Cancelled)
+        {
             ++c.failed;
         }
     }
     return c;
 }
 
-int TaskManager::completedCount() const {
+int TaskManager::completedCount() const
+{
     QMutexLocker locker(&m_mutex);
     int count = 0;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
-        if (it.value() && it.value()->status() == ConversionTask::Status::Completed) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
+        if (it.value() && it.value()->status() == ConversionTask::Status::Completed)
+        {
             ++count;
         }
     }
     return count;
 }
 
-int TaskManager::failedCount() const {
+int TaskManager::failedCount() const
+{
     QMutexLocker locker(&m_mutex);
     int count = 0;
-    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it) {
+    for (auto it = m_tasks.begin(); it != m_tasks.end(); ++it)
+    {
         ConversionTask* task = it.value();
-        if (task) {
+        if (task)
+        {
             ConversionTask::Status status = task->status();
-            if (status == ConversionTask::Status::Failed || status == ConversionTask::Status::Cancelled) {
+            if (status == ConversionTask::Status::Failed || status == ConversionTask::Status::Cancelled)
+            {
                 ++count;
             }
         }
@@ -363,23 +432,29 @@ int TaskManager::failedCount() const {
     return count;
 }
 
-void TaskManager::processQueue() {
+void TaskManager::processQueue()
+{
     QMutexLocker locker(&m_mutex);
-    if (!m_started) {
+    if (!m_started)
+    {
         return;
     }
-    while (m_runningTasks.size() < m_maxParallel && !m_pendingQueue.isEmpty()) {
+    while (m_runningTasks.size() < m_maxParallel && !m_pendingQueue.isEmpty())
+    {
         QString taskId = m_pendingQueue.takeFirst();
         ConversionTask* task = m_tasks.value(taskId);
-        if (!task || task->status() != ConversionTask::Status::Pending) {
+        if (!task || task->status() != ConversionTask::Status::Pending)
+        {
             continue;
         }
-        if (task->isCancelled()) {
+        if (task->isCancelled())
+        {
             task->setStatus(ConversionTask::Status::Cancelled);
             continue;
         }
         QString converterName = task->params().value("converter").toString();
-        if (!m_converters.contains(converterName)) {
+        if (!m_converters.contains(converterName))
+        {
             task->setErrorMessage(tr("未找到转换器: %1").arg(converterName));
             task->setStatus(ConversionTask::Status::Failed);
             LOG_ERROR("TaskManager", QString("未找到转换器: %1").arg(converterName));
@@ -392,27 +467,28 @@ void TaskManager::processQueue() {
         std::unique_ptr<IConverter> instance = m_converters.value(converterName)->clone();
         TaskRunnable* runnable = new TaskRunnable(task, converterName, std::move(instance));
         m_runningTasks[taskId] = runnable;
-        connect(runnable, &TaskRunnable::started,
-                this, &TaskManager::onTaskStarted, Qt::QueuedConnection);
-        connect(runnable, &TaskRunnable::progressChanged,
-                this, &TaskManager::onTaskProgressChanged, Qt::QueuedConnection);
-        connect(runnable, &TaskRunnable::finished,
-                this, &TaskManager::onTaskFinished, Qt::QueuedConnection);
+        connect(runnable, &TaskRunnable::started, this, &TaskManager::onTaskStarted, Qt::QueuedConnection);
+        connect(runnable, &TaskRunnable::progressChanged, this, &TaskManager::onTaskProgressChanged,
+                Qt::QueuedConnection);
+        connect(runnable, &TaskRunnable::finished, this, &TaskManager::onTaskFinished, Qt::QueuedConnection);
         m_threadPool->start(runnable, static_cast<int>(task->priority()));
         LOG_INFO("TaskManager", QString("提交任务到线程池: %1").arg(taskId));
     }
 }
 
-void TaskManager::onTaskStarted(const QString& taskId) {
+void TaskManager::onTaskStarted(const QString& taskId)
+{
     LOG_INFO("TaskManager", QString("任务开始: %1").arg(taskId));
     emit taskStarted(taskId);
 }
 
-void TaskManager::onTaskProgressChanged(const QString& taskId, int progress) {
+void TaskManager::onTaskProgressChanged(const QString& taskId, int progress)
+{
     emit taskProgressChanged(taskId, progress);
 }
 
-void TaskManager::onTaskFinished(const QString& taskId, bool success, const QString& message) {
+void TaskManager::onTaskFinished(const QString& taskId, bool success, const QString& message)
+{
     Q_UNUSED(message);
     bool allDone = false;
     ConversionTask* orphan = nullptr;
@@ -424,21 +500,26 @@ void TaskManager::onTaskFinished(const QString& taskId, bool success, const QStr
         allDone = m_runningTasks.isEmpty() && m_pendingQueue.isEmpty();
     }
     // Emit signals OUTSIDE mutex
-    if (orphan) {
+    if (orphan)
+    {
         // removeTask deferred deletion of this task because its worker was
         // still live; the worker has now returned, so it is safe to release.
         delete orphan;
     }
     emit taskCompleted(taskId, success);
-    if (allDone) {
+    if (allDone)
+    {
         LOG_INFO("TaskManager", "所有任务已完成");
         emit allTasksCompleted();
-    } else {
+    }
+    else
+    {
         processQueue();
     }
 }
 
-void TaskManager::waitForTasks(int timeoutMs) {
+void TaskManager::waitForTasks(int timeoutMs)
+{
     // NOTE: must NOT hold m_mutex — worker completions land as queued
     // onTaskFinished slots that re-enter TaskManager on this thread.
     m_threadPool->waitForDone(timeoutMs);

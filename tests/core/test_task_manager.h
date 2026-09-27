@@ -3,10 +3,12 @@
 
 #include <QObject>
 
-class TestTaskManager : public QObject {
+class TestTaskManager : public QObject
+{
     Q_OBJECT
 public:
-    explicit TestTaskManager(QObject* parent = nullptr) : QObject(parent) {}
+    explicit TestTaskManager(QObject* parent = nullptr) : QObject(parent)
+    { }
 private slots:
     void initTestCase();
     void cleanupTestCase();

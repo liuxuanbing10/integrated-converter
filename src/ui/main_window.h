@@ -1,24 +1,25 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
-#include <QMainWindow>
-#include <QMenuBar>
-#include <QToolBar>
-#include <QStatusBar>
-#include <QSplitter>
-#include <QLabel>
-#include <QAction>
-#include <QDateTime>
-#include <QPixmap>
-#include <QVariant>
-#include <QTabWidget>
-#include <QComboBox>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QFrame>
-#include <QMap>
-#include <QSet>
 #include "format_registry.h"
+
+#include <QAction>
+#include <QComboBox>
+#include <QDateTime>
+#include <QFrame>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMainWindow>
+#include <QMap>
+#include <QMenuBar>
+#include <QPixmap>
+#include <QPushButton>
+#include <QSet>
+#include <QSplitter>
+#include <QStatusBar>
+#include <QTabWidget>
+#include <QToolBar>
+#include <QVariant>
 
 class TaskListWidget;
 class ProgressWidget;
@@ -27,7 +28,8 @@ class FileCategoryWidget;
 class ConversionParamsDialog;
 struct ConversionResult;
 
-class MainWindow : public QMainWindow {
+class MainWindow : public QMainWindow
+{
     Q_OBJECT
 public:
     explicit MainWindow(QWidget* parent = nullptr);

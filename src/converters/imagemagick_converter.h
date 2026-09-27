@@ -1,14 +1,17 @@
 #ifndef IMAGEMAGICK_CONVERTER_H
 #define IMAGEMAGICK_CONVERTER_H
 
-#include "iconverter.h"
 #include "error_types.h"
+#include "iconverter.h"
+
 #include <QProcess>
 #include <QSet>
+
 #include <atomic>
 #include <memory>
 
-class ImageMagickConverter : public QObject, public IConverter {
+class ImageMagickConverter : public QObject, public IConverter
+{
     Q_OBJECT
 
 public:
@@ -19,22 +22,36 @@ public:
     ~ImageMagickConverter() override;
 
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
-                                      const QVariantMap& params) override;
+                                     const QVariantMap& params) override;
     QStringList supportedInputFormats() const override;
     QStringList supportedOutputFormats() const override;
-    QString name() const override { return QStringLiteral("ImageMagick"); }
-    bool isConversionSupported(const QString& inputFormat,
-                               const QString& outputFormat) const override;
+    QString name() const override
+    {
+        return QStringLiteral("ImageMagick");
+    }
+    bool isConversionSupported(const QString& inputFormat, const QString& outputFormat) const override;
 
-    void setMagickPath(const QString& path) { m_magickPath = path; }
-    QString magickPath() const { return m_magickPath; }
-    bool isRunning() const { return m_isRunning; }
+    void setMagickPath(const QString& path)
+    {
+        m_magickPath = path;
+    }
+    QString magickPath() const
+    {
+        return m_magickPath;
+    }
+    bool isRunning() const
+    {
+        return m_isRunning;
+    }
     void cancel();
 
     bool identify(const QString& filePath, QVariantMap& info);
     bool validateParams(const QVariantMap& params, QString& errorMsg);
 
-    double currentProgress() const { return m_currentProgress; }
+    double currentProgress() const
+    {
+        return m_currentProgress;
+    }
 
 signals:
     void progressChanged(int progress);
@@ -49,8 +66,7 @@ private slots:
 
 private:
     bool runMagick(const QStringList& args);
-    QStringList buildArguments(const QString& inputFile, const QString& outputFile,
-                                const QVariantMap& params) const;
+    QStringList buildArguments(const QString& inputFile, const QString& outputFile, const QVariantMap& params) const;
     QString getFormatFromExtension(const QString& filePath) const;
 
     QString m_magickPath;

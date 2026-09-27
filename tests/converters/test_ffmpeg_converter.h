@@ -4,10 +4,12 @@
 #include <QObject>
 #include <QString>
 
-class TestFFmpegConverter : public QObject {
+class TestFFmpegConverter : public QObject
+{
     Q_OBJECT
 public:
-    explicit TestFFmpegConverter(QObject* parent = nullptr) : QObject(parent) {}
+    explicit TestFFmpegConverter(QObject* parent = nullptr) : QObject(parent)
+    { }
 private slots:
     void initTestCase();
     void testSupportedInputFormats();
@@ -30,6 +32,7 @@ private slots:
     void testSpeedMetrics();
     void testUiCodecOptionsPassValidation();
     void testUiAudioOptionsPassValidation();
+
 private:
     bool checkFFmpegAvailable();
     bool m_ffmpegAvailable;

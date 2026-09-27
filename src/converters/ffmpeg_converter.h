@@ -1,18 +1,21 @@
 #ifndef FFMPEG_CONVERTER_H
 #define FFMPEG_CONVERTER_H
 
-#include "iconverter.h"
 #include "error_types.h"
-#include "format_registry.h"
 #include "ffmpeg_progress_parser.h"
-#include <QProcess>
-#include <QTimer>
+#include "format_registry.h"
+#include "iconverter.h"
+
 #include <QMap>
+#include <QProcess>
 #include <QSet>
+#include <QTimer>
+
 #include <atomic>
 #include <memory>
 
-class FFmpegConverter : public QObject, public IConverter {
+class FFmpegConverter : public QObject, public IConverter
+{
     Q_OBJECT
 
 public:
@@ -25,29 +28,57 @@ public:
     ~FFmpegConverter() override;
 
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
-                                      const QVariantMap& params) override;
+                                     const QVariantMap& params) override;
     QStringList supportedInputFormats() const override;
     QStringList supportedOutputFormats() const override;
-    QString name() const override { return QStringLiteral("FFmpeg"); }
-    bool isConversionSupported(const QString& inputFormat,
-                              const QString& outputFormat) const override;
+    QString name() const override
+    {
+        return QStringLiteral("FFmpeg");
+    }
+    bool isConversionSupported(const QString& inputFormat, const QString& outputFormat) const override;
 
-    void setFFmpegPath(const QString& path) { m_ffmpegPath = path; }
-    QString ffmpegPath() const { return m_ffmpegPath; }
-    void setFFprobePath(const QString& path) { m_ffprobePath = path; }
-    QString ffprobePath() const { return m_ffprobePath; }
-    bool isRunning() const { return m_isRunning; }
+    void setFFmpegPath(const QString& path)
+    {
+        m_ffmpegPath = path;
+    }
+    QString ffmpegPath() const
+    {
+        return m_ffmpegPath;
+    }
+    void setFFprobePath(const QString& path)
+    {
+        m_ffprobePath = path;
+    }
+    QString ffprobePath() const
+    {
+        return m_ffprobePath;
+    }
+    bool isRunning() const
+    {
+        return m_isRunning;
+    }
     void cancel();
 
-    bool extractAudio(const QString& inputFile, const QString& outputFile,
-                     const QVariantMap& params = QVariantMap());
+    bool extractAudio(const QString& inputFile, const QString& outputFile, const QVariantMap& params = QVariantMap());
     bool getMediaInfo(const QString& filePath, QVariantMap& info);
     double getDuration(const QString& filePath);
 
-    double currentSpeed() const { return m_currentSpeed; }
-    qint64 estimatedRemainingMs() const { return m_estimatedRemainingMs; }
-    double currentBitrate() const { return m_currentBitrate; }
-    qint64 processedBytes() const { return m_processedBytes; }
+    double currentSpeed() const
+    {
+        return m_currentSpeed;
+    }
+    qint64 estimatedRemainingMs() const
+    {
+        return m_estimatedRemainingMs;
+    }
+    double currentBitrate() const
+    {
+        return m_currentBitrate;
+    }
+    qint64 processedBytes() const
+    {
+        return m_processedBytes;
+    }
 
     static bool validateParams(const QVariantMap& params, QString& errorMsg);
     static QMap<QString, QString> videoFormatMap();

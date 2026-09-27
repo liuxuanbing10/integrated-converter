@@ -1,20 +1,23 @@
 #ifndef ICONVERTER_H
 #define ICONVERTER_H
+#include "error_types.h"
+
+#include <QAtomicInt>
 #include <QString>
 #include <QStringList>
 #include <QVariantMap>
-#include <QAtomicInt>
+
+#include <functional>
 #include <memory>
 #include <optional>
-#include <functional>
-#include "error_types.h"
 
 // Optional per-task progress callback (0-100). Injected by TaskRunnable before
 // convert(); invoked from the worker thread, so implementations must only
 // touch per-instance state.
 using ProgressFn = std::function<void(int)>;
 
-class IConverter {
+class IConverter
+{
 public:
     virtual ~IConverter() = default;
 
@@ -30,28 +33,37 @@ public:
     // routed — cancelling A can never kill B's process, and the caller
     // (GUI thread) only flips an atomic instead of holding a mutex over a
     // blocking kill()/waitForFinished().
-    virtual void setCancelFlag(const QAtomicInt* flag) { m_cancelFlag = flag; }
+    virtual void setCancelFlag(const QAtomicInt* flag)
+    {
+        m_cancelFlag = flag;
+    }
 
     // Real-time progress reporting (percentage 0-100). Default no-op for
     // converters with no granular progress (Pandoc, coarse IM).
-    virtual void setProgressCallback(ProgressFn cb) { m_progressCb = std::move(cb); }
+    virtual void setProgressCallback(ProgressFn cb)
+    {
+        m_progressCb = std::move(cb);
+    }
 
     virtual std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
-                                              const QVariantMap& params) = 0;
+                                             const QVariantMap& params) = 0;
     virtual QStringList supportedInputFormats() const = 0;
     virtual QStringList supportedOutputFormats() const = 0;
     virtual QString name() const = 0;
-    virtual bool isConversionSupported(const QString& inputFormat,
-                                       const QString& outputFormat) const = 0;
+    virtual bool isConversionSupported(const QString& inputFormat, const QString& outputFormat) const = 0;
     // Synchronous hard-cancel for direct (non-TaskManager) users, e.g. CLI and
     // destructors. TaskManager paths use setCancelFlag() instead.
-    virtual void cancel() {}
+    virtual void cancel()
+    { }
 
 protected:
-    void reportProgress(int percent) {
-        if (m_progressCb) m_progressCb(qBound(0, percent, 100));
+    void reportProgress(int percent)
+    {
+        if (m_progressCb)
+            m_progressCb(qBound(0, percent, 100));
     }
-    bool isCancelRequested() const {
+    bool isCancelRequested() const
+    {
         return m_cancelFlag && m_cancelFlag->loadAcquire() != 0;
     }
 

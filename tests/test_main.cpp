@@ -1,43 +1,45 @@
-#include <QTest>
-#include <QCoreApplication>
-#include <QFile>
-#include <QTextStream>
-#include <cstdlib>
-#include <cstdio>
-#include "core/test_logger.h"
-#include "core/test_config_manager.h"
-#include "core/test_task_manager.h"
-#include "core/test_error_types.h"
-#include "core/task_manager.h"
-#include "core/logger.h"
 #include "converters/test_ffmpeg_converter.h"
 #include "converters/test_ffmpeg_progress_parser.h"
-#include "converters/test_pandoc_converter.h"
 #include "converters/test_imagemagick_converter.h"
+#include "converters/test_pandoc_converter.h"
 #include "converters/test_segmented_converter.h"
-#include "core/test_large_file_handler.h"
+#include "core/logger.h"
+#include "core/task_manager.h"
+#include "core/test_config_manager.h"
+#include "core/test_error_types.h"
 #include "core/test_format_registry.h"
+#include "core/test_large_file_handler.h"
+#include "core/test_logger.h"
+#include "core/test_task_manager.h"
+
+#include <QCoreApplication>
+#include <QFile>
+#include <QTest>
+#include <QTextStream>
+
+#include <cstdio>
+#include <cstdlib>
 
 // Run a test suite and log result to file via QFile (bypasses stdio buffering)
-static int runSuite(QObject *test, int argc, char **argv,
-                    const QString &name, QTextStream &log) {
+static int runSuite(QObject* test, int argc, char** argv, const QString& name, QTextStream& log)
+{
     log << "=== " << name << " ===\n";
     log.flush();
     int result = QTest::qExec(test, argc, argv);
-    log << "=== " << name << ": "
-        << (result == 0 ? "PASS" : "FAIL")
-        << " (exit=" << result << ") ===\n\n";
+    log << "=== " << name << ": " << (result == 0 ? "PASS" : "FAIL") << " (exit=" << result << ") ===\n\n";
     log.flush();
     return result;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     setbuf(stdout, NULL);
     int status = 0;
 
     // Open log file via QFile — bypasses stdio buffering entirely
     QFile logFile("test_results.log");
-    if (logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+    if (logFile.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
         QTextStream log(&logFile);
 
         log << "test_runner.exe started\n";
@@ -81,8 +83,7 @@ int main(int argc, char *argv[]) {
             TaskManager::instance()->cancelAllTasks();
             appLogger.setFileOutput(false);
 
-            log << "FINAL STATUS: " << status
-                << " (" << (status == 0 ? "ALL PASS" : "SOME FAILURES") << ")\n";
+            log << "FINAL STATUS: " << status << " (" << (status == 0 ? "ALL PASS" : "SOME FAILURES") << ")\n";
             log.flush();
         }
         logFile.close();

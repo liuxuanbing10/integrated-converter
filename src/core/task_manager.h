@@ -1,21 +1,24 @@
 #ifndef TASK_MANAGER_H
 #define TASK_MANAGER_H
 
-#include <QObject>
+#include "conversion_task.h"
+#include "iconverter.h"
+
 #include <QList>
 #include <QMap>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QObject>
 #include <QThreadPool>
 #include <QWaitCondition>
+
 #include <memory>
-#include "conversion_task.h"
-#include "iconverter.h"
 
 class ConversionTask;
 class TaskRunnable;
 
-class TaskManager : public QObject {
+class TaskManager : public QObject
+{
     Q_OBJECT
 
 public:
@@ -27,8 +30,7 @@ public:
     IConverter* converter(const QString& name) const;
 
     QString addTask(std::unique_ptr<ConversionTask> task);
-    QString addTask(const QString& inputFile, const QString& outputFile,
-                    const QVariantMap& params);
+    QString addTask(const QString& inputFile, const QString& outputFile, const QVariantMap& params);
     void removeTask(const QString& taskId);
     void cancelTask(const QString& taskId);
     void cancelAllTasks();
@@ -50,7 +52,8 @@ public:
     void setMaxParallelTasks(int max);
     int maxParallelTasks() const;
 
-    struct TaskCounters {
+    struct TaskCounters
+    {
         int total = 0;
         int pending = 0;
         int running = 0;

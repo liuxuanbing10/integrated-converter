@@ -1,20 +1,22 @@
 #ifndef CONVERSION_TASK_H
 #define CONVERSION_TASK_H
 
-#include <QObject>
-#include <QString>
-#include <QVariantMap>
-#include <QUuid>
-#include <QDateTime>
-#include <QMutex>
 #include <QAtomicInt>
 #include <QAtomicInteger>
+#include <QDateTime>
+#include <QMutex>
+#include <QObject>
+#include <QString>
+#include <QUuid>
+#include <QVariantMap>
 
-class ConversionTask : public QObject {
+class ConversionTask : public QObject
+{
     Q_OBJECT
 
 public:
-    enum class Status {
+    enum class Status
+    {
         Pending,
         Running,
         Completed,
@@ -22,55 +24,138 @@ public:
         Cancelled
     };
 
-    enum class ConverterType {
+    enum class ConverterType
+    {
         Unknown,
         FFmpeg,
         Pandoc,
         ImageMagick
     };
 
-    enum class Priority {
+    enum class Priority
+    {
         Low = 0,
         Normal = 1,
         High = 2
     };
 
     explicit ConversionTask(QObject* parent = nullptr);
-    ConversionTask(const QString& inputFile, const QString& outputFile,
-                   const QVariantMap& params, QObject* parent = nullptr);
+    ConversionTask(const QString& inputFile, const QString& outputFile, const QVariantMap& params,
+                   QObject* parent = nullptr);
     ~ConversionTask() override = default;
 
-    QString id() const { return m_id; }
-    QString inputFile() const { return m_inputFile; }
-    QString outputFile() const { return m_outputFile; }
-    QVariantMap params() const { return m_params; }
-    Status status() const { return static_cast<Status>(m_status.loadRelaxed()); }
-    int progress() const { return m_progress.loadRelaxed(); }
-    QString errorMessage() const { QMutexLocker l(&m_dataMutex); return m_errorMessage; }
-    ConverterType converterType() const { return m_converterType; }
-    Priority priority() const { return m_priority; }
-    QDateTime startTime() const { QMutexLocker l(&m_dataMutex); return m_startTime; }
-    QDateTime endTime() const { QMutexLocker l(&m_dataMutex); return m_endTime; }
+    QString id() const
+    {
+        return m_id;
+    }
+    QString inputFile() const
+    {
+        return m_inputFile;
+    }
+    QString outputFile() const
+    {
+        return m_outputFile;
+    }
+    QVariantMap params() const
+    {
+        return m_params;
+    }
+    Status status() const
+    {
+        return static_cast<Status>(m_status.loadRelaxed());
+    }
+    int progress() const
+    {
+        return m_progress.loadRelaxed();
+    }
+    QString errorMessage() const
+    {
+        QMutexLocker l(&m_dataMutex);
+        return m_errorMessage;
+    }
+    ConverterType converterType() const
+    {
+        return m_converterType;
+    }
+    Priority priority() const
+    {
+        return m_priority;
+    }
+    QDateTime startTime() const
+    {
+        QMutexLocker l(&m_dataMutex);
+        return m_startTime;
+    }
+    QDateTime endTime() const
+    {
+        QMutexLocker l(&m_dataMutex);
+        return m_endTime;
+    }
     qint64 durationMs() const;
-    bool isCancelled() const { return m_cancelled.loadRelaxed() != 0; }
+    bool isCancelled() const
+    {
+        return m_cancelled.loadRelaxed() != 0;
+    }
     /// Raw pointer to the atomic cancel flag — injected into the converter
     /// clone so its worker-thread wait-loop can poll cancellation.
-    const QAtomicInt* cancelFlag() const { return &m_cancelled; }
-    qint64 fileSize() const { return m_fileSize; }
+    const QAtomicInt* cancelFlag() const
+    {
+        return &m_cancelled;
+    }
+    qint64 fileSize() const
+    {
+        return m_fileSize;
+    }
 
-    void setInputFile(const QString& file) { m_inputFile = file; }
-    void setOutputFile(const QString& file) { m_outputFile = file; }
-    void setParams(const QVariantMap& params) { m_params = params; }
-    void setConverterType(ConverterType type) { m_converterType = type; }
-    void setPriority(Priority priority) { m_priority = priority; }
+    void setInputFile(const QString& file)
+    {
+        m_inputFile = file;
+    }
+    void setOutputFile(const QString& file)
+    {
+        m_outputFile = file;
+    }
+    void setParams(const QVariantMap& params)
+    {
+        m_params = params;
+    }
+    void setConverterType(ConverterType type)
+    {
+        m_converterType = type;
+    }
+    void setPriority(Priority priority)
+    {
+        m_priority = priority;
+    }
     void setStatus(Status status);
     void setProgress(int progress);
-    void setErrorMessage(const QString& message) { QMutexLocker l(&m_dataMutex); m_errorMessage = message; }
-    void requestCancel() { m_cancelled.storeRelease(1); }
-    void resetCancelFlag() { m_cancelled.storeRelaxed(0); }
-    void setFileSize(qint64 size) { m_fileSize = size; }
-    void setStartTime(const QDateTime& t) { QMutexLocker l(&m_dataMutex); m_startTime = t; }
-    void setEndTime(const QDateTime& t) { QMutexLocker l(&m_dataMutex); m_endTime = t; }
+    void setErrorMessage(const QString& message)
+    {
+        QMutexLocker l(&m_dataMutex);
+        m_errorMessage = message;
+    }
+    void requestCancel()
+    {
+        m_cancelled.storeRelease(1);
+    }
+    void resetCancelFlag()
+    {
+        m_cancelled.storeRelaxed(0);
+    }
+    void setFileSize(qint64 size)
+    {
+        m_fileSize = size;
+    }
+    void setStartTime(const QDateTime& t)
+    {
+        QMutexLocker l(&m_dataMutex);
+        m_startTime = t;
+    }
+    void setEndTime(const QDateTime& t)
+    {
+        QMutexLocker l(&m_dataMutex);
+        m_endTime = t;
+    }
 
     static QString statusToString(Status status);
     static QString converterTypeToString(ConverterType type);

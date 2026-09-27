@@ -1,20 +1,18 @@
 #include "imagemagick_converter.h"
+
 #include "config_manager.h"
 #include "format_registry.h"
 #include "logger.h"
-#include <QFileInfo>
-#include <QDir>
+
 #include <QDateTime>
+#include <QDir>
+#include <QFileInfo>
 #include <QRegularExpression>
 
 static constexpr qint64 WAIT_FOR_FINISHED_TIMEOUT_MS = 300000; // 5 min
 
-ImageMagickConverter::ImageMagickConverter(QObject* parent)
-    : QObject(parent)
-    , m_magickPath("magick")
-    , m_process(nullptr)
-    , m_isRunning(false)
-    , m_currentProgress(0.0)
+ImageMagickConverter::ImageMagickConverter(QObject* parent) :
+    QObject(parent), m_magickPath("magick"), m_process(nullptr), m_isRunning(false), m_currentProgress(0.0)
 {
     m_magickPath = ConfigManager::instance().value("imagemagickPath", "magick").toString();
     const auto& reg = FormatRegistry::instance();
@@ -24,35 +22,38 @@ ImageMagickConverter::ImageMagickConverter(QObject* parent)
 
 // Copy-ctor for clone(): carries configuration only (tool path + format
 // knowledge), never per-run state. See FFmpegConverter for rationale.
-ImageMagickConverter::ImageMagickConverter(const ImageMagickConverter& other)
-    : QObject(nullptr)
-    , m_magickPath(other.m_magickPath)
-    , m_inputFormats(other.m_inputFormats)
-    , m_outputFormats(other.m_outputFormats)
-    , m_process(nullptr)
-    , m_isRunning(false)
-    , m_currentProgress(0.0)
-{
-}
+ImageMagickConverter::ImageMagickConverter(const ImageMagickConverter& other) :
+    QObject(nullptr),
+    m_magickPath(other.m_magickPath),
+    m_inputFormats(other.m_inputFormats),
+    m_outputFormats(other.m_outputFormats),
+    m_process(nullptr),
+    m_isRunning(false),
+    m_currentProgress(0.0)
+{ }
 
-std::unique_ptr<IConverter> ImageMagickConverter::clone() const {
+std::unique_ptr<IConverter> ImageMagickConverter::clone() const
+{
     return std::make_unique<ImageMagickConverter>(*this);
 }
 
-ImageMagickConverter::~ImageMagickConverter() {
+ImageMagickConverter::~ImageMagickConverter()
+{
     cancel();
 }
 
-QStringList ImageMagickConverter::supportedInputFormats() const {
+QStringList ImageMagickConverter::supportedInputFormats() const
+{
     return QStringList(m_inputFormats.cbegin(), m_inputFormats.cend());
 }
 
-QStringList ImageMagickConverter::supportedOutputFormats() const {
+QStringList ImageMagickConverter::supportedOutputFormats() const
+{
     return QStringList(m_outputFormats.cbegin(), m_outputFormats.cend());
 }
 
-bool ImageMagickConverter::isConversionSupported(const QString& inputFormat,
-                                                  const QString& outputFormat) const {
+bool ImageMagickConverter::isConversionSupported(const QString& inputFormat, const QString& outputFormat) const
+{
     QString input = inputFormat.toLower();
     QString output = outputFormat.toLower();
     bool inputSupported = m_inputFormats.contains(input);
@@ -61,13 +62,14 @@ bool ImageMagickConverter::isConversionSupported(const QString& inputFormat,
     return inputSupported && outputSupported;
 }
 
-QString ImageMagickConverter::getFormatFromExtension(const QString& filePath) const {
+QString ImageMagickConverter::getFormatFromExtension(const QString& filePath) const
+{
     return QFileInfo(filePath).suffix().toLower();
 }
 
-QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
-                                                  const QString& outputFile,
-                                                  const QVariantMap& params) const {
+QStringList ImageMagickConverter::buildArguments(const QString& inputFile, const QString& outputFile,
+                                                 const QVariantMap& params) const
+{
     QStringList args;
 
     // Input file
@@ -78,37 +80,43 @@ QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
 
     // Optional resize
     QString resize = params.value("resize").toString();
-    if (!resize.isEmpty()) {
+    if (!resize.isEmpty())
+    {
         args << "-resize" << resize;
     }
 
     // Quality (1-100)
     int quality = params.value("quality", 0).toInt();
-    if (quality > 0 && quality <= 100) {
+    if (quality > 0 && quality <= 100)
+    {
         args << "-quality" << QString::number(quality);
     }
 
     // Compression type
     QString compression = params.value("compression").toString();
-    if (!compression.isEmpty()) {
+    if (!compression.isEmpty())
+    {
         args << "-compress" << compression;
     }
 
     // Density (DPI)
     int density = params.value("density", 0).toInt();
-    if (density > 0) {
+    if (density > 0)
+    {
         args << "-density" << QString::number(density);
     }
 
     // Depth (bit depth)
     QString depth = params.value("depth").toString();
-    if (!depth.isEmpty()) {
+    if (!depth.isEmpty())
+    {
         args << "-depth" << depth;
     }
 
     // Strip metadata
     bool strip = params.value("strip", false).toBool();
-    if (strip) {
+    if (strip)
+    {
         args << "-strip";
     }
 
@@ -119,11 +127,13 @@ QStringList ImageMagickConverter::buildArguments(const QString& inputFile,
 }
 
 std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile, const QString& outputFile,
-                                                        const QVariantMap& params) {
+                                                       const QVariantMap& params)
+{
     LOG_INFO("ImageMagick", QString("开始转换: %1 -> %2").arg(inputFile, outputFile));
 
     QFileInfo inputInfo(inputFile);
-    if (!inputInfo.exists()) {
+    if (!inputInfo.exists())
+    {
         ErrorInfo error = ErrorTypes::createFileNotFoundError(inputFile, "ImageMagick::convert");
         error.outputFile = outputFile;
         m_lastError = error;
@@ -135,9 +145,9 @@ std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile,
 
     // Validate parameters
     QString paramError;
-    if (!validateParams(params, paramError)) {
-        ErrorInfo error = ErrorTypes::createError(
-            ErrorCode::InvalidParameter, paramError, "ImageMagick::convert");
+    if (!validateParams(params, paramError))
+    {
+        ErrorInfo error = ErrorTypes::createError(ErrorCode::InvalidParameter, paramError, "ImageMagick::convert");
         error.inputFile = inputFile;
         error.outputFile = outputFile;
         m_lastError = error;
@@ -153,13 +163,15 @@ std::optional<ErrorInfo> ImageMagickConverter::convert(const QString& inputFile,
     m_currentProgress = 0.0;
 
     QStringList args = buildArguments(inputFile, outputFile, params);
-    if (runMagick(args)) return std::nullopt;
-    if (m_lastError.isValid()) return m_lastError;
-    return ErrorTypes::createConversionFailedError(
-        tr("ImageMagick 转换失败"), "ImageMagick", "ImageMagick::convert");
+    if (runMagick(args))
+        return std::nullopt;
+    if (m_lastError.isValid())
+        return m_lastError;
+    return ErrorTypes::createConversionFailedError(tr("ImageMagick 转换失败"), "ImageMagick", "ImageMagick::convert");
 }
 
-bool ImageMagickConverter::runMagick(const QStringList& args) {
+bool ImageMagickConverter::runMagick(const QStringList& args)
+{
     // NOTE: no m_isRunning mutual-exclusion guard here anymore — TaskManager
     // clones one converter per concurrent task (see FFmpegConverter).
     // Re-create the process to ensure clean state. No signal connections:
@@ -174,11 +186,11 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
     emit statusChanged(tr("正在启动ImageMagick..."));
     m_process->start();
 
-    if (!m_process->waitForStarted(5000)) {
+    if (!m_process->waitForStarted(5000))
+    {
         m_isRunning = false;
-        ErrorInfo error = ErrorTypes::createProcessError(
-            ErrorCode::ProcessFailedToStart, "ImageMagick",
-            m_process->errorString(), "ImageMagick::runMagick");
+        ErrorInfo error = ErrorTypes::createProcessError(ErrorCode::ProcessFailedToStart, "ImageMagick",
+                                                         m_process->errorString(), "ImageMagick::runMagick");
         error.inputFile = m_currentInputFile;
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
@@ -195,33 +207,40 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
     // cancel flag every tick instead of blocking for the full timeout.
     bool timedOut = false;
     const qint64 deadline = QDateTime::currentMSecsSinceEpoch() + WAIT_FOR_FINISHED_TIMEOUT_MS;
-    for (;;) {
-        if (m_process->waitForFinished(500)) {
+    for (;;)
+    {
+        if (m_process->waitForFinished(500))
+        {
             break;
         }
         QString chunk = QString::fromUtf8(m_process->readAllStandardError());
-        if (!chunk.isEmpty()) {
+        if (!chunk.isEmpty())
+        {
             m_errorBuffer += chunk;
             // ImageMagick -monitor emits "filename.jpg 15.2% ..." tokens
             static const QRegularExpression progressRe(R"(([\d.]+)%\s+)");
             auto it = QRegularExpressionMatchIterator(progressRe.globalMatch(chunk));
             double pct = -1.0;
-            while (it.hasNext()) {
+            while (it.hasNext())
+            {
                 pct = it.next().captured(1).toDouble();
             }
-            if (pct >= 0.0) {
+            if (pct >= 0.0)
+            {
                 m_currentProgress = pct;
                 emit progressChanged(static_cast<int>(pct));
                 reportProgress(static_cast<int>(pct));
             }
         }
-        if (isCancelRequested()) {
+        if (isCancelRequested())
+        {
             LOG_INFO("ImageMagick", tr("收到取消请求，终止进程"));
             m_process->kill();
             m_process->waitForFinished(3000);
             break;
         }
-        if (QDateTime::currentMSecsSinceEpoch() > deadline) {
+        if (QDateTime::currentMSecsSinceEpoch() > deadline)
+        {
             timedOut = true;
             LOG_WARNING("ImageMagick", tr("ImageMagick 进程超时，正在终止"));
             m_process->kill();
@@ -230,18 +249,18 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
         }
     }
 
-    if (isCancelRequested()) {
+    if (isCancelRequested())
+    {
         m_isRunning = false;
         m_process.reset();
-        return false;   // TaskRunnable marks the task Cancelled via its flag
+        return false; // TaskRunnable marks the task Cancelled via its flag
     }
-    if (timedOut) {
+    if (timedOut)
+    {
         m_isRunning = false;
         m_process.reset();
-        ErrorInfo error = ErrorTypes::createError(
-            ErrorCode::TaskTimeout,
-            tr("ImageMagick 转换超时"),
-            "ImageMagick::runMagick");
+        ErrorInfo error =
+            ErrorTypes::createError(ErrorCode::TaskTimeout, tr("ImageMagick 转换超时"), "ImageMagick::runMagick");
         error.inputFile = m_currentInputFile;
         error.outputFile = m_currentOutputFile;
         m_lastError = error;
@@ -260,8 +279,10 @@ bool ImageMagickConverter::runMagick(const QStringList& args) {
     return success;
 }
 
-void ImageMagickConverter::cancel() {
-    if (m_isRunning && m_process) {
+void ImageMagickConverter::cancel()
+{
+    if (m_isRunning && m_process)
+    {
         LOG_INFO("ImageMagick", tr("取消转换任务"));
         m_process->kill();
         m_process->waitForFinished(3000);
@@ -272,57 +293,68 @@ void ImageMagickConverter::cancel() {
     }
 }
 
-bool ImageMagickConverter::identify(const QString& filePath, QVariantMap& info) {
+bool ImageMagickConverter::identify(const QString& filePath, QVariantMap& info)
+{
     QProcess process;
     process.setProgram(m_magickPath);
     process.setArguments(QStringList() << "identify" << "-verbose" << filePath);
     process.start();
 
-    if (!process.waitForStarted(5000)) {
+    if (!process.waitForStarted(5000))
+    {
         return false;
     }
-    if (!process.waitForFinished(30000)) {
+    if (!process.waitForFinished(30000))
+    {
         return false;
     }
-    if (process.exitCode() != 0) {
+    if (process.exitCode() != 0)
+    {
         return false;
     }
 
     QString output = QString::fromUtf8(process.readAllStandardOutput());
     QRegularExpression geomRe(R"(Geometry:\s+(\d+)x(\d+))");
     QRegularExpressionMatch geomMatch = geomRe.match(output);
-    if (geomMatch.hasMatch()) {
+    if (geomMatch.hasMatch())
+    {
         info["width"] = geomMatch.captured(1).toInt();
         info["height"] = geomMatch.captured(2).toInt();
     }
 
     QRegularExpression formatRe(R"(Format:\s+(\w+))");
     QRegularExpressionMatch formatMatch = formatRe.match(output);
-    if (formatMatch.hasMatch()) {
+    if (formatMatch.hasMatch())
+    {
         info["format"] = formatMatch.captured(1);
     }
 
     QRegularExpression depthRe(R"(Depth:\s+(\d+))");
     QRegularExpressionMatch depthMatch = depthRe.match(output);
-    if (depthMatch.hasMatch()) {
+    if (depthMatch.hasMatch())
+    {
         info["depth"] = depthMatch.captured(1).toInt();
     }
 
     QRegularExpression filesizeRe(R"(Filesize:\s+([\d.]+[A-Z]?))");
     QRegularExpressionMatch filesizeMatch = filesizeRe.match(output);
-    if (filesizeMatch.hasMatch()) {
+    if (filesizeMatch.hasMatch())
+    {
         info["fileSize"] = filesizeMatch.captured(1);
     }
 
     return true;
 }
 
-bool ImageMagickConverter::validateParams(const QVariantMap& params, QString& errorMsg) {
+bool ImageMagickConverter::validateParams(const QVariantMap& params, QString& errorMsg)
+{
     // Validate resize format (e.g., "800x600", "50%", "1920x1080!")
     QString resize = params.value("resize").toString();
-    if (!resize.isEmpty()) {
+    if (!resize.isEmpty())
+    {
         static const QRegularExpression resizeRe(R"(^\d+[xX]\d+!?$|^\d+%$|^x\d+$|^\d+$)");
-        if (!resizeRe.match(resize).hasMatch()) {
+        if (!resizeRe.match(resize).hasMatch())
+        {
             errorMsg = QString("无效的缩放参数: %1 (期望格式如 800x600, 50%%, x1080, 800)").arg(resize);
             return false;
         }
@@ -330,18 +362,21 @@ bool ImageMagickConverter::validateParams(const QVariantMap& params, QString& er
 
     // Validate quality
     int quality = params.value("quality", 0).toInt();
-    if (quality < 0 || quality > 100) {
+    if (quality < 0 || quality > 100)
+    {
         errorMsg = QString("质量参数超出范围: %1 (有效范围: 0-100)").arg(quality);
         return false;
     }
 
     // Validate density
     int density = params.value("density", 0).toInt();
-    if (density < 0) {
+    if (density < 0)
+    {
         errorMsg = QString("DPI不能为负数: %1").arg(density);
         return false;
     }
-    if (density > 12000) {
+    if (density > 12000)
+    {
         errorMsg = QString("DPI过高: %1 (上限: 12000)").arg(density);
         return false;
     }
@@ -349,8 +384,10 @@ bool ImageMagickConverter::validateParams(const QVariantMap& params, QString& er
     return true;
 }
 
-void ImageMagickConverter::onProcessReadyReadStandardError() {
-    if (!m_process) return;
+void ImageMagickConverter::onProcessReadyReadStandardError()
+{
+    if (!m_process)
+        return;
     QString output = QString::fromUtf8(m_process->readAllStandardError());
     m_errorBuffer += output;
 
@@ -358,46 +395,56 @@ void ImageMagickConverter::onProcessReadyReadStandardError() {
     // ImageMagick outputs progress lines like: "filename.jpg 15.2% 10.1M"
     static const QRegularExpression progressRe(R"(([\d.]+)%\s+)");
     QRegularExpressionMatch match = progressRe.match(output);
-    if (match.hasMatch()) {
+    if (match.hasMatch())
+    {
         double pct = match.captured(1).toDouble();
         m_currentProgress = pct;
         emit progressChanged(static_cast<int>(pct));
     }
 }
 
-void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
+{
     // Guard: if already marked not running (e.g. cancel() already handled this),
     // do nothing to avoid double-emission of completion signals.
-    if (!m_isRunning) return;
+    if (!m_isRunning)
+        return;
     m_isRunning = false;
     bool success = (exitCode == 0 && exitStatus == QProcess::NormalExit);
 
-    if (success) {
+    if (success)
+    {
         LOG_INFO("ImageMagick", QString("转换完成: %1").arg(m_currentOutputFile));
         emit progressChanged(100);
         emit statusChanged(tr("转换完成"));
         emit conversionFinished(true, tr("转换成功"));
-    } else {
+    }
+    else
+    {
         ErrorInfo error;
-        if (exitStatus == QProcess::CrashExit) {
-            error = ErrorTypes::createProcessError(ErrorCode::ProcessCrashed, "ImageMagick",
-                                                   QString(), "ImageMagick::onProcessFinished");
-        } else {
+        if (exitStatus == QProcess::CrashExit)
+        {
+            error = ErrorTypes::createProcessError(ErrorCode::ProcessCrashed, "ImageMagick", QString(),
+                                                   "ImageMagick::onProcessFinished");
+        }
+        else
+        {
             QString detailMsg;
-            if (!m_errorBuffer.isEmpty()) {
+            if (!m_errorBuffer.isEmpty())
+            {
                 QStringList lines = m_errorBuffer.split('\n', Qt::SkipEmptyParts);
-                for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i) {
-                    if (lines[i].contains("Error") || lines[i].contains("error") ||
-                        lines[i].contains("Invalid") || lines[i].contains("failed")) {
+                for (int i = lines.size() - 1; i >= 0 && detailMsg.length() < 500; --i)
+                {
+                    if (lines[i].contains("Error") || lines[i].contains("error") || lines[i].contains("Invalid") ||
+                        lines[i].contains("failed"))
+                    {
                         detailMsg += lines[i].trimmed() + "\n";
                     }
                 }
             }
             error = ErrorTypes::createConversionFailedError(
-                detailMsg.trimmed().isEmpty()
-                    ? tr("退出码: %1").arg(exitCode)
-                    : detailMsg.trimmed(),
-                "ImageMagick", "ImageMagick::onProcessFinished");
+                detailMsg.trimmed().isEmpty() ? tr("退出码: %1").arg(exitCode) : detailMsg.trimmed(), "ImageMagick",
+                "ImageMagick::onProcessFinished");
         }
         error.inputFile = m_currentInputFile;
         error.outputFile = m_currentOutputFile;
@@ -409,12 +456,15 @@ void ImageMagickConverter::onProcessFinished(int exitCode, QProcess::ExitStatus 
     }
 }
 
-void ImageMagickConverter::onProcessError(QProcess::ProcessError error) {
+void ImageMagickConverter::onProcessError(QProcess::ProcessError error)
+{
     // Guard: if already handled, skip to avoid double-emission
-    if (!m_isRunning) return;
+    if (!m_isRunning)
+        return;
     m_isRunning = false;
     ErrorCode errorCode;
-    switch (error) {
+    switch (error)
+    {
         case QProcess::FailedToStart:
             errorCode = ErrorCode::ProcessFailedToStart;
             break;
@@ -428,8 +478,7 @@ void ImageMagickConverter::onProcessError(QProcess::ProcessError error) {
             errorCode = ErrorCode::Unknown;
             break;
     }
-    ErrorInfo err = ErrorTypes::createProcessError(errorCode, "ImageMagick",
-                                                   QString(), "ImageMagick::onProcessError");
+    ErrorInfo err = ErrorTypes::createProcessError(errorCode, "ImageMagick", QString(), "ImageMagick::onProcessError");
     err.inputFile = m_currentInputFile;
     err.outputFile = m_currentOutputFile;
     m_lastError = err;

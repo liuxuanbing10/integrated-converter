@@ -1,79 +1,112 @@
-#include <QTest>
-#include <QSignalSpy>
-#include <QThread>
-#include <QEventLoop>
-#include "../../src/core/task_manager.h"
-#include "../../src/core/conversion_task.h"
-#include "../../src/core/iconverter.h"
 #include "test_task_manager.h"
 
+#include "../../src/core/conversion_task.h"
+#include "../../src/core/iconverter.h"
+#include "../../src/core/task_manager.h"
+
+#include <QEventLoop>
+#include <QSignalSpy>
+#include <QTest>
+#include <QThread>
+
 // MockConverter: test mock, keep inline with Q_OBJECT (no separate header needed)
-class MockConverter : public QObject, public IConverter {
+class MockConverter : public QObject, public IConverter
+{
     Q_OBJECT
 public:
-    explicit MockConverter(QObject* parent = nullptr) : QObject(parent) {}
-    MockConverter(const MockConverter& other) : QObject(nullptr) {
+    explicit MockConverter(QObject* parent = nullptr) : QObject(parent)
+    { }
+    MockConverter(const MockConverter& other) : QObject(nullptr)
+    {
         m_calls = other.m_calls;
         m_delayMs = other.m_delayMs;
         m_reportProgress = other.m_reportProgress;
     }
-    std::unique_ptr<IConverter> clone() const override {
+    std::unique_ptr<IConverter> clone() const override
+    {
         return std::make_unique<MockConverter>(*this);
     }
-    QString name() const override { return "MockConverter"; }
-    QStringList supportedInputFormats() const override { return {"mock_in"}; }
-    QStringList supportedOutputFormats() const override { return {"mock_out"}; }
+    QString name() const override
+    {
+        return "MockConverter";
+    }
+    QStringList supportedInputFormats() const override
+    {
+        return {"mock_in"};
+    }
+    QStringList supportedOutputFormats() const override
+    {
+        return {"mock_out"};
+    }
     std::optional<ErrorInfo> convert(const QString& inputFile, const QString& outputFile,
-                                     const QVariantMap& params) override {
+                                     const QVariantMap& params) override
+    {
         Q_UNUSED(inputFile);
         Q_UNUSED(outputFile);
         Q_UNUSED(params);
         ++m_calls;
-        if (m_delayMs > 0) {
+        if (m_delayMs > 0)
+        {
             // Run on the WORKER thread (TaskRunnable::run). No QEventLoop
             // here — no Qt event objects are created in this thread, so
             // plain sleeps are safe and keep the process poll-free.
             QThread::msleep(m_delayMs);
         }
-        if (m_reportProgress > 0 && m_progressCb) {
+        if (m_reportProgress > 0 && m_progressCb)
+        {
             m_progressCb(m_reportProgress);
         }
         return std::nullopt;
     }
-    int callCount() const { return m_calls; }
-    void setDelay(int ms) { m_delayMs = ms; }
-    void setReportProgress(int p) { m_reportProgress = p; }
-    bool isConversionSupported(const QString& inputFormat,
-                              const QString& outputFormat) const override {
+    int callCount() const
+    {
+        return m_calls;
+    }
+    void setDelay(int ms)
+    {
+        m_delayMs = ms;
+    }
+    void setReportProgress(int p)
+    {
+        m_reportProgress = p;
+    }
+    bool isConversionSupported(const QString& inputFormat, const QString& outputFormat) const override
+    {
         return inputFormat == "mock_in" && outputFormat == "mock_out";
     }
+
 private:
     int m_calls = 0;
     int m_delayMs = 0;
     int m_reportProgress = 0;
 };
 
-void TestTaskManager::initTestCase() {
+void TestTaskManager::initTestCase()
+{
     TaskManager::instance()->cancelAllTasks();
 }
 
-void TestTaskManager::cleanupTestCase() {
+void TestTaskManager::cleanupTestCase()
+{
     TaskManager::instance()->cancelAllTasks();
 }
 
-void TestTaskManager::init() {
+void TestTaskManager::init()
+{
     TaskManager::instance()->cancelAllTasks();
     TaskManager::instance()->registerConverter("mock", std::make_shared<MockConverter>());
 }
 
-void TestTaskManager::testRegisterConverter() {
+void TestTaskManager::testRegisterConverter()
+{
     auto* tm = TaskManager::instance();
     auto* conv = tm->converter("mock");
     QVERIFY(conv != nullptr);
     QCOMPARE(conv->name(), QString("MockConverter"));
 }
 
-void TestTaskManager::testAddTask() {
+void TestTaskManager::testAddTask()
+{
     auto* tm = TaskManager::instance();
     int before = tm->totalTaskCount();
     QString taskId = tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
@@ -81,7 +114,8 @@ void TestTaskManager::testAddTask() {
     QCOMPARE(tm->totalTaskCount(), before + 1);
 }
 
-void TestTaskManager::testRemoveTask() {
+void TestTaskManager::testRemoveTask()
+{
     auto* tm = TaskManager::instance();
     int before = tm->totalTaskCount();
     QString taskId = tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
@@ -90,7 +124,8 @@ void TestTaskManager::testRemoveTask() {
     QCOMPARE(tm->totalTaskCount(), before);
 }
 
-void TestTaskManager::testCancelTask() {
+void TestTaskManager::testCancelTask()
+{
     auto* tm = TaskManager::instance();
     QString taskId = tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
     QVERIFY(!taskId.isEmpty());
@@ -100,10 +135,12 @@ void TestTaskManager::testCancelTask() {
     QVERIFY(task->status() == ConversionTask::Status::Cancelled);
 }
 
-void TestTaskManager::testCancelAllTasks() {
+void TestTaskManager::testCancelAllTasks()
+{
     auto* tm = TaskManager::instance();
     tm->cancelAllTasks();
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 5; ++i)
+    {
         tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
     }
     tm->cancelAllTasks();
@@ -111,7 +148,8 @@ void TestTaskManager::testCancelAllTasks() {
     QCOMPARE(tm->runningCount(), 0);
 }
 
-void TestTaskManager::testMaxParallelTasks() {
+void TestTaskManager::testMaxParallelTasks()
+{
     auto* tm = TaskManager::instance();
     int original = tm->maxParallelTasks();
     tm->setMaxParallelTasks(10);
@@ -120,23 +158,27 @@ void TestTaskManager::testMaxParallelTasks() {
     QCOMPARE(tm->maxParallelTasks(), original);
 }
 
-void TestTaskManager::testTaskCounts() {
+void TestTaskManager::testTaskCounts()
+{
     auto* tm = TaskManager::instance();
     int before = tm->totalTaskCount();
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i)
+    {
         tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
     }
     QCOMPARE(tm->totalTaskCount(), before + 3);
 }
 
-void TestTaskManager::testGetTasksByStatus() {
+void TestTaskManager::testGetTasksByStatus()
+{
     auto* tm = TaskManager::instance();
     tm->cancelAllTasks();
     tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
     QVERIFY(tm->pendingCount() > 0);
 }
 
-void TestTaskManager::testStart() {
+void TestTaskManager::testStart()
+{
     auto* tm = TaskManager::instance();
     int originalMax = tm->maxParallelTasks();
     tm->setMaxParallelTasks(4);
@@ -147,7 +189,8 @@ void TestTaskManager::testStart() {
     tm->setMaxParallelTasks(originalMax);
 }
 
-void TestTaskManager::testTaskAddedSignal() {
+void TestTaskManager::testTaskAddedSignal()
+{
     auto* tm = TaskManager::instance();
     QSignalSpy spy(tm, &TaskManager::taskAdded);
     tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
@@ -157,12 +200,13 @@ void TestTaskManager::testTaskAddedSignal() {
 // ── Regression: shared-singleton converters made batch conversion fail ──
 // Before the clone-per-task fix, 4 parallel tasks dispatched onto ONE
 // converter instance tripped the "already running" guard and 3 of 4 failed.
-void TestTaskManager::testParallelTasksAllSucceed() {
+void TestTaskManager::testParallelTasksAllSucceed()
+{
     auto* tm = TaskManager::instance();
     tm->cancelAllTasks();
 
     auto mock = std::make_shared<MockConverter>();
-    mock->setDelay(300);   // hold each "conversion" long enough to overlap
+    mock->setDelay(300); // hold each "conversion" long enough to overlap
     tm->registerConverter("mock", mock);
     int originalMax = tm->maxParallelTasks();
     tm->setMaxParallelTasks(4);
@@ -175,15 +219,16 @@ void TestTaskManager::testParallelTasksAllSucceed() {
     QStringList ids;
     QVariantMap params;
     params["converter"] = "mock";
-    for (int i = 0; i < 4; ++i) {
-        ids << tm->addTask(QString("/input%1.mock_in").arg(i),
-                           QString("/output%1.mock_out").arg(i), params);
+    for (int i = 0; i < 4; ++i)
+    {
+        ids << tm->addTask(QString("/input%1.mock_in").arg(i), QString("/output%1.mock_out").arg(i), params);
     }
     tm->start();
 
     // Pump the event loop until all four finish (queued from worker threads).
     QSignalSpy oneDone(tm, &TaskManager::taskCompleted);
-    while (oneDone.count() < 4) {
+    while (oneDone.count() < 4)
+    {
         QVERIFY2(oneDone.wait(2000), "parallel task did not complete within timeout");
     }
     QCOMPARE(tm->runningCount(), 0);
@@ -196,7 +241,8 @@ void TestTaskManager::testParallelTasksAllSucceed() {
 }
 
 // ── Regression: TaskRunnable::progressChanged was never emitted (§3.2) ──
-void TestTaskManager::testProgressPropagation() {
+void TestTaskManager::testProgressPropagation()
+{
     auto* tm = TaskManager::instance();
     tm->cancelAllTasks();
 
@@ -216,10 +262,13 @@ void TestTaskManager::testProgressPropagation() {
     // taskCompleted also drives the progress bar to 100; we want the
     // mid-conversion 42 emitted through the converter's progress callback.
     bool saw42 = false;
-    for (int spins = 0; spins < 100 && !saw42; ++spins) {
+    for (int spins = 0; spins < 100 && !saw42; ++spins)
+    {
         doneSpy.wait(200);
-        for (const auto& args : progressSpy) {
-            if (args.at(0).toString() == taskId && args.at(1).toInt() == 42) {
+        for (const auto& args : progressSpy)
+        {
+            if (args.at(0).toString() == taskId && args.at(1).toInt() == 42)
+            {
                 saw42 = true;
                 break;
             }
@@ -230,7 +279,8 @@ void TestTaskManager::testProgressPropagation() {
 }
 
 // ── Regression: cancel(A) must not kill B's process (§3.1 friendly fire) ──
-void TestTaskManager::testCancelIsPerTask() {
+void TestTaskManager::testCancelIsPerTask()
+{
     auto* tm = TaskManager::instance();
     tm->cancelAllTasks();
 
@@ -250,14 +300,16 @@ void TestTaskManager::testCancelIsPerTask() {
     tm->start();
 
     // Let both enter convert(), then cancel only A.
-    while (startedSpy.count() < 2) {
+    while (startedSpy.count() < 2)
+    {
         QVERIFY(startedSpy.wait(3000));
     }
     tm->cancelTask(idA);
 
     // Wait for both to finish.
     QSignalSpy doneSpy(tm, &TaskManager::taskCompleted);
-    while (doneSpy.count() < 2) {
+    while (doneSpy.count() < 2)
+    {
         QVERIFY(doneSpy.wait(5000));
     }
 
@@ -270,7 +322,8 @@ void TestTaskManager::testCancelIsPerTask() {
     tm->setMaxParallelTasks(originalMax);
 }
 
-void TestTaskManager::testTaskRemovedSignal() {
+void TestTaskManager::testTaskRemovedSignal()
+{
     auto* tm = TaskManager::instance();
     QString taskId = tm->addTask("/input.mock_in", "/output.mock_out", QVariantMap());
     QSignalSpy spy(tm, &TaskManager::taskRemoved);
@@ -278,7 +331,8 @@ void TestTaskManager::testTaskRemovedSignal() {
     QCOMPARE(spy.count(), 1);
 }
 
-void TestTaskManager::testSingleton() {
+void TestTaskManager::testSingleton()
+{
     auto* instance1 = TaskManager::instance();
     auto* instance2 = TaskManager::instance();
     QCOMPARE(instance1, instance2);

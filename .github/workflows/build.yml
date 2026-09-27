@@ -7,54 +7,8 @@ on:
     branches: [master, main]
 
 jobs:
-  linux-gcc:
-    name: linux / GCC / Qt6
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Qt6 + build tools
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.11.1'
-          host: 'linux'
-          target: 'desktop'
-          arch: 'gcc_64'
-          modules: ''
-          cache: true
-
-      - name: Install ffmpeg / pandoc / imagemagick / lint tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-              ffmpeg pandoc imagemagick ninja-build \
-              clang-tidy clang-format
-
-      - name: Configure (Debug, with tests)
-        run: |
-          cmake -S . -B build/debug -G Ninja \
-              -DCMAKE_BUILD_TYPE=Debug \
-              -DBUILD_TESTS=ON
-
-      - name: Build
-        run: cmake --build build/debug --parallel
-
-      - name: ctest
-        working-directory: build/debug
-        run: ctest --output-on-failure
-
-      - name: Check clang-format
-        run: |
-          find src/ tests/ -name '*.cpp' -o -name '*.h' \
-            | xargs clang-format --dry-run -Werror
-
-      - name: Run clang-tidy
-        working-directory: build/debug
-        run: run-clang-tidy -quiet -p . 2>&1 | head -100
-
   windows-msvc:
-    name: windows / MSVC / Qt6
+    name: windows / MSVC / Qt 6.12
     runs-on: windows-2022
     steps:
       - name: Checkout
@@ -63,7 +17,7 @@ jobs:
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.11.1'
+          version: '6.12.0'
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2022_64'

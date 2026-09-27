@@ -1,9 +1,10 @@
 #ifndef CONFIG_MANAGER_H
 #define CONFIG_MANAGER_H
 #include <QObject>
-#include <QVariantMap>
 #include <QString>
-class ConfigManager : public QObject {
+#include <QVariantMap>
+class ConfigManager : public QObject
+{
     Q_OBJECT
 public:
     static ConfigManager& instance();
@@ -17,7 +18,11 @@ public:
     void setOutputDirectory(const QString& dir);
     int logLevel() const;
     void setLogLevel(int level);
-    QVariantMap allConfig() const { return m_config; }
+    QVariantMap allConfig() const
+    {
+        return m_config;
+    }
+
 private:
     ConfigManager();
     ~ConfigManager();
