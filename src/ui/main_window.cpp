@@ -29,6 +29,36 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <chrono>
+#include <type_traits>
+
+namespace
+{
+/// Qt 6.12 ships two incompatible signatures for this setter across
+/// point releases/builds (int on the local D:/tools/6.12.0 tree,
+/// std::chrono::milliseconds on the one aqt installs in CI). Probe
+/// which one exists with a C++23 requires-clause so both compile.
+template<typename H>
+concept WakeUpDelayTakesInt = requires(H* h, int ms) { h->setToolTipWakeUpDelay(ms); };
+
+template<typename H>
+void setToolTipWakeUpDelayCompat(H* hints, int ms)
+{
+    if (!hints)
+    {
+        return;
+    }
+    if constexpr (WakeUpDelayTakesInt<H>)
+    {
+        hints->setToolTipWakeUpDelay(ms);
+    }
+    else
+    {
+        hints->setToolTipWakeUpDelay(std::chrono::milliseconds(ms));
+    }
+}
+} // namespace
+
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
     m_tabWidget(nullptr),
@@ -61,11 +91,11 @@ MainWindow::MainWindow(QWidget* parent) :
     setupConnections();
     applyLightTheme();
 
-    // Qt 6.12: Use QStyleHints for fine-grained tooltip control
-    if (auto* hints = QApplication::styleHints())
-    {
-        hints->setToolTipWakeUpDelay(500);
-    }
+    // Qt 6.12: tooltip wake-up delay. The setter signature differs between
+    // Qt 6.12 builds (plain int vs std::chrono::milliseconds); the template
+    // + if constexpr probe below compiles on both because the untaken
+    // branch is never instantiated.
+    setToolTipWakeUpDelayCompat(QApplication::styleHints(), 500);
 
     LOG_INFO("MainWindow", "主窗口初始化完成 (外部配置面板)");
 }
