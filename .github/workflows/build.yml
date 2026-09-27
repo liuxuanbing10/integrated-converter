@@ -22,7 +22,9 @@ jobs:
         run: |
           pip install "git+https://github.com/miurahr/aqtinstall.git"
           python -m aqt install-qt windows desktop 6.12.0 win64_msvc2022_64 --outputdir "${{ github.workspace }}\Qt"
-          echo "${{ github.workspace }}\Qt\6.12.0\win64_msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          # NOTE: with the new per-arch repo layout aqt installs into
+          # Qt/6.12.0/msvc2022_64 (no win64_ prefix) for Qt >= 6.11.
+          echo "${{ github.workspace }}\Qt\6.12.0\msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Set up MSVC environment (for Ninja)
         uses: ilammy/msvc-dev-cmd@v1
@@ -35,7 +37,7 @@ jobs:
         run: |
           cmake -S . -B build/debug -G Ninja `
             -DCMAKE_BUILD_TYPE=Debug `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}\Qt\6.12.0\win64_msvc2022_64" `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}\Qt\6.12.0\msvc2022_64" `
             -DBUILD_TESTS=ON
 
       - name: Build
