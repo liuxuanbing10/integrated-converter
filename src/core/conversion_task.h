@@ -138,10 +138,6 @@ public:
     {
         m_cancelled.storeRelease(1);
     }
-    void resetCancelFlag()
-    {
-        m_cancelled.storeRelaxed(0);
-    }
     void setFileSize(qint64 size)
     {
         m_fileSize = size;
@@ -157,7 +153,6 @@ public:
         m_endTime = t;
     }
 
-    static QString statusToString(Status status);
     static QString converterTypeToString(ConverterType type);
     static QString priorityToString(Priority priority);
     static ConverterType stringToConverterType(const QString& str);

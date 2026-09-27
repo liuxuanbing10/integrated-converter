@@ -1,21 +1,40 @@
 #ifndef PROGRESS_WIDGET_H
 #define PROGRESS_WIDGET_H
-#include <QWidget>
-#include <QProgressBar>
-#include <QLabel>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
-class ProgressWidget : public QWidget {
+#include <QLabel>
+#include <QProgressBar>
+#include <QVBoxLayout>
+#include <QWidget>
+class ProgressWidget : public QWidget
+{
     Q_OBJECT
 public:
     explicit ProgressWidget(QWidget* parent = nullptr);
     ~ProgressWidget() override;
-    int totalTasks() const { return m_totalTasks; }
-    int completedTasks() const { return m_completedTasks; }
-    int failedTasks() const { return m_failedTasks; }
-    int runningTasks() const { return m_runningTasks; }
-    int pendingTasks() const { return m_pendingTasks; }
-    int overallProgress() const { return m_overallProgress; }
+    int totalTasks() const
+    {
+        return m_totalTasks;
+    }
+    int completedTasks() const
+    {
+        return m_completedTasks;
+    }
+    int failedTasks() const
+    {
+        return m_failedTasks;
+    }
+    int runningTasks() const
+    {
+        return m_runningTasks;
+    }
+    int pendingTasks() const
+    {
+        return m_pendingTasks;
+    }
+    int overallProgress() const
+    {
+        return m_overallProgress;
+    }
 signals:
     void progressChanged(int progress);
 public slots:
@@ -33,11 +52,11 @@ public slots:
     void setCurrentBitrate(double bitrate);
     void setDetailedProgress(int progress, double speed, qint64 remainingMs, double bitrate);
     void reset();
+
 private:
     void setupUI();
     void updateDisplay();
     QString formatTime(int seconds) const;
-    QString formatFileSize(qint64 bytes) const;
     QString formatSpeed(double bytesPerSecond) const;
     QProgressBar* m_progressBar;
     QLabel* m_progressLabel;

@@ -50,7 +50,6 @@ private slots:
 
 private:
     bool runPandoc(const QStringList& args, QString& output);
-    bool runPandocAsync(const QString& inputFile, const QString& outputFile, const QStringList& args);
     QStringList buildArguments(const QString& inputFile, const QString& outputFile, const QVariantMap& params);
     QString detectInputFormat(const QString& filePath) const;
     QString detectOutputFormat(const QString& filePath) const;

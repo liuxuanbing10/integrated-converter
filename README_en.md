@@ -39,11 +39,11 @@
 
 ### Task Management
 
-- **Parallel execution** — Configurable concurrency (default 4) via `QThreadPool`; dynamically adjusts under memory pressure
+- **Parallel execution** — Configurable concurrency (default 4) via `QThreadPool`; each running task gets its own converter instance
 - **Priority scheduling** — Per-task priority (Low / Normal / High); higher-priority tasks jump the queue
 - **Batch processing** — Add multiple files, convert in one click; summary dialog with success/failure breakdown
-- **Pause / Resume / Cancel** — Full lifecycle control per-task or globally
-- **Progress details** — Per-task: percentage, processing speed, bitrate, ETA, processed bytes (from ffmpeg stderr parsing)
+- **Cancel** — Cooperative per-task or global cancellation; the underlying process is terminated by its own worker
+- **Progress details** — Per-task percentage propagated from converter progress callbacks (ffmpeg stderr parsing feeds speed/ETA internally)
 - **10 000+ task scalability** — Tested for memory stability with large task sets
 
 ### Error Handling & Recovery
@@ -54,8 +54,7 @@
   - *Task errors* — TaskCancelled, TaskTimeout, TaskDependencyFailed
   - *Process errors* — ProcessCrashed, OutOfMemory, ProcessFailedToStart
 - **ErrorInfo struct** — Full context: code, message, details, suggestion, timestamp, retry count, recoverable flag
-- **Auto-recovery** — Optional automatic retry of recoverable errors
-- **Retry Manager** — Configurable max retries (default 3), exponential backoff delay (base 1 s, max 30 s, multiplier 2×), per-error-code retryability
+- **Retry failed** — Failed items can be resubmitted selectively from the summary dialog (re-queues only the failed files)
 
 ### Skill System
 
@@ -66,9 +65,7 @@
 
 ### Memory & Resource Management
 
-- **Memory Monitor** — Periodic heap check (configurable interval), 3-level alert (Normal / Warning / Critical)
-- **Pressure-aware scheduling** — TaskManager reduces parallelism when memory is under pressure
-- **Tracked allocation** — Records app-level allocation/deallocation for diagnostics
+- **Large-file handling** — File-size tiers feed suggested task priority (`LargeFileHandler`)
 
 ### Logging
 
@@ -214,8 +211,8 @@ integrated_converter.exe
 2. **Select output** — Pick a target format in the config panel
 3. **Tune parameters** (optional) — Resolution, bitrate, codec, quality, PDF engine, etc.
 4. **Convert** — Click "Start Conversion"
-5. **Monitor** — Watch real-time progress, speed, ETA
-6. **Review** — After batch completion, view the summary dialog (success/fail/retry)
+5. **Monitor** — Watch per-task progress in the task list; aggregate counters in the progress panel
+6. **Review** — After batch completion, view the summary dialog (success/fail; failed files can be retried selectively)
 
 ---
 
@@ -247,8 +244,8 @@ ctest --test-dir build
 ```
 
 The test suite covers:
-- Unit tests for Logger, ConfigManager, TaskManager, ErrorHandler, FFmpegConverter, PandocConverter, ImageMagickConverter
-- Integration workflow (task lifecycle, batch, parallel, cancellation, priority, pause/resume)
+- Unit tests for Logger, ConfigManager, TaskManager, ErrorTypes, FormatRegistry, LargeFileHandler, FFmpeg/Pandoc/ImageMagick converters
+- Integration workflow (task lifecycle, batch, parallel isolation, cooperative cancellation, priority)
 - Performance benchmarks (task creation, removal, concurrent operations, log throughput)
 
 ---
@@ -269,10 +266,6 @@ integrated_converter/
 │   │   ├── format_registry.h/cpp # Format registry
 │   │   ├── logger.h/cpp          # Logging system
 │   │   ├── error_types.h/cpp     # Error codes
-│   │   ├── error_handler.h/cpp   # Error handler
-│   │   ├── retry_manager.h/cpp   # Retry scheduler
-│   │   ├── skill_manager.h/cpp   # Skill system
-│   │   ├── memory_monitor.h/cpp  # Memory monitor
 │   │   └── large_file_handler.h/cpp # Large file handler
 │   │
 │   ├── converters/               # Engine wrappers
@@ -338,7 +331,8 @@ File: `~/.integrated_converter/config.json`
 
 | Pattern | Usage |
 |---------|-------|
-| **Singleton** | Logger, ConfigManager, TaskManager, ErrorHandler, RetryManager, MemoryMonitor |
+| **Singleton** | ConfigManager, TaskManager, FormatRegistry (Logger is app-scoped; `g_logger` is an atomic pointer) |
+| **Prototype / clone-per-task** | `IConverter::clone()` — every queued task runs on a dedicated converter instance |
 | **Strategy / Interface** | `IConverter` abstract base; `FFmpegConverter`, `PandocConverter`, `ImageMagickConverter` implementations |
 | **Observer** | Qt signals/slots for task progress, error events, memory alerts |
 | **QRunnable** | `TaskRunnable` wraps `ConversionTask` for `QThreadPool` execution |

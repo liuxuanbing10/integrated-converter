@@ -39,10 +39,10 @@
 
 ### 任务管理
 
-- **并行执行** — 通过 QThreadPool 实现可配置并发（默认 4），内存压力下自动调整
+- **并行执行** — 通过 QThreadPool 实现可配置并发（默认 4），每个运行任务持有独立转换器实例
 - **优先级调度** — 每任务优先级（低/中/高），高优先级任务插队执行
 - **批量处理** — 批量添加文件一键转换，完成后弹出成功/失败汇总
-- **暂停/继续/取消** — 单任务或全局全生命周期控制
+- **取消** — 单任务或全局协作式取消，底层进程由其工作线程自行终止
 - **进度详情** — 单任务百分比、处理速度、码率、预计剩余时间、已处理字节数
 - **万级任务可扩展性** — 经大任务集内存稳定性测试
 
@@ -54,7 +54,7 @@
   - *任务错误* — TaskCancelled、TaskTimeout、TaskDependencyFailed
   - *进程错误* — ProcessCrashed、OutOfMemory、ProcessFailedToStart
 - **错误信息结构体** — 完整上下文：错误码、消息、详情、建议、时间戳、重试次数、可恢复标记
-- **自动恢复** — 可恢复错误可选自动重试
+- **失败重试** — 汇总对话框可选择性重新提交失败文件（仅重转失败项）
 - **重试管理器** — 可配置最大重试次数（默认 3）、指数退避延迟（基数 1 秒、上限 30 秒、乘数 2 倍）
 
 ### 技能系统
@@ -247,8 +247,8 @@ ctest --test-dir build
 ```
 
 测试套件覆盖：
-- Logger、ConfigManager、TaskManager、ErrorHandler、各转换器的单元测试
-- 集成工作流（任务生命周期、批量处理、并行、取消、优先级、暂停/恢复）
+- Logger、ConfigManager、TaskManager、ErrorTypes、FormatRegistry、各转换器的单元测试
+- 集成工作流（任务生命周期、批量处理、并行隔离、协作式取消、优先级）
 - 性能基准测试（任务创建、移除、并发操作、日志吞吐量）
 
 ---
@@ -269,10 +269,6 @@ integrated_converter/
 │   │   ├── format_registry.h/cpp # 格式注册表
 │   │   ├── logger.h/cpp          # 日志系统
 │   │   ├── error_types.h/cpp     # 错误码定义
-│   │   ├── error_handler.h/cpp   # 错误处理
-│   │   ├── retry_manager.h/cpp   # 重试调度
-│   │   ├── skill_manager.h/cpp   # 技能系统
-│   │   ├── memory_monitor.h/cpp  # 内存监控
 │   │   └── large_file_handler.h/cpp # 大文件处理
 │   │
 │   ├── converters/               # 引擎包装器
@@ -338,7 +334,8 @@ integrated_converter/
 
 | 模式 | 用途 |
 |------|------|
-| **单例** | Logger、ConfigManager、TaskManager、ErrorHandler、RetryManager、MemoryMonitor |
+| **单例** | ConfigManager、TaskManager、FormatRegistry（Logger 为应用级对象，g_logger 原子指针） |
+| **克隆/每任务独立实例** | `IConverter::clone()` — 每个任务运行于专属转换器 |
 | **策略/接口** | `IConverter` 抽象基类，FFmpegConverter、PandocConverter、ImageMagickConverter 实现 |
 | **观察者** | Qt 信号槽用于进度、错误、内存告警 |
 | **QRunnable** | TaskRunnable 包装 ConversionTask 以供 QThreadPool 执行 |

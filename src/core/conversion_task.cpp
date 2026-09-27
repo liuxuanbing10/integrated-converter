@@ -82,24 +82,6 @@ void ConversionTask::setProgress(int progress)
     }
 }
 
-QString ConversionTask::statusToString(Status status)
-{
-    switch (status)
-    {
-        case Status::Pending:
-            return tr("等待中");
-        case Status::Running:
-            return tr("运行中");
-        case Status::Completed:
-            return tr("已完成");
-        case Status::Failed:
-            return tr("失败");
-        case Status::Cancelled:
-            return tr("已取消");
-        default:
-            return tr("未知");
-    }
-}
 
 QString ConversionTask::converterTypeToString(ConverterType type)
 {

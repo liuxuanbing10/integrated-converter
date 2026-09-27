@@ -81,10 +81,6 @@ public:
     }
 
     static bool validateParams(const QVariantMap& params, QString& errorMsg);
-    static QMap<QString, QString> videoFormatMap();
-    static QMap<QString, QString> audioFormatMap();
-    static QMap<QString, QString> videoCodecMap();
-    static QMap<QString, QString> audioCodecMap();
 
 signals:
     void progressChanged(int progress);

@@ -89,3 +89,20 @@ Testing/
 
 # AI agent tool config (node_modules)
 .opencode/node_modules/
+
+# local artefacts / AI tool residue (repo hygiene)
+archive/
+release/
+.omo/
+.sisyphus/
+.uploads/
+.workbuddy/
+.vs/
+opencode.json
+OUTPUT_LOCATION
+
+# stray test outputs in repo root
+test_output*.txt
+test_all.txt
+test_full.txt
+test_results.log

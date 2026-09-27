@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Test)
 
 # Shared source/header lists from root (must come before target creation)
 include(../cmake/sources.cmake)
@@ -32,7 +32,6 @@ target_link_libraries(test_runner PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
-    Qt6::Concurrent
     Qt6::Test
 )
 if(WIN32)

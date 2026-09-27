@@ -43,7 +43,6 @@ MainWindow::MainWindow(QWidget* parent) :
     m_paramsBtn(nullptr),
     m_taskListWidget(nullptr),
     m_progressWidget(nullptr),
-    m_mainSplitter(nullptr),
     m_statusLabel(nullptr),
     m_taskStatsLabel(nullptr),
     m_startAction(nullptr),
@@ -52,7 +51,7 @@ MainWindow::MainWindow(QWidget* parent) :
     m_darkMode(false),
     m_lastActiveCategory(FormatRegistry::Category::Image)
 {
-    setWindowTitle(tr("集成格式转换工具 v1.4.0"));
+    setWindowTitle(tr("集成格式转换工具 v%1").arg(QStringLiteral(APP_VERSION)));
     resize(1200, 800);
     setAcceptDrops(true); // Enable drag-and-drop of files onto the main window
     setupMenuBar();
@@ -736,16 +735,16 @@ void MainWindow::onCancelAll()
 void MainWindow::onAbout()
 {
     QMessageBox::about(this, tr("关于"),
-                       tr("<h3>集成格式转换工具 v1.4.0</h3>"
-                          "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
-                          "<p>支持功能：</p>"
-                          "<ul>"
-                          "<li>视频格式转换（MP4, AVI, MKV等）</li>"
-                          "<li>音频格式转换（MP3, WAV, FLAC等）</li>"
-                          "<li>图片格式转换（PNG, JPG, GIF, WebP等）</li>"
-                          "<li>文档格式转换（Markdown, DOCX, PDF等）</li>"
-                          "</ul>"
-                          "<p> 2024 ConverterTools</p>"));
+                       tr("<h3>集成格式转换工具 v%1</h3>").arg(QStringLiteral(APP_VERSION)) +
+                           "<p>基于FFmpeg、Pandoc和ImageMagick的多功能文件转换工具</p>"
+                           "<p>支持功能：</p>"
+                           "<ul>"
+                           "<li>视频格式转换（MP4, AVI, MKV等）</li>"
+                           "<li>音频格式转换（MP3, WAV, FLAC等）</li>"
+                           "<li>图片格式转换（PNG, JPG, GIF, WebP等）</li>"
+                           "<li>文档格式转换（Markdown, DOCX, PDF等）</li>"
+                           "</ul>"
+                           "<p>© 2024 ConverterTools</p>");
 }
 
 void MainWindow::onExit()

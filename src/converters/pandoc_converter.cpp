@@ -358,27 +358,6 @@ bool PandocConverter::runPandoc(const QStringList& args, QString& output)
     reportProgress(100);
     return true;
 }
-bool PandocConverter::runPandocAsync(const QString& inputFile, const QString& outputFile, const QStringList& args)
-{
-    if (m_currentProcess)
-    {
-        m_currentProcess->kill();
-        m_currentProcess.reset();
-    }
-    m_currentProcess = std::make_unique<QProcess>();
-    m_currentOutputFile = outputFile;
-    m_isConverting = true;
-    connect(m_currentProcess.get(), QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
-            &PandocConverter::onProcessFinished);
-    connect(m_currentProcess.get(), &QProcess::errorOccurred, this, &PandocConverter::onProcessError);
-    connect(m_currentProcess.get(), &QProcess::readyReadStandardError, this,
-            &PandocConverter::onProcessReadyReadStandardError);
-    m_currentProcess->setProgram(m_pandocPath);
-    m_currentProcess->setArguments(args);
-    LOG_DEBUG("Pandoc", QString("异步执行命令: %1 %2").arg(m_pandocPath, args.join(" ")));
-    m_currentProcess->start();
-    return m_currentProcess->waitForStarted();
-}
 void PandocConverter::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     QString output;

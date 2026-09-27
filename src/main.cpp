@@ -1,64 +1,83 @@
 #include <QApplication>
-#include <QStyleFactory>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QHash>
-#include <QStandardPaths>
 #include <QMutex>
+#include <QStandardPaths>
 #include <QStringList>
+#include <QStyleFactory>
+
 #include <iostream>
 #ifdef Q_OS_WIN
 #include <windows.h>
 #endif
-#include "ui/main_window.h"
-#include "core/logger.h"
-#include "core/config_manager.h"
-#include "core/task_manager.h"
-#include "converters/ffmpeg_converter.h"
-#include "converters/pandoc_converter.h"
-#include "converters/imagemagick_converter.h"
 #include "cli/cli_runner.h"
+#include "converters/ffmpeg_converter.h"
+#include "converters/imagemagick_converter.h"
+#include "converters/pandoc_converter.h"
+#include "core/config_manager.h"
 #include "core/iconverter.h"
+#include "core/logger.h"
+#include "core/task_manager.h"
+#include "ui/main_window.h"
+
 #include <memory>
 
 #ifdef Q_OS_WIN
 // Custom Qt message handler that writes UTF-16 directly to the Windows console,
 // bypassing code page conversion issues that cause garbled Chinese text.
 static QMutex g_consoleMutex;
-static void winConsoleMessageHandler(QtMsgType type, const QMessageLogContext& ctx,
-                                       const QString& msg) {
+static void winConsoleMessageHandler(QtMsgType type, const QMessageLogContext& ctx, const QString& msg)
+{
     QMutexLocker locker(&g_consoleMutex);
     QString prefix;
-    switch (type) {
-        case QtDebugMsg:    prefix = "[DEBUG] "; break;
-        case QtInfoMsg:     prefix = "[INFO] ";  break;
-        case QtWarningMsg:  prefix = "[WARN] ";  break;
-        case QtCriticalMsg: prefix = "[ERROR] "; break;
-        case QtFatalMsg:    prefix = "[FATAL] "; break;
+    switch (type)
+    {
+        case QtDebugMsg:
+            prefix = "[DEBUG] ";
+            break;
+        case QtInfoMsg:
+            prefix = "[INFO] ";
+            break;
+        case QtWarningMsg:
+            prefix = "[WARN] ";
+            break;
+        case QtCriticalMsg:
+            prefix = "[ERROR] ";
+            break;
+        case QtFatalMsg:
+            prefix = "[FATAL] ";
+            break;
     }
     QString fullMsg = prefix + msg + "\n";
     HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE);
     DWORD written;
-    if (hConsole != INVALID_HANDLE_VALUE && hConsole != nullptr) {
+    if (hConsole != INVALID_HANDLE_VALUE && hConsole != nullptr)
+    {
         // WriteConsoleW requires a real console handle. If stderr is redirected
         // to a file/pipe, fall back to a UTF-8 narrow write.
-        if (GetFileType(hConsole) == FILE_TYPE_CHAR) {
+        if (GetFileType(hConsole) == FILE_TYPE_CHAR)
+        {
             WriteConsoleW(hConsole, fullMsg.utf16(), fullMsg.size(), &written, nullptr);
-        } else {
+        }
+        else
+        {
             const QByteArray utf8 = fullMsg.toUtf8();
             fwrite(utf8.constData(), 1, utf8.size(), stderr);
             fflush(stderr);
         }
     }
-    if (type == QtFatalMsg) {
+    if (type == QtFatalMsg)
+    {
         // Let the default handler deal with abort
         abort();
     }
 }
 #endif
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 #ifdef Q_OS_WIN
     // Install custom handler that uses WriteConsoleW (UTF-16 native) to avoid
     // garbled Chinese output caused by Qt's default GBK-to-console encoding.
@@ -75,30 +94,33 @@ int main(int argc, char* argv[]) {
     // backed threads that complicate clean exit on `return`.
     // ----------------------------------------------------------------
     bool isCli = false;
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; ++i)
+    {
         QString a = QString::fromLocal8Bit(argv[i]);
-        if (a == "--cli" || a == "--help" || a == "-h" || a == "--list-formats") {
+        if (a == "--cli" || a == "--help" || a == "-h" || a == "--list-formats")
+        {
             isCli = true;
             break;
         }
     }
 
-    if (isCli) {
+    if (isCli)
+    {
         // Note: WIN32_EXECUTABLE is OFF in CMakeLists.txt so the linker uses
         // /SUBSYSTEM:CONSOLE — the OS creates a console and CRT stdio handles
         // are valid from process start. No AttachConsole / freopen_s needed.
         // QCoreApplication is sufficient — converters don't need GUI.
         QCoreApplication coreApp(argc, argv);
         coreApp.setApplicationName("IntegratedConverter");
-        coreApp.setApplicationVersion("1.4.0");
+        coreApp.setApplicationVersion(QStringLiteral(APP_VERSION));
         coreApp.setOrganizationName("ConverterTools");
 
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
         auto pandocConverter = std::make_shared<PandocConverter>();
         auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
         QHash<QString, IConverter*> byName;
-        byName.insert("FFmpeg",      ffmpegConverter.get());
-        byName.insert("Pandoc",      pandocConverter.get());
+        byName.insert("FFmpeg", ffmpegConverter.get());
+        byName.insert("Pandoc", pandocConverter.get());
         byName.insert("ImageMagick", imagemagickConverter.get());
 
         QStringList cliArgs = coreApp.arguments().mid(1);
@@ -107,22 +129,26 @@ int main(int argc, char* argv[]) {
         cliArgs.removeAll("--cli");
         QString err;
         CliRunner::Options opts = CliRunner::parseArgs(cliArgs, &err);
-        if (!err.isEmpty()) {
+        if (!err.isEmpty())
+        {
             QTextStream(stderr) << err << "\n\n";
             CliRunner::printHelp();
             return 2;
         }
-        if (opts.showHelp) {
+        if (opts.showHelp)
+        {
             CliRunner::printHelp();
             return 0;
         }
-        if (opts.listFormats) {
+        if (opts.listFormats)
+        {
             CliRunner::printFormats();
             return 0;
         }
         QString runErr;
         int rc = CliRunner::run(opts, byName, &runErr);
-        if (!runErr.isEmpty()) {
+        if (!runErr.isEmpty())
+        {
             QTextStream(stderr) << runErr << "\n";
         }
         return rc;
@@ -135,19 +161,19 @@ int main(int argc, char* argv[]) {
     // Use Fusion style for a modern, cross-platform consistent look
     app.setStyle(QStyleFactory::create("Fusion"));
     app.setApplicationName("IntegratedConverter");
-    app.setApplicationVersion("1.4.0");
+    app.setApplicationVersion(QStringLiteral(APP_VERSION));
     app.setOrganizationName("ConverterTools");
     Logger logger;
     g_logger = &logger;
-    QString configDir = QStandardPaths::writableLocation(
-        QStandardPaths::AppConfigLocation);
+    QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     QDir().mkpath(configDir);
     QString logPath = configDir + "/converter.log";
     logger.setLogFile(logPath);
     logger.setLevel(Logger::Level::Info);
     LOG_INFO("Main", "应用程序启动");
     QString configPath = configDir + "/config.json";
-    if (QFile::exists(configPath)) {
+    if (QFile::exists(configPath))
+    {
         ConfigManager::instance().loadConfig(configPath);
     }
     int logLevel = ConfigManager::instance().logLevel();

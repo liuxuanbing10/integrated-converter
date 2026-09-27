@@ -112,17 +112,12 @@ protected:
 
     TaskListWidget* m_taskListWidget;
     ProgressWidget* m_progressWidget;
-    QSplitter* m_mainSplitter;
     QLabel* m_statusLabel;
     QLabel* m_taskStatsLabel;
-    QLabel* m_errorIconLabel;
     QAction* m_startAction;
     QAction* m_cancelAction;
     QAction* m_summaryAction;
     QAction* m_toolbarStartAction;
-    QAction* m_toolbarCancelAction;
-    QAction* m_toolbarSummaryAction;
-    int m_errorCount;
     QList<ConversionResult> m_conversionResults;
     QString m_currentConvertingFile;
 };
