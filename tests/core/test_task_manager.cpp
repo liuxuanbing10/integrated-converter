@@ -152,8 +152,18 @@ void TestTaskManager::testMaxParallelTasks()
 {
     auto* tm = TaskManager::instance();
     int original = tm->maxParallelTasks();
-    tm->setMaxParallelTasks(10);
-    QCOMPARE(tm->maxParallelTasks(), 10);
+    // Do NOT assert an absolute value: the setter clamps to
+    // idealThreadCount()*2, so e.g. 10 survives on a 16-core dev box
+    // but is truncated to 8 on a 4-core CI runner. Assert the
+    // clamping semantics instead.
+    tm->setMaxParallelTasks(3);
+    QCOMPARE(tm->maxParallelTasks(), 3);
+    // 0 and negatives must clamp to 1, not disable the queue.
+    tm->setMaxParallelTasks(0);
+    QCOMPARE(tm->maxParallelTasks(), 1);
+    // Huge values clamp to the cap; reading it back proves the bound.
+    tm->setMaxParallelTasks(100000);
+    QCOMPARE(tm->maxParallelTasks(), qMax(1, QThread::idealThreadCount() * 2));
     tm->setMaxParallelTasks(original);
     QCOMPARE(tm->maxParallelTasks(), original);
 }
