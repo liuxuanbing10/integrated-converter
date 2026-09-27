@@ -49,8 +49,14 @@ jobs:
           # test_runner writes detail to test_results.log and can die at
           # startup (missing DLL etc.) with ctest swallowing the cause;
           # run it directly first so its exit code and stdout are visible.
+          $env:QTEST_LOGFILE = "$PWD\qtest.log"
           & ".\tests\test_runner.exe"
-          Write-Host "direct-run exit: $LASTEXITCODE"
+          $rc = $LASTEXITCODE
+          Write-Host "direct-run exit: $rc"
+          if ($rc -ne 0 -and (Test-Path qtest.log)) {
+            Write-Host "===== qtest.log (per-failure detail) ====="
+            Select-String -Path qtest.log -Pattern "FAIL!|\*\*\* Loc:" -Context 0,2
+          }
           ctest --output-on-failure
           $ctest = $LASTEXITCODE
           if (Test-Path tests\test_results.log) {
