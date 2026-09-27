@@ -358,7 +358,7 @@ void MainWindow::setupCentralWidget()
     dirRow->addWidget(browseBtn);
     configLayout->addLayout(dirRow);
 
-    configLayout->addSpacing(10);
+    configLayout->addSpacing(6);
 
     m_paramsBtn = new QPushButton(QIcon(":/icons/settings.svg"), tr(" 参数设置"));
     m_paramsBtn->setMinimumHeight(32);
@@ -374,7 +374,9 @@ void MainWindow::setupCentralWidget()
     m_convertBtn->setIconSize(QSize(16, 16));
     configLayout->addWidget(m_convertBtn);
 
-    contentLayout->addWidget(m_configPanel);
+    // Top-aligned so the card hugs its content instead of stretching to the
+    // page height and growing a hollow middle.
+    contentLayout->addWidget(m_configPanel, 0, Qt::AlignTop);
 
     setCentralWidget(centralWidget);
 
