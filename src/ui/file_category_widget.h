@@ -9,7 +9,7 @@
 #include <QHBoxLayout>
 #include <QList>
 #include "format_registry.h"
-#include "file_list_widget.h"   // for FileInfo struct
+#include "file_info.h"
 
 class FileCategoryWidget : public QWidget {
     Q_OBJECT

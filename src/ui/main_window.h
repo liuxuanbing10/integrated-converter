@@ -67,8 +67,6 @@ private:
     /// (retry-failed flow) instead of re-converting the whole queue.
     void submitConversionTasks(const QSet<QString>& onlyPaths = QSet<QString>());
     void showConversionSummary();
-    void showErrorDialog(const struct ErrorInfo& error);
-    void updateErrorIcon();
     void applyLightTheme();
     void applyDarkTheme();
 

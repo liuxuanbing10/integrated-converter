@@ -2,7 +2,6 @@
 #include "converters/test_ffmpeg_progress_parser.h"
 #include "converters/test_imagemagick_converter.h"
 #include "converters/test_pandoc_converter.h"
-#include "converters/test_segmented_converter.h"
 #include "core/logger.h"
 #include "core/task_manager.h"
 #include "core/test_config_manager.h"
@@ -71,8 +70,6 @@ int main(int argc, char* argv[])
             status |= runSuite(&testPandoc, argc, argv, "TestPandocConverter", log);
             TestImageMagickConverter testImageMagick;
             status |= runSuite(&testImageMagick, argc, argv, "TestImageMagickConverter", log);
-            TestSegmentedConverter testSegmented;
-            status |= runSuite(&testSegmented, argc, argv, "TestSegmentedConverter", log);
             TestLargeFileHandler testLargeFileHandler;
             status |= runSuite(&testLargeFileHandler, argc, argv, "TestLargeFileHandler", log);
             TestFormatRegistry testFormatRegistry;

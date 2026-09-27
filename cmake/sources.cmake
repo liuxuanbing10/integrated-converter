@@ -24,6 +24,7 @@ set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/error_types.h
     ${PROJECT_SOURCE_DIR}/src/core/large_file_handler.h
     ${PROJECT_SOURCE_DIR}/src/core/format_registry.h
+    ${PROJECT_SOURCE_DIR}/src/core/file_info.h
 )
 
 # ── Converter wrappers ─────────────────────────────────────────────────────
@@ -31,14 +32,12 @@ set(CONVERTER_SOURCES
     ${PROJECT_SOURCE_DIR}/src/converters/ffmpeg_converter.cpp
     ${PROJECT_SOURCE_DIR}/src/converters/ffmpeg_progress_parser.cpp
     ${PROJECT_SOURCE_DIR}/src/converters/pandoc_converter.cpp
-    ${PROJECT_SOURCE_DIR}/src/converters/segmented_converter.cpp
     ${PROJECT_SOURCE_DIR}/src/converters/imagemagick_converter.cpp
 )
 set(CONVERTER_HEADERS
     ${PROJECT_SOURCE_DIR}/src/converters/ffmpeg_converter.h
     ${PROJECT_SOURCE_DIR}/src/converters/ffmpeg_progress_parser.h
     ${PROJECT_SOURCE_DIR}/src/converters/pandoc_converter.h
-    ${PROJECT_SOURCE_DIR}/src/converters/segmented_converter.h
     ${PROJECT_SOURCE_DIR}/src/converters/imagemagick_converter.h
 )
 
@@ -46,12 +45,9 @@ set(CONVERTER_HEADERS
 set(UI_SOURCES
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.cpp
-    ${PROJECT_SOURCE_DIR}/src/ui/file_list_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/file_category_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/progress_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/batch_conversion_summary.cpp
-    ${PROJECT_SOURCE_DIR}/src/ui/batch_convert_dialog.cpp
-    ${PROJECT_SOURCE_DIR}/src/ui/error_dialog.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/conversion_params_dialog.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/image_params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/document_params_widget.cpp
@@ -61,12 +57,9 @@ set(UI_SOURCES
 set(UI_HEADERS
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.h
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.h
-    ${PROJECT_SOURCE_DIR}/src/ui/file_list_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/file_category_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/progress_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/batch_conversion_summary.h
-    ${PROJECT_SOURCE_DIR}/src/ui/batch_convert_dialog.h
-    ${PROJECT_SOURCE_DIR}/src/ui/error_dialog.h
     ${PROJECT_SOURCE_DIR}/src/ui/conversion_params_dialog.h
     ${PROJECT_SOURCE_DIR}/src/ui/image_params_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/document_params_widget.h

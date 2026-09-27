@@ -15,7 +15,6 @@ set(TEST_SOURCES
     converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp
     converters/test_imagemagick_converter.cpp
-    converters/test_segmented_converter.cpp
 
     core/test_large_file_handler.cpp
     core/test_format_registry.cpp

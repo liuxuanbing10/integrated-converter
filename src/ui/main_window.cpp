@@ -5,7 +5,7 @@
 #include "conversion_params_dialog.h"
 #include "error_types.h"
 #include "file_category_widget.h"
-#include "file_list_widget.h"
+#include "file_info.h"
 #include "format_registry.h"
 #include "logger.h"
 #include "progress_widget.h"
