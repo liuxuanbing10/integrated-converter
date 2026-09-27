@@ -14,14 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Qt6
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: '6.12.0'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_msvc2022_64'
-          cache: true
+      - name: Install Qt 6.12.0
+        # aqtinstall 3.3.0 cannot parse the new per-arch Windows repo layout
+        # used by Qt >= 6.11 (miurahr/aqtinstall#959); the fix is merged on
+        # master but unreleased. Install from git until the next release.
+        # Keep this version in sync with the local toolchain: Qt 6.12.0.
+        run: |
+          pip install "git+https://github.com/miurahr/aqtinstall.git"
+          python -m aqt install-qt windows desktop 6.12.0 win64_msvc2022_64 --outputdir "${{ github.workspace }}\Qt"
+          echo "${{ github.workspace }}\Qt\6.12.0\win64_msvc2022_64\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Set up MSVC environment (for Ninja)
         uses: ilammy/msvc-dev-cmd@v1
@@ -34,6 +35,7 @@ jobs:
         run: |
           cmake -S . -B build/debug -G Ninja `
             -DCMAKE_BUILD_TYPE=Debug `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}\Qt\6.12.0\win64_msvc2022_64" `
             -DBUILD_TESTS=ON
 
       - name: Build
