@@ -11,6 +11,7 @@ set(TEST_SOURCES
     core/test_config_manager.cpp
     core/test_task_manager.cpp
     core/test_error_types.cpp
+    core/test_conversion_planner.cpp
     converters/test_ffmpeg_converter.cpp
     converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp

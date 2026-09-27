@@ -5,6 +5,7 @@
 
 # ── Core framework ──────────────────────────────────────────────────────────
 set(CORE_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.cpp
     ${PROJECT_SOURCE_DIR}/src/core/conversion_task.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_manager.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_runnable.cpp
@@ -25,6 +26,7 @@ set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/large_file_handler.h
     ${PROJECT_SOURCE_DIR}/src/core/format_registry.h
     ${PROJECT_SOURCE_DIR}/src/core/file_info.h
+    ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.h
 )
 
 # ── Converter wrappers ─────────────────────────────────────────────────────

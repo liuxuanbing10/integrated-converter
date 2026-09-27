@@ -3,6 +3,7 @@
 #include "batch_conversion_summary.h"
 #include "config_manager.h"
 #include "conversion_params_dialog.h"
+#include "conversion_planner.h"
 #include "error_types.h"
 #include "file_category_widget.h"
 #include "file_info.h"
@@ -1016,153 +1017,8 @@ void MainWindow::updateProgressWidget()
     m_progressWidget->updateFromTaskManager(c.total, c.pending, c.running, c.completed, c.failed);
 }
 
-/// Convert bitrate string like "500k", "1M" to int kbps. Returns 0 if auto/empty.
-static int parseBitrateToKbps(const QString& bitrateStr)
-{
-    if (bitrateStr.isEmpty())
-        return 0;
-    QString str = bitrateStr.trimmed().toLower();
-    if (str == "auto")
-        return 0;
-    if (str.endsWith("k"))
-    {
-        bool ok;
-        int val = str.left(str.length() - 1).toInt(&ok);
-        return ok ? val : 0;
-    }
-    if (str.endsWith("m"))
-    {
-        bool ok;
-        int val = str.left(str.length() - 1).toInt(&ok);
-        return ok ? val * 1000 : 0;
-    }
-    bool ok;
-    int val = str.toInt(&ok);
-    return ok ? val : 0;
-}
-
-/// Merge saved conversion params into the task param map, normalizing keys for the converter.
-static QVariantMap mergeConversionParams(const QVariantMap& baseParams, const QVariantMap& dialogParams,
-                                         FormatRegistry::Category cat)
-{
-    QVariantMap merged = baseParams;
-
-    for (auto it = dialogParams.begin(); it != dialogParams.end(); ++it)
-    {
-        const QString& key = it.key();
-        const QVariant& value = it.value();
-
-        // Skip empty/default values to avoid overwriting base params
-        if (!value.isValid())
-            continue;
-
-        if (cat == FormatRegistry::Category::Audio || cat == FormatRegistry::Category::Video)
-        {
-            // Normalize resolution to lowercase (FFmpeg requires lowercase 'x')
-            if (key == "resolution")
-            {
-                QString res = value.toString().trimmed().toLower();
-                if (!res.isEmpty())
-                {
-                    merged["resolution"] = res;
-                }
-                continue;
-            }
-            if (key == "videoBitrate" || key == "audioBitrate")
-            {
-                QString bs = value.toString();
-                if (bs.isEmpty())
-                    continue;
-                int kbps = parseBitrateToKbps(bs);
-                if (kbps > 0)
-                {
-                    merged[key] = kbps;
-                }
-                continue;
-            }
-            if (key == "framerate")
-            {
-                QString fps = value.toString();
-                if (!fps.isEmpty())
-                {
-                    bool ok;
-                    int fpsInt = fps.toInt(&ok);
-                    if (ok)
-                    {
-                        merged["frameRate"] = fpsInt;
-                    }
-                }
-                continue;
-            }
-            if (key == "twoPass")
-            {
-                merged["twoPass"] = value;
-                continue;
-            }
-        }
-
-        if (cat == FormatRegistry::Category::Document)
-        {
-            if (key == "pageSize" || key == "orientation" || key == "marginTop" || key == "marginBottom" ||
-                key == "marginLeft" || key == "marginRight")
-            {
-                // Collect geometry variables for pandoc
-                continue; // Handled below
-            }
-        }
-
-        // Pass through all other values
-        merged[key] = value;
-    }
-
-    // Build pandoc geometry variables
-    if (cat == FormatRegistry::Category::Document)
-    {
-        QStringList geoParts;
-        QString pageSize = dialogParams.value("pageSize").toString();
-        if (!pageSize.isEmpty() && pageSize != "custom")
-        {
-            geoParts << pageSize;
-        }
-        QString orientation = dialogParams.value("orientation").toString();
-        if (orientation == "landscape")
-        {
-            geoParts << "landscape";
-        }
-        auto addMargin = [&](const QString& key, const QString& side) {
-            double val = dialogParams.value(key, 1.0).toDouble();
-            if (val > 0)
-            {
-                geoParts << QString("%1=%2in").arg(side).arg(val, 0, 'f', 1);
-            }
-        };
-        addMargin("marginTop", "top");
-        addMargin("marginBottom", "bottom");
-        addMargin("marginLeft", "left");
-        addMargin("marginRight", "right");
-
-        if (!geoParts.isEmpty())
-        {
-            QVariantMap varMap = merged.value("variableMap").toMap();
-            varMap["geometry"] = geoParts.join(",");
-            merged["variableMap"] = varMap;
-        }
-
-        // Number sections
-        if (dialogParams.value("numberSections", false).toBool())
-        {
-            QStringList extraArgs = merged.value("extraArgs").toStringList();
-            extraArgs << "--number-sections";
-            merged["extraArgs"] = extraArgs;
-        }
-    }
-
-    return merged;
-}
-
 void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths)
 {
-    const auto& reg = FormatRegistry::instance();
     QString outputDir = m_outputDirEdit->text();
     if (outputDir.isEmpty())
     {
@@ -1198,38 +1054,25 @@ void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths)
             {
                 continue;
             }
-            QFileInfo fi(fileInfo.filePath);
-            QString baseName = fi.completeBaseName();
-            QString outputFile = outputDir + "/" + baseName + "." + outputFormat;
-
-            // Avoid overwriting source
-            if (QFileInfo(outputFile).absoluteFilePath() == QFileInfo(fileInfo.filePath).absoluteFilePath())
+            // Output naming + converter routing now live in
+            // ConversionPlanner (shared with the CLI; analysis §4.2).
+            const QString outputFile =
+                ConversionPlanner::outputPath(fileInfo.filePath, QString(), outputDir, outputFormat);
+            if (QFileInfo(outputFile).fileName().contains("_converted."))
             {
-                outputFile = outputDir + "/" + baseName + "_converted." + outputFormat;
                 LOG_WARNING("MainWindow", QString("输出路径与输入相同，自动重命名: %1").arg(outputFile));
             }
 
             QVariantMap params;
             params["outputFormat"] = outputFormat;
-            QString ext = fi.suffix().toLower();
-            auto converterType = reg.converterForExt(ext);
-            if (converterType == FormatRegistry::Converter::Pandoc)
-            {
-                params["converter"] = "Pandoc";
-            }
-            else if (converterType == FormatRegistry::Converter::ImageMagick)
-            {
-                params["converter"] = "ImageMagick";
-            }
-            else
-            {
-                params["converter"] = "FFmpeg";
-            }
+            const QString converter =
+                ConversionPlanner::converterNameFor(outputFormat, QFileInfo(fileInfo.filePath).suffix());
+            params["converter"] = converter.isEmpty() ? QStringLiteral("FFmpeg") : converter;
 
             // Merge dialog conversion params
             if (!dialogParams.isEmpty())
             {
-                params = mergeConversionParams(params, dialogParams, cat);
+                params = ConversionPlanner::mergeParams(params, dialogParams, cat);
             }
 
             TaskManager::instance()->addTask(fileInfo.filePath, outputFile, params);

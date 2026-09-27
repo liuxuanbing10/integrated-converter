@@ -5,6 +5,7 @@
 #include "core/logger.h"
 #include "core/task_manager.h"
 #include "core/test_config_manager.h"
+#include "core/test_conversion_planner.h"
 #include "core/test_error_types.h"
 #include "core/test_format_registry.h"
 #include "core/test_large_file_handler.h"
@@ -31,7 +32,8 @@ static int runSuite(QObject* test, int argc, char** argv, const QString& name, Q
     QByteArray outFile = (name + QStringLiteral(".qtest.log")).toUtf8();
     char* effArgv[32];
     int effArgc = 0;
-    for (int i = 0; i < argc && effArgc < 29; ++i) {
+    for (int i = 0; i < argc && effArgc < 29; ++i)
+    {
         effArgv[effArgc++] = argv[i];
     }
     effArgv[effArgc++] = outArg.data();
@@ -74,6 +76,9 @@ int main(int argc, char* argv[])
             status |= runSuite(&testTaskManager, argc, argv, "TestTaskManager", log);
             TestErrorTypes testErrorTypes;
             status |= runSuite(&testErrorTypes, argc, argv, "TestErrorTypes", log);
+
+            TestConversionPlanner testPlanner;
+            status |= runSuite(&testPlanner, argc, argv, "TestConversionPlanner", log);
             TestFFmpegConverter testFFmpeg;
             status |= runSuite(&testFFmpeg, argc, argv, "TestFFmpegConverter", log);
             TestFfmpegProgressParser testParser;
