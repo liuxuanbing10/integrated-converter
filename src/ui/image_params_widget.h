@@ -1,35 +1,32 @@
 #ifndef IMAGE_PARAMS_WIDGET_H
 #define IMAGE_PARAMS_WIDGET_H
 
-#include <QWidget>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QSlider>
-#include <QCheckBox>
-#include <QLineEdit>
-#include <QLabel>
-#include <QVariantMap>
-#include <QRegularExpressionValidator>
+#include "params_widget.h"
 
-class ImageParamsWidget : public QWidget {
+QT_BEGIN_NAMESPACE
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QSlider;
+class QSpinBox;
+QT_END_NAMESPACE
+
+class ImageParamsWidget : public AbstractParamsWidget
+{
     Q_OBJECT
 public:
     explicit ImageParamsWidget(QWidget* parent = nullptr);
     ~ImageParamsWidget() override = default;
 
-    QVariantMap getParams() const;
-    void setParams(const QVariantMap& params);
     void setEnabledFormats(const QStringList& formats);
-    QStringList validate() const;
+    QStringList validate() const override;
 
-signals:
-    void paramsChanged();
+protected:
+    QVariantMap collectParams() const override;
+    void applyParams(const QVariantMap& params) override;
+    QString buildPreviewText() const override;
 
 private:
-    void setupUI();
-    void setupConnections();
-    QString buildPreviewText() const;
-
     QSlider* m_qualitySlider;
     QSpinBox* m_qualitySpinBox;
     QLineEdit* m_resizeInput;
@@ -37,7 +34,6 @@ private:
     QSpinBox* m_densitySpinBox;
     QCheckBox* m_stripCheckBox;
     QComboBox* m_depthCombo;
-    QLabel* m_previewLabel;
 };
 
 #endif // IMAGE_PARAMS_WIDGET_H

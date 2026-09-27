@@ -11,7 +11,9 @@
 #include "core/test_large_file_handler.h"
 #include "core/test_logger.h"
 #include "core/test_task_manager.h"
+#include "ui/test_params_widgets.h"
 
+#include <QApplication>
 #include <QCoreApplication>
 #include <QFile>
 #include <QTest>
@@ -59,7 +61,10 @@ int main(int argc, char* argv[])
         log.flush();
 
         {
-            QCoreApplication app(argc, argv);
+            // QApplication (not Core): the param-widget smoke tests need a
+            // real GUI platform. We deliberately do NOT force offscreen —
+            // converter subprocess tests must keep a normal environment.
+            QApplication app(argc, argv);
             Logger appLogger;
             g_logger = &appLogger;
             appLogger.setConsoleOutput(false);
@@ -79,6 +84,9 @@ int main(int argc, char* argv[])
 
             TestConversionPlanner testPlanner;
             status |= runSuite(&testPlanner, argc, argv, "TestConversionPlanner", log);
+
+            TestParamsWidgets testParamsWidgets;
+            status |= runSuite(&testParamsWidgets, argc, argv, "TestParamsWidgets", log);
             TestFFmpegConverter testFFmpeg;
             status |= runSuite(&testFFmpeg, argc, argv, "TestFFmpegConverter", log);
             TestFfmpegProgressParser testParser;

@@ -19,8 +19,18 @@ set(TEST_SOURCES
 
     core/test_large_file_handler.cpp
     core/test_format_registry.cpp
+
+    ui/test_params_widgets.cpp
 )
-add_executable(test_runner ${TEST_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES})
+set(WIDGET_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/ui/theme.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/params_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/image_params_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/document_params_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/audio_params_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/video_params_widget.cpp
+)
+add_executable(test_runner ${TEST_SOURCES} ${WIDGET_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES})
 target_include_directories(test_runner PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core

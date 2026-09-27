@@ -1,32 +1,31 @@
 #ifndef DOCUMENT_PARAMS_WIDGET_H
 #define DOCUMENT_PARAMS_WIDGET_H
 
-#include <QWidget>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QDoubleSpinBox>
-#include <QCheckBox>
-#include <QLabel>
-#include <QVariantMap>
+#include "params_widget.h"
 
-class DocumentParamsWidget : public QWidget {
+QT_BEGIN_NAMESPACE
+class QCheckBox;
+class QComboBox;
+class QDoubleSpinBox;
+class QSpinBox;
+QT_END_NAMESPACE
+
+class DocumentParamsWidget : public AbstractParamsWidget
+{
     Q_OBJECT
 public:
     explicit DocumentParamsWidget(QWidget* parent = nullptr);
     ~DocumentParamsWidget() override = default;
 
-    QVariantMap getParams() const;
-    void setParams(const QVariantMap& params);
-    QStringList validate() const;
+    QStringList validate() const override;
 
-signals:
-    void paramsChanged();
+protected:
+    QVariantMap collectParams() const override;
+    void applyParams(const QVariantMap& params) override;
+    void onControlChanged() override;
+    QString buildPreviewText() const override;
 
 private:
-    void setupUI();
-    void setupConnections();
-    QString buildPreviewText() const;
-
     QComboBox* m_pageSizeCombo;
     QComboBox* m_orientationCombo;
     QDoubleSpinBox* m_marginTop;
@@ -35,9 +34,8 @@ private:
     QDoubleSpinBox* m_marginRight;
     QComboBox* m_pdfEngineCombo;
     QCheckBox* m_tocCheckBox;
-    QCheckBox* m_numberSectionsCheckBox;
     QSpinBox* m_tocDepthSpinBox;
-    QLabel* m_previewLabel;
+    QCheckBox* m_numberSectionsCheckBox;
 };
 
 #endif // DOCUMENT_PARAMS_WIDGET_H

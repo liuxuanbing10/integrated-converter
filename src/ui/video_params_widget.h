@@ -1,33 +1,31 @@
 #ifndef VIDEO_PARAMS_WIDGET_H
 #define VIDEO_PARAMS_WIDGET_H
 
-#include <QWidget>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QSlider>
-#include <QLineEdit>
-#include <QLabel>
-#include <QCheckBox>
-#include <QVariantMap>
+#include "params_widget.h"
 
-class VideoParamsWidget : public QWidget {
+QT_BEGIN_NAMESPACE
+class QCheckBox;
+class QComboBox;
+class QLineEdit;
+class QSlider;
+class QSpinBox;
+QT_END_NAMESPACE
+
+class VideoParamsWidget : public AbstractParamsWidget
+{
     Q_OBJECT
 public:
     explicit VideoParamsWidget(QWidget* parent = nullptr);
     ~VideoParamsWidget() override = default;
 
-    QVariantMap getParams() const;
-    void setParams(const QVariantMap& params);
-    QStringList validate() const;
+    QStringList validate() const override;
 
-signals:
-    void paramsChanged();
+protected:
+    QVariantMap collectParams() const override;
+    void applyParams(const QVariantMap& params) override;
+    QString buildPreviewText() const override;
 
 private:
-    void setupUI();
-    void setupConnections();
-    QString buildPreviewText() const;
-
     QComboBox* m_videoCodecCombo;
     QComboBox* m_audioCodecCombo;
     QLineEdit* m_resolutionInput;
@@ -38,7 +36,6 @@ private:
     QSlider* m_crfSlider;
     QSpinBox* m_crfSpinBox;
     QCheckBox* m_twoPassCheckBox;
-    QLabel* m_previewLabel;
 };
 
 #endif // VIDEO_PARAMS_WIDGET_H

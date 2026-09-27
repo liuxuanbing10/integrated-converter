@@ -181,6 +181,10 @@ QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox { background-color: {surface};
 QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus { border: 1px solid {accent}; }
 QLineEdit:disabled { background-color: {surfaceAlt}; color: {textMuted}; }
 QLineEdit[cssClass="placeholder-hint"] { color: {textMuted}; }
+QLabel[cssClass="hint"] { color: {textMuted}; font-size: 11px; background: transparent; }
+QLabel[cssClass="preview"] { background-color: {surfaceAlt}; border: 1px solid {border};
+    border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px; color: {text}; }
 QComboBox::drop-down { border: none; width: 22px; }
 QComboBox QAbstractItemView { background-color: {surface}; border: 1px solid {border};
     border-radius: 8px; selection-background-color: {accentSoft}; selection-color: {accent};

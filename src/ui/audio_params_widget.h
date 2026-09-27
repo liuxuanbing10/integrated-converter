@@ -1,38 +1,35 @@
 #ifndef AUDIO_PARAMS_WIDGET_H
 #define AUDIO_PARAMS_WIDGET_H
 
-#include <QWidget>
-#include <QComboBox>
-#include <QSlider>
-#include <QSpinBox>
-#include <QLabel>
-#include <QVariantMap>
+#include "params_widget.h"
 
-class AudioParamsWidget : public QWidget {
+QT_BEGIN_NAMESPACE
+class QComboBox;
+class QSlider;
+class QSpinBox;
+QT_END_NAMESPACE
+
+class AudioParamsWidget : public AbstractParamsWidget
+{
     Q_OBJECT
 public:
     explicit AudioParamsWidget(QWidget* parent = nullptr);
     ~AudioParamsWidget() override = default;
 
-    QVariantMap getParams() const;
-    void setParams(const QVariantMap& params);
-    QStringList validate() const;
+    QStringList validate() const override;
 
-signals:
-    void paramsChanged();
+protected:
+    QVariantMap collectParams() const override;
+    void applyParams(const QVariantMap& params) override;
+    QString buildPreviewText() const override;
 
 private:
-    void setupUI();
-    void setupConnections();
-    QString buildPreviewText() const;
-
+    QComboBox* m_codecCombo;
     QComboBox* m_bitrateCombo;
     QComboBox* m_sampleRateCombo;
     QComboBox* m_channelsCombo;
     QSlider* m_vbrQualitySlider;
     QSpinBox* m_vbrQualitySpinBox;
-    QComboBox* m_codecCombo;
-    QLabel* m_previewLabel;
 };
 
 #endif // AUDIO_PARAMS_WIDGET_H

@@ -1,221 +1,157 @@
 #include "audio_params_widget.h"
-#include <QVBoxLayout>
-#include <QHBoxLayout>
+
+#include <QComboBox>
 #include <QGridLayout>
-#include <QGroupBox>
-#include <QFrame>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QSlider>
+#include <QSpinBox>
 
-AudioParamsWidget::AudioParamsWidget(QWidget* parent)
-    : QWidget(parent)
-    , m_bitrateCombo(nullptr)
-    , m_sampleRateCombo(nullptr)
-    , m_channelsCombo(nullptr)
-    , m_vbrQualitySlider(nullptr)
-    , m_vbrQualitySpinBox(nullptr)
-    , m_codecCombo(nullptr)
-    , m_previewLabel(nullptr)
+namespace
 {
-    setupUI();
-    setupConnections();
+template<typename T>
+AbstractParamsWidget::Choice ch(const QString& text, const T& data)
+{
+    return qMakePair(text, QVariant::fromValue(data));
 }
+} // namespace
 
-void AudioParamsWidget::setupUI() {
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(16, 16, 16, 16);
-    mainLayout->setSpacing(12);
-
+AudioParamsWidget::AudioParamsWidget(QWidget* parent) : AbstractParamsWidget(parent)
+{
     // ── Codec ─────────────────────────────────────────────────────
-    QGroupBox* codecGroup = new QGroupBox(tr("编码器"));
-    QHBoxLayout* codecLayout = new QHBoxLayout(codecGroup);
-    m_codecCombo = new QComboBox();
-    m_codecCombo->addItem("AAC (Advanced Audio Coding)", "aac");
-    m_codecCombo->addItem("MP3 (MPEG Audio Layer 3)", "mp3");
-    m_codecCombo->addItem("FLAC (Free Lossless Audio Codec)", "flac");
-    m_codecCombo->addItem("Vorbis (OGG)", "vorbis");
-    m_codecCombo->addItem("Opus", "opus");
-    m_codecCombo->addItem("WAV (PCM)", "pcm_s16le");
-    m_codecCombo->setMinimumHeight(32);
-    m_codecCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
-        "QComboBox::drop-down { border: none; width: 22px; "
-        "background-color: #ffffff; }"
-        "QComboBox::down-arrow { width: 10px; height: 10px; }"
-        "QComboBox QAbstractItemView { "
-        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
-        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
-        "font-size: 12px; }"
-    );
-    codecLayout->addWidget(m_codecCombo, 1);
-    mainLayout->addWidget(codecGroup);
+    {
+        QGridLayout* g = addGroup(tr("编码器"));
+        m_codecCombo = addCombo(g, 0, tr("编码器:"),
+                                {
+                                    ch("AAC (Advanced Audio Coding)", QStringLiteral("aac")),
+                                    ch("MP3 (MPEG Audio Layer 3)", QStringLiteral("mp3")),
+                                    ch("FLAC (Free Lossless Audio Codec)", QStringLiteral("flac")),
+                                    ch("Vorbis (OGG)", QStringLiteral("vorbis")),
+                                    ch("Opus", QStringLiteral("opus")),
+                                    ch("WAV (PCM)", QStringLiteral("pcm_s16le")),
+                                },
+                                32);
+    }
 
-    // ── Bitrate ───────────────────────────────────────────────────
-    QGroupBox* bitrateGroup = new QGroupBox(tr("比特率设置"));
-    QGridLayout* bitrateGrid = new QGridLayout(bitrateGroup);
-    bitrateGrid->setSpacing(8);
+    // ── Bitrate / sample rate / channels / VBR ────────────────────
+    {
+        QGridLayout* g = addGroup(tr("比特率设置"));
+        m_bitrateCombo = addCombo(g, 0, tr("比特率:"),
+                                  {
+                                      ch(tr("自动"), QStringLiteral("auto")),
+                                      ch("64 kbps", QStringLiteral("64k")),
+                                      ch("96 kbps", QStringLiteral("96k")),
+                                      ch("128 kbps", QStringLiteral("128k")),
+                                      ch("192 kbps", QStringLiteral("192k")),
+                                      ch("256 kbps", QStringLiteral("256k")),
+                                      ch("320 kbps", QStringLiteral("320k")),
+                                  });
+        m_sampleRateCombo = addCombo(g, 1, tr("采样率:"),
+                                     {
+                                         ch(tr("自动"), 0),
+                                         ch("22050 Hz", 22050),
+                                         ch("44100 Hz", 44100),
+                                         ch("48000 Hz", 48000),
+                                         ch("96000 Hz", 96000),
+                                         ch("192000 Hz", 192000),
+                                     });
+        m_channelsCombo = addCombo(g, 2, tr("声道:"),
+                                   {
+                                       ch(tr("自动"), 0),
+                                       ch(tr("单声道 (Mono)"), 1),
+                                       ch(tr("立体声 (Stereo)"), 2),
+                                       ch(tr("环绕声 5.1"), 6),
+                                   });
 
-    bitrateGrid->addWidget(new QLabel(tr("比特率:")), 0, 0);
-    m_bitrateCombo = new QComboBox();
-    m_bitrateCombo->addItem(tr("自动"), "auto");
-    m_bitrateCombo->addItem("64 kbps", "64k");
-    m_bitrateCombo->addItem("96 kbps", "96k");
-    m_bitrateCombo->addItem("128 kbps", "128k");
-    m_bitrateCombo->addItem("192 kbps", "192k");
-    m_bitrateCombo->addItem("256 kbps", "256k");
-    m_bitrateCombo->addItem("320 kbps", "320k");
-    m_bitrateCombo->setMinimumHeight(30);
-    bitrateGrid->addWidget(m_bitrateCombo, 0, 1);
+        QHBoxLayout* vbrRow = new QHBoxLayout();
+        vbrRow->addWidget(new QLabel(tr("VBR质量:")));
+        m_vbrQualitySlider = new QSlider(Qt::Horizontal);
+        m_vbrQualitySlider->setRange(0, 9);
+        m_vbrQualitySlider->setValue(5);
+        m_vbrQualitySlider->setTickPosition(QSlider::TicksBelow);
+        m_vbrQualitySlider->setTickInterval(1);
+        vbrRow->addWidget(m_vbrQualitySlider, 1);
+        m_vbrQualitySpinBox = new QSpinBox();
+        m_vbrQualitySpinBox->setRange(0, 9);
+        m_vbrQualitySpinBox->setValue(5);
+        m_vbrQualitySpinBox->setFixedWidth(70);
+        m_vbrQualitySpinBox->setToolTip(tr("0=最高质量, 9=最高压缩"));
+        vbrRow->addWidget(m_vbrQualitySpinBox);
+        g->addLayout(vbrRow, 3, 0, 1, 2);
+        syncPair(m_vbrQualitySlider, m_vbrQualitySpinBox);
+        registerControl(m_vbrQualitySlider, SIGNAL(valueChanged(int)));
 
-    bitrateGrid->addWidget(new QLabel(tr("采样率:")), 1, 0);
-    m_sampleRateCombo = new QComboBox();
-    m_sampleRateCombo->addItem(tr("自动"), 0);
-    m_sampleRateCombo->addItem("22050 Hz", 22050);
-    m_sampleRateCombo->addItem("44100 Hz", 44100);
-    m_sampleRateCombo->addItem("48000 Hz", 48000);
-    m_sampleRateCombo->addItem("96000 Hz", 96000);
-    m_sampleRateCombo->addItem("192000 Hz", 192000);
-    m_sampleRateCombo->setMinimumHeight(30);
-    bitrateGrid->addWidget(m_sampleRateCombo, 1, 1);
+        addHint(g, 4, tr("提示: VBR质量 0=最佳质量(文件大), 9=最大压缩(质量低)"));
+    }
 
-    bitrateGrid->addWidget(new QLabel(tr("声道:")), 2, 0);
-    m_channelsCombo = new QComboBox();
-    m_channelsCombo->addItem(tr("自动"), 0);
-    m_channelsCombo->addItem(tr("单声道 (Mono)"), 1);
-    m_channelsCombo->addItem(tr("立体声 (Stereo)"), 2);
-    m_channelsCombo->addItem(tr("环绕声 5.1"), 6);
-    m_channelsCombo->setMinimumHeight(30);
-    bitrateGrid->addWidget(m_channelsCombo, 2, 1);
-
-    // VBR quality
-    QHBoxLayout* vbrLayout = new QHBoxLayout();
-    vbrLayout->addWidget(new QLabel(tr("VBR质量:")));
-    m_vbrQualitySlider = new QSlider(Qt::Horizontal);
-    m_vbrQualitySlider->setRange(0, 9);
-    m_vbrQualitySlider->setValue(5);
-    m_vbrQualitySlider->setTickPosition(QSlider::TicksBelow);
-    m_vbrQualitySlider->setTickInterval(1);
-    vbrLayout->addWidget(m_vbrQualitySlider, 1);
-
-    m_vbrQualitySpinBox = new QSpinBox();
-    m_vbrQualitySpinBox->setRange(0, 9);
-    m_vbrQualitySpinBox->setValue(5);
-    m_vbrQualitySpinBox->setFixedWidth(70);
-    m_vbrQualitySpinBox->setToolTip(tr("0=最高质量, 9=最高压缩"));
-    vbrLayout->addWidget(m_vbrQualitySpinBox);
-
-    bitrateGrid->addLayout(vbrLayout, 3, 0, 1, 2);
-
-    QLabel* vbrHint = new QLabel(tr("提示: VBR质量 0=最佳质量(文件大), 9=最大压缩(质量低)"));
-    vbrHint->setStyleSheet("color: #86909c; font-size: 11px;");
-    bitrateGrid->addWidget(vbrHint, 4, 0, 1, 2);
-
-    mainLayout->addWidget(bitrateGroup);
-
-    // ── Preview ───────────────────────────────────────────────────
-    QGroupBox* previewGroup = new QGroupBox(tr("参数预览"));
-    QVBoxLayout* previewLayout = new QVBoxLayout(previewGroup);
-    m_previewLabel = new QLabel();
-    m_previewLabel->setWordWrap(true);
-    m_previewLabel->setStyleSheet(
-        "QLabel { background-color: #f7f9fb; border: 1px solid #eceded; "
-        "border-radius: 8px; padding: 12px; font-family: 'Consolas', 'Courier New', monospace; "
-        "font-size: 12px; color: #1d2129; }"
-    );
-    m_previewLabel->setMinimumHeight(200);
-    previewLayout->addWidget(m_previewLabel);
-    mainLayout->addWidget(previewGroup);
-
-    mainLayout->addStretch();
+    finishSetup();
 }
 
-void AudioParamsWidget::setupConnections() {
-    auto updatePreview = [this]() {
-        m_previewLabel->setText(buildPreviewText());
-        emit paramsChanged();
-    };
-
-    connect(m_codecCombo, &QComboBox::currentTextChanged, this, updatePreview);
-    connect(m_bitrateCombo, &QComboBox::currentTextChanged, this, updatePreview);
-    connect(m_sampleRateCombo, &QComboBox::currentTextChanged, this, updatePreview);
-    connect(m_channelsCombo, &QComboBox::currentTextChanged, this, updatePreview);
-    connect(m_vbrQualitySlider, &QSlider::valueChanged, m_vbrQualitySpinBox, &QSpinBox::setValue);
-    connect(m_vbrQualitySpinBox, QOverload<int>::of(&QSpinBox::valueChanged), m_vbrQualitySlider, &QSlider::setValue);
-    connect(m_vbrQualitySlider, &QSlider::valueChanged, this, updatePreview);
-}
-
-QVariantMap AudioParamsWidget::getParams() const {
+QVariantMap AudioParamsWidget::collectParams() const
+{
     QVariantMap params;
     params["audioCodec"] = m_codecCombo->currentData().toString();
-    QString bitrate = m_bitrateCombo->currentData().toString();
-    if (bitrate != "auto") {
+    const QString bitrate = m_bitrateCombo->currentData().toString();
+    if (bitrate != "auto")
+    {
         params["audioBitrate"] = bitrate;
     }
-    int sampleRate = m_sampleRateCombo->currentData().toInt();
-    if (sampleRate > 0) {
+    const int sampleRate = m_sampleRateCombo->currentData().toInt();
+    if (sampleRate > 0)
+    {
         params["sampleRate"] = sampleRate;
     }
-    int channels = m_channelsCombo->currentData().toInt();
-    if (channels > 0) {
+    const int channels = m_channelsCombo->currentData().toInt();
+    if (channels > 0)
+    {
         params["channels"] = channels;
     }
     params["vbrQuality"] = m_vbrQualitySpinBox->value();
     return params;
 }
 
-void AudioParamsWidget::setParams(const QVariantMap& params) {
-    m_codecCombo->blockSignals(true);
-    m_bitrateCombo->blockSignals(true);
-    m_sampleRateCombo->blockSignals(true);
-    m_channelsCombo->blockSignals(true);
-    m_vbrQualitySlider->blockSignals(true);
-    m_vbrQualitySpinBox->blockSignals(true);
-
-    auto setComboData = [](QComboBox* combo, const QVariant& data) {
-        int idx = combo->findData(data);
-        if (idx >= 0) combo->setCurrentIndex(idx);
-    };
-
+void AudioParamsWidget::applyParams(const QVariantMap& params)
+{
     setComboData(m_codecCombo, params.value("audioCodec", "aac"));
 
-    QString bitrate = params.value("audioBitrate").toString();
-    if (!bitrate.isEmpty()) {
+    const QString bitrate = params.value("audioBitrate").toString();
+    if (!bitrate.isEmpty())
+    {
         setComboData(m_bitrateCombo, bitrate);
     }
 
-    int sampleRate = params.value("sampleRate", 0).toInt();
-    if (sampleRate > 0) {
+    const int sampleRate = params.value("sampleRate", 0).toInt();
+    if (sampleRate > 0)
+    {
         setComboData(m_sampleRateCombo, sampleRate);
     }
 
-    int channels = params.value("channels", 0).toInt();
-    if (channels > 0) {
+    const int channels = params.value("channels", 0).toInt();
+    if (channels > 0)
+    {
         setComboData(m_channelsCombo, channels);
     }
 
-    m_vbrQualitySpinBox->setValue(params.value("vbrQuality", 5).toInt());
-
-    m_codecCombo->blockSignals(false);
-    m_bitrateCombo->blockSignals(false);
-    m_sampleRateCombo->blockSignals(false);
-    m_channelsCombo->blockSignals(false);
-    m_vbrQualitySlider->blockSignals(false);
-    m_vbrQualitySpinBox->blockSignals(false);
-
-    m_previewLabel->setText(buildPreviewText());
+    const int vbr = params.value("vbrQuality", 5).toInt();
+    m_vbrQualitySpinBox->setValue(vbr);
+    m_vbrQualitySlider->setValue(vbr);
 }
 
-QStringList AudioParamsWidget::validate() const {
+QStringList AudioParamsWidget::validate() const
+{
     QStringList errors;
-    int vbr = m_vbrQualitySpinBox->value();
-    if (vbr < 0 || vbr > 9) {
+    const int vbr = m_vbrQualitySpinBox->value();
+    if (vbr < 0 || vbr > 9)
+    {
         errors << tr("VBR质量必须在 0-9 之间");
     }
     return errors;
 }
 
-QString AudioParamsWidget::buildPreviewText() const {
+QString AudioParamsWidget::buildPreviewText() const
+{
     QString text = tr("📋 音频参数预览\n");
-    text += tr("━━━━━━━━━━━━━━━━━━\n");
+    text += separatorLine();
     text += tr("编码器: %1\n").arg(m_codecCombo->currentText().section("(", 0, 0).trimmed());
     text += tr("比特率: %1\n").arg(m_bitrateCombo->currentText());
     text += tr("采样率: %1\n").arg(m_sampleRateCombo->currentText());
