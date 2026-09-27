@@ -21,6 +21,7 @@
 #include "core/logger.h"
 #include "core/task_manager.h"
 #include "ui/main_window.h"
+#include "ui/theme.h"
 
 #include <memory>
 
@@ -193,6 +194,9 @@ int main(int argc, char* argv[])
     }
     int logLevel = ConfigManager::instance().logLevel();
     logger.setLevel(static_cast<Logger::Level>(logLevel));
+    // Design-system QSS (light/dark, see ui/theme.h). Applied before any
+    // widget is constructed so the first paint already wears the theme.
+    Theme::apply(&app, Theme::loadMode());
     auto ffmpegConverter = std::make_shared<FFmpegConverter>();
     auto pandocConverter = std::make_shared<PandocConverter>();
     auto imagemagickConverter = std::make_shared<ImageMagickConverter>();

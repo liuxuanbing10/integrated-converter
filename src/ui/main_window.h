@@ -4,6 +4,7 @@
 #include "format_registry.h"
 
 #include <QAction>
+#include <QButtonGroup>
 #include <QComboBox>
 #include <QDateTime>
 #include <QFrame>
@@ -16,6 +17,7 @@
 #include <QPushButton>
 #include <QSet>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QTabWidget>
 #include <QToolBar>
@@ -23,6 +25,10 @@
 
 class TaskListWidget;
 class ProgressWidget;
+namespace Theme
+{
+enum class Mode;
+}
 class BatchConversionSummary;
 class FileCategoryWidget;
 class ConversionParamsDialog;
@@ -48,12 +54,15 @@ private slots:
     void onAllTasksCompleted();
     void onShowSummary();
     void onRetryFailed(const QList<QString>& inputPaths);
-    void toggleTheme();
+    void setThemeMode(Theme::Mode mode);
+    void togglePauseQueue();
+    void onQueuePauseStateChanged(bool paused);
+    void onSidebarNav(int index);
+    void onSidebarFilterChanged(const QString& text);
     void onErrorOccurred(const struct ErrorInfo& error);
     void onRetryTriggered(const QString& taskId, int retryCount);
     void updateStatusBar();
     void updateProgressWidget();
-    void onTabChanged(int index);
     void onConversionParams();
 
 private:
@@ -67,12 +76,14 @@ private:
     /// (retry-failed flow) instead of re-converting the whole queue.
     void submitConversionTasks(const QSet<QString>& onlyPaths = QSet<QString>());
     void showConversionSummary();
-    void applyLightTheme();
-    void applyDarkTheme();
+    void setupSettingsPage();
 
     /// Opens a file dialog that accepts ALL supported formats,
     /// then auto-routes each file to the correct category tab.
     void addFilesAndAutoRoute(const QStringList& filePaths);
+
+private:
+    void setNavSelected(int index);
 
 protected:
     // Cancel running tasks before the window is destroyed so child processes
@@ -87,25 +98,37 @@ protected:
     /// Populate the format combo for the given category and restore its saved selection.
     void populateFormatCombo(FormatRegistry::Category cat);
 
-    bool m_darkMode;
+    // Sidebar navigation + page stack (3FUI-style functional navigation)
+    QFrame* m_sidebar = nullptr;
+    QLineEdit* m_sidebarSearch = nullptr;
+    QList<QPushButton*> m_navButtons;
+    QStackedWidget* m_pageStack = nullptr;
+    QWidget* m_queuePage = nullptr; // index 0
+    FileCategoryWidget* m_imageTab = nullptr;
+    FileCategoryWidget* m_docTab = nullptr;
+    FileCategoryWidget* m_audioTab = nullptr;
+    FileCategoryWidget* m_videoTab = nullptr;
+    QWidget* m_settingsPage = nullptr;
+    int m_lastNavIndex = 0;
 
-    // Category tabs
-    QTabWidget* m_tabWidget;
-    FileCategoryWidget* m_imageTab;
-    FileCategoryWidget* m_docTab;
-    FileCategoryWidget* m_audioTab;
-    FileCategoryWidget* m_videoTab;
+    // External config panel (right of pages)
+    QFrame* m_configPanel = nullptr;
+    QComboBox* m_formatCombo = nullptr;
+    QLineEdit* m_outputDirEdit = nullptr;
+    QPushButton* m_paramsBtn = nullptr;
+    QPushButton* m_convertBtn = nullptr;
 
-    // External config panel (right of tabs)
-    QFrame* m_configPanel;
-    QComboBox* m_formatCombo;
-    QLineEdit* m_outputDirEdit;
-    QPushButton* m_paramsBtn;
-    QPushButton* m_convertBtn;
+    // Queue-toolbar semantic action buttons (3FUI color semantics)
+    QPushButton* m_queuePauseBtn = nullptr;
+    QPushButton* m_queueCancelBtn = nullptr;
+    QPushButton* m_queueRemoveBtn = nullptr;
+    QPushButton* m_queueRetryBtn = nullptr;
+    QPushButton* m_queueOpenBtn = nullptr;
+    QLabel* m_queueHint = nullptr;
 
     // Per-category format selection tracking
     QMap<FormatRegistry::Category, QVariant> m_savedFormats;
-    // Track last active tab category (replaces static local in onTabChanged)
+    // Track last active category (drives the format combo)
     FormatRegistry::Category m_lastActiveCategory;
     // Per-category conversion parameters
     QMap<FormatRegistry::Category, QVariantMap> m_conversionParams;

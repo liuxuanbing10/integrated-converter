@@ -1,6 +1,7 @@
 #include "progress_widget.h"
 
 #include "large_file_handler.h"
+#include "theme.h"
 
 #include <QDateTime>
 ProgressWidget::ProgressWidget(QWidget* parent) :
@@ -38,18 +39,16 @@ void ProgressWidget::setupUI()
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     m_currentFileLabel = new QLabel(tr("当前: 无"));
-    m_currentFileLabel->setStyleSheet(
-        "padding: 4px 8px; background-color: #fdf3de; border-radius: 8px; color: #bd7e00; font-size: 12px;");
+    Theme::setCss(m_currentFileLabel, "chip-warning");
     m_currentFileLabel->setWordWrap(true);
     mainLayout->addWidget(m_currentFileLabel);
     QHBoxLayout* infoLayout = new QHBoxLayout();
     m_fileSizeLabel = new QLabel(tr("大小: --"), this);
     m_speedLabel = new QLabel(tr("速度: --"), this);
     m_bitrateLabel = new QLabel(tr("码率: --"), this);
-    QString infoStyle = "padding: 2px 6px; border-radius: 8px; font-size: 11px;";
-    m_fileSizeLabel->setStyleSheet(infoStyle + "background-color: #f3f7ff; color: #1664ff;");
-    m_speedLabel->setStyleSheet(infoStyle + "background-color: #e2f5eb; color: #2a814b;");
-    m_bitrateLabel->setStyleSheet(infoStyle + "background-color: #feeced; color: #d7312a;");
+    Theme::setCss(m_fileSizeLabel, "chip-accent");
+    Theme::setCss(m_speedLabel, "chip-success");
+    Theme::setCss(m_bitrateLabel, "chip-danger");
     infoLayout->addWidget(m_fileSizeLabel);
     infoLayout->addWidget(m_speedLabel);
     infoLayout->addWidget(m_bitrateLabel);
@@ -61,17 +60,7 @@ void ProgressWidget::setupUI()
     m_progressBar->setValue(0);
     m_progressBar->setTextVisible(true);
     m_progressBar->setFormat(tr("%p%"));
-    m_progressBar->setStyleSheet("QProgressBar {"
-                                 "  border: 1px solid #dde2e9;"
-                                 "  border-radius: 8px;"
-                                 "  text-align: center;"
-                                 "  background-color: #f7f9fb;"
-                                 "  color: #4e5969;"
-                                 "}"
-                                 "QProgressBar::chunk {"
-                                 "  background-color: #1664ff;"
-                                 "  border-radius: 7px;"
-                                 "}");
+    m_progressBar->setFixedHeight(22);
     progressLayout->addWidget(m_progressBar);
     m_progressLabel = new QLabel("0%", this);
     m_progressLabel->setMinimumWidth(50);
@@ -85,13 +74,12 @@ void ProgressWidget::setupUI()
     m_completedLabel = new QLabel(tr("成功: 0"), this);
     m_failedLabel = new QLabel(tr("失败: 0"), this);
     m_timeLabel = new QLabel(tr("剩余: --"), this);
-    QString labelStyle = "padding: 2px 8px; border-radius: 8px; font-size: 12px;";
-    m_totalLabel->setStyleSheet(labelStyle + "background-color: #f3f7ff; color: #1664ff;");
-    m_runningLabel->setStyleSheet(labelStyle + "background-color: #fdf3de; color: #bd7e00;");
-    m_pendingLabel->setStyleSheet(labelStyle + "background-color: #f3f7ff; color: #387bff;");
-    m_completedLabel->setStyleSheet(labelStyle + "background-color: #e2f5eb; color: #2a814b;");
-    m_failedLabel->setStyleSheet(labelStyle + "background-color: #feeced; color: #d7312a;");
-    m_timeLabel->setStyleSheet(labelStyle + "background-color: #f7f9fb; color: #4e5969;");
+    Theme::setCss(m_totalLabel, "chip-accent");
+    Theme::setCss(m_runningLabel, "chip-warning");
+    Theme::setCss(m_pendingLabel, "chip");
+    Theme::setCss(m_completedLabel, "chip-success");
+    Theme::setCss(m_failedLabel, "chip-danger");
+    Theme::setCss(m_timeLabel, "chip");
     statsLayout->addWidget(m_totalLabel);
     statsLayout->addWidget(m_runningLabel);
     statsLayout->addWidget(m_pendingLabel);

@@ -25,6 +25,7 @@ private slots:
     void testParallelTasksAllSucceed();
     void testProgressPropagation();
     void testCancelIsPerTask();
+    void testPauseBlocksDispatchAndResumeContinues();
     void testTaskAddedSignal();
     void testTaskRemovedSignal();
     void testSingleton();

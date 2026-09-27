@@ -11,21 +11,30 @@
 #include "progress_widget.h"
 #include "task_list_widget.h"
 #include "task_manager.h"
+#include "theme.h"
 
+#include <QActionGroup>
 #include <QApplication>
+#include <QCheckBox>
 #include <QCloseEvent>
+#include <QDesktopServices>
 #include <QDir>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPushButton>
+#include <QSpinBox>
 #include <QStyle>
 #include <QStyleHints>
+#include <QThread>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -61,16 +70,6 @@ void setToolTipWakeUpDelayCompat(H* hints, int ms)
 
 MainWindow::MainWindow(QWidget* parent) :
     QMainWindow(parent),
-    m_tabWidget(nullptr),
-    m_imageTab(nullptr),
-    m_docTab(nullptr),
-    m_audioTab(nullptr),
-    m_videoTab(nullptr),
-    m_configPanel(nullptr),
-    m_formatCombo(nullptr),
-    m_outputDirEdit(nullptr),
-    m_convertBtn(nullptr),
-    m_paramsBtn(nullptr),
     m_taskListWidget(nullptr),
     m_progressWidget(nullptr),
     m_statusLabel(nullptr),
@@ -78,7 +77,7 @@ MainWindow::MainWindow(QWidget* parent) :
     m_startAction(nullptr),
     m_cancelAction(nullptr),
     m_summaryAction(nullptr),
-    m_darkMode(false),
+    m_toolbarStartAction(nullptr),
     m_lastActiveCategory(FormatRegistry::Category::Image)
 {
     setWindowTitle(tr("集成格式转换工具 v%1").arg(QStringLiteral(APP_VERSION)));
@@ -89,7 +88,7 @@ MainWindow::MainWindow(QWidget* parent) :
     setupStatusBar();
     setupCentralWidget();
     setupConnections();
-    applyLightTheme();
+    setNavSelected(0);
 
     // Qt 6.12: tooltip wake-up delay. The setter signature differs between
     // Qt 6.12 builds (plain int vs std::chrono::milliseconds); the template
@@ -130,10 +129,26 @@ void MainWindow::setupMenuBar()
     connect(m_summaryAction, &QAction::triggered, this, &MainWindow::onShowSummary);
 
     QMenu* viewMenu = menuBar->addMenu(tr("视图(&V)"));
-    QAction* themeAction = viewMenu->addAction(tr("切换深色模式(&D)"));
-    themeAction->setCheckable(true);
-    themeAction->setChecked(false);
-    connect(themeAction, &QAction::triggered, this, &MainWindow::toggleTheme);
+    QMenu* themeMenu = viewMenu->addMenu(tr("外观(&A)"));
+    QActionGroup* themeGroup = new QActionGroup(this);
+    themeGroup->setExclusive(true);
+    for (auto [label, mode] :
+         std::initializer_list<std::pair<const char*, Theme::Mode>>{{QT_TR_NOOP("跟随系统"), Theme::Mode::System},
+                                                                    {QT_TR_NOOP("浅色"), Theme::Mode::Light},
+                                                                    {QT_TR_NOOP("深色"), Theme::Mode::Dark}})
+    {
+        QAction* act = themeMenu->addAction(tr(label));
+        act->setCheckable(true);
+        act->setData(static_cast<int>(mode));
+        themeGroup->addAction(act);
+        connect(act, &QAction::triggered, this, [this, mode]() { setThemeMode(mode); });
+        if (mode == Theme::loadMode())
+            act->setChecked(true);
+    }
+    viewMenu->addSeparator();
+    QAction* pauseAct = viewMenu->addAction(tr("暂停/恢复队列"));
+    pauseAct->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
+    connect(pauseAct, &QAction::triggered, this, &MainWindow::togglePauseQueue);
 
     QMenu* helpMenu = menuBar->addMenu(tr("帮助(&H)"));
     QAction* aboutAction = helpMenu->addAction(tr("关于(&A)"));
@@ -162,6 +177,7 @@ void MainWindow::setupStatusBar()
     m_statusLabel->setStyleSheet("padding: 2px 8px;");
     m_taskStatsLabel = new QLabel();
     m_taskStatsLabel->setStyleSheet("padding: 2px 8px;");
+    m_taskStatsLabel->setObjectName("queueCounters");
     statusBar->addWidget(m_statusLabel, 1);
     statusBar->addPermanentWidget(m_taskStatsLabel);
 }
@@ -169,127 +185,169 @@ void MainWindow::setupStatusBar()
 void MainWindow::setupCentralWidget()
 {
     QWidget* centralWidget = new QWidget(this);
-    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
-    mainLayout->setContentsMargins(8, 8, 8, 8);
-    mainLayout->setSpacing(8);
+    QHBoxLayout* rootLayout = new QHBoxLayout(centralWidget);
+    rootLayout->setContentsMargins(8, 8, 8, 8);
+    rootLayout->setSpacing(8);
 
-    // ── Global action bar (above tabs) ────────────────────────────
+    // ── Sidebar: search + functional navigation (3FUI pattern) ────
+    m_sidebar = new QFrame();
+    m_sidebar->setObjectName("sidebar");
+    m_sidebar->setFixedWidth(200);
+    QVBoxLayout* sideLayout = new QVBoxLayout(m_sidebar);
+    sideLayout->setContentsMargins(8, 10, 8, 8);
+    sideLayout->setSpacing(2);
+
+    m_sidebarSearch = new QLineEdit();
+    m_sidebarSearch->setPlaceholderText(tr("搜索功能…"));
+    m_sidebarSearch->setClearButtonEnabled(true);
+    sideLayout->addWidget(m_sidebarSearch);
+
+    struct NavItem
+    {
+        const char* label;
+    };
+    const NavItem navItems[] = {{QT_TR_NOOP("转换队列")}, {QT_TR_NOOP("图片转换")}, {QT_TR_NOOP("文档转换")},
+                                {QT_TR_NOOP("音频转换")}, {QT_TR_NOOP("视频转换")}, {QT_TR_NOOP("设置")}};
+    QLabel* navSection = new QLabel(tr("功能导航"));
+    Theme::setCss(navSection, "nav-section");
+    sideLayout->addWidget(navSection);
+    for (int i = 0; i < 6; ++i)
+    {
+        QPushButton* nav = new QPushButton(tr(navItems[i].label));
+        nav->setCheckable(true);
+        nav->setCursor(Qt::PointingHandCursor);
+        nav->setProperty("cssClass", "nav");
+        connect(nav, &QPushButton::clicked, this, [this, i]() { onSidebarNav(i); });
+        m_navButtons.append(nav);
+        sideLayout->addWidget(nav);
+    }
+    sideLayout->addStretch();
+    rootLayout->addWidget(m_sidebar);
+
+    // ── Right column ──────────────────────────────────────────────
+    QVBoxLayout* rightCol = new QVBoxLayout();
+    rightCol->setSpacing(8);
+    rootLayout->addLayout(rightCol, 1);
+
+    // Global action bar
     QHBoxLayout* globalBar = new QHBoxLayout();
-    QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"), tr(" 选择文件（自动识别分类）"));
-    globalAddBtn->setStyleSheet("QPushButton { padding: 10px 24px; border: none; "
-                                "border-radius: 8px; background-color: #1664ff; color: #ffffff; "
-                                "font-size: 14px; font-weight: 600; }"
-                                "QPushButton:hover { background-color: #0055ff; }"
-                                "QPushButton:pressed { background-color: #387bff; }");
+    QPushButton* globalAddBtn = new QPushButton(QIcon(":/icons/file.svg"), tr(" 添加文件"));
+    Theme::setCss(globalAddBtn, "primary");
     connect(globalAddBtn, &QPushButton::clicked, this, &MainWindow::onAddFiles);
-
-    QLabel* globalHint = new QLabel(tr("支持图片、文档、音频、视频文件，系统自动识别分类"));
-    globalHint->setStyleSheet("color: #86909c; font-size: 12px; padding-left: 8px;");
-
+    QLabel* globalHint = new QLabel(tr("支持拖拽 · 图片 / 文档 / 音频 / 视频自动分类"));
+    Theme::setCss(globalHint, "muted");
     globalBar->addWidget(globalAddBtn);
     globalBar->addWidget(globalHint, 1);
-    mainLayout->addLayout(globalBar);
+    rightCol->addLayout(globalBar);
 
-    // ── Content area: tabs (left) + config panel (right) ──────────
+    // ── Content row: page stack + config panel ────────────────────
     QHBoxLayout* contentLayout = new QHBoxLayout();
     contentLayout->setSpacing(8);
+    rightCol->addLayout(contentLayout, 1);
 
-    // -- Tab widget (left, stretchy) --
-    m_tabWidget = new QTabWidget();
-    m_tabWidget->setStyleSheet("QTabWidget::pane { border: 1px solid #dde2e9; border-radius: 8px; "
-                               "background-color: #ffffff; padding: 0px; }"
-                               "QTabBar::tab { padding: 8px 20px; font-size: 13px; font-weight: 600; "
-                               "border: 1px solid #dde2e9; border-bottom: none; border-top-left-radius: 8px; "
-                               "border-top-right-radius: 8px; margin-right: 2px; color: #4e5969; }"
-                               "QTabBar::tab:selected { background-color: #ffffff; color: #1664ff; "
-                               "border-bottom: 2px solid #1664ff; }"
-                               "QTabBar::tab:!selected { background-color: #f7f9fb; }"
-                               "QTabBar::tab:hover:!selected { background-color: #f3f7ff; }");
+    m_pageStack = new QStackedWidget();
+    m_pageStack->setMinimumWidth(0);
+    m_pageStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    contentLayout->addWidget(m_pageStack, 1);
 
+    // Page 0: conversion queue — semantic action toolbar (3FUI colors)
+    m_queuePage = new QWidget();
+    QVBoxLayout* queueLayout = new QVBoxLayout(m_queuePage);
+    queueLayout->setContentsMargins(8, 8, 8, 8);
+    queueLayout->setSpacing(8);
+
+    QHBoxLayout* queueBar = new QHBoxLayout();
+    queueBar->setSpacing(4);
+    m_queuePauseBtn = new QPushButton(tr("暂停"));
+    Theme::setCss(m_queuePauseBtn, "text-warning");
+    m_queuePauseBtn->setToolTip(tr("暂停派发新任务（运行中的任务不受影响）  Ctrl+P"));
+    m_queuePauseBtn->setEnabled(false);
+    queueBar->addWidget(m_queuePauseBtn);
+    m_queueCancelBtn = new QPushButton(tr("全部停止"));
+    Theme::setCss(m_queueCancelBtn, "text-danger");
+    queueBar->addWidget(m_queueCancelBtn);
+    m_queueRemoveBtn = new QPushButton(tr("移除"));
+    Theme::setCss(m_queueRemoveBtn, "text-remove");
+    m_queueRemoveBtn->setEnabled(false);
+    queueBar->addWidget(m_queueRemoveBtn);
+    m_queueRetryBtn = new QPushButton(tr("重试失败"));
+    Theme::setCss(m_queueRetryBtn, "text-locate");
+    m_queueRetryBtn->setEnabled(false);
+    queueBar->addWidget(m_queueRetryBtn);
+    m_queueOpenBtn = new QPushButton(tr("打开输出目录"));
+    Theme::setCss(m_queueOpenBtn, "text-success");
+    m_queueOpenBtn->setEnabled(false);
+    queueBar->addWidget(m_queueOpenBtn);
+    queueBar->addStretch();
+    queueLayout->addLayout(queueBar);
+
+    m_progressWidget = new ProgressWidget();
+    m_progressWidget->setMinimumWidth(0);
+    m_progressWidget->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Fixed);
+    queueLayout->addWidget(m_progressWidget);
+    m_taskListWidget = new TaskListWidget();
+    queueLayout->addWidget(m_taskListWidget, 1);
+    m_queueHint = new QLabel(tr("暂无任务 — 点击上方“添加文件”，或直接把文件拖进窗口"));
+    QLabel* queueHint = m_queueHint;
+    Theme::setCss(queueHint, "muted");
+    queueHint->setAlignment(Qt::AlignCenter);
+    queueLayout->addWidget(queueHint);
+    m_pageStack->addWidget(m_queuePage);
+
+    // Pages 1..4: category file lists
     using Cat = FormatRegistry::Category;
     m_imageTab = new FileCategoryWidget(Cat::Image);
     m_docTab = new FileCategoryWidget(Cat::Document);
     m_audioTab = new FileCategoryWidget(Cat::Audio);
     m_videoTab = new FileCategoryWidget(Cat::Video);
+    m_pageStack->addWidget(m_imageTab);
+    m_pageStack->addWidget(m_docTab);
+    m_pageStack->addWidget(m_audioTab);
+    m_pageStack->addWidget(m_videoTab);
 
-    m_tabWidget->addTab(m_imageTab, QString::fromUtf8("\xF0\x9F\x96\xBC") + tr(" 图片转换"));
-    m_tabWidget->addTab(m_docTab, QString::fromUtf8("\xF0\x9F\x93\x84") + tr(" 文档转换"));
-    m_tabWidget->addTab(m_audioTab, QString::fromUtf8("\xF0\x9F\x8E\xB5") + tr(" 音频转换"));
-    m_tabWidget->addTab(m_videoTab, QString::fromUtf8("\xF0\x9F\x8E\xAC") + tr(" 视频转换"));
+    // Page 5: settings
+    setupSettingsPage();
+    m_pageStack->addWidget(m_settingsPage);
 
-    contentLayout->addWidget(m_tabWidget, 1);
-
-    // -- Config panel (right, fixed width) --
+    // ── Config panel (right, sticky across pages) ─────────────────
     m_configPanel = new QFrame();
     m_configPanel->setObjectName("configPanel");
     m_configPanel->setFixedWidth(280);
-    m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #dde2e9; border-radius: 12px; "
-        "background-color: #ffffff; }"
-        "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
-        "#configTitleTxt { color: #1664ff; font-size: 14px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 12px; font-weight: 600; color: #4e5969; }");
+    Theme::setCss(m_configPanel, "panel");
 
     QVBoxLayout* configLayout = new QVBoxLayout(m_configPanel);
-    configLayout->setContentsMargins(12, 14, 12, 12);
+    configLayout->setContentsMargins(14, 14, 14, 12);
     configLayout->setSpacing(8);
 
-    // Title
-    QLabel* configTitle = new QLabel(tr("⚙ 转换设置"));
+    QLabel* configTitle = new QLabel(tr("转换设置"));
     configTitle->setObjectName("configTitleTxt");
-    // Color + font come from container #configPanel stylesheet via #configTitleTxt selector
+    Theme::setCss(configTitle, "section");
     configTitle->setAlignment(Qt::AlignCenter);
     configLayout->addWidget(configTitle);
 
-    // Separator line
-    QFrame* sepLine = new QFrame();
-    sepLine->setFrameShape(QFrame::HLine);
-    sepLine->setStyleSheet("QFrame { color: #eceded; border: none; border-top: 1px solid #eceded; }");
-    configLayout->addWidget(sepLine);
-
-    // Output format label
     QLabel* formatLabel = new QLabel(tr("输出格式"));
     formatLabel->setObjectName("configFormatLabel");
-    // Color + font come from container #configPanel stylesheet via #configFormatLabel selector
+    Theme::setCss(formatLabel, "muted");
     configLayout->addWidget(formatLabel);
 
-    // Format combo — solid background explicitly
     m_formatCombo = new QComboBox();
-    m_formatCombo->setMinimumHeight(28);
-    m_formatCombo->setStyleSheet("QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-                                 "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
-                                 "QComboBox::drop-down { border: none; width: 22px; "
-                                 "background-color: #ffffff; }"
-                                 "QComboBox::down-arrow { width: 10px; height: 10px; }"
-                                 "QComboBox QAbstractItemView { "
-                                 "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
-                                 "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
-                                 "font-size: 12px; }");
+    m_formatCombo->setMinimumHeight(30);
     configLayout->addWidget(m_formatCombo);
 
-    // Output directory label
     QLabel* dirLabel = new QLabel(tr("输出目录"));
     dirLabel->setObjectName("configDirLabel");
-    // Color + font come from container #configPanel stylesheet via #configDirLabel selector
+    Theme::setCss(dirLabel, "muted");
     configLayout->addWidget(dirLabel);
 
-    // Output directory input + browse button
     QHBoxLayout* dirRow = new QHBoxLayout();
     dirRow->setSpacing(5);
-
     m_outputDirEdit = new QLineEdit();
     m_outputDirEdit->setPlaceholderText(tr("留空则使用源文件所在目录"));
-    m_outputDirEdit->setMinimumHeight(28);
-    m_outputDirEdit->setStyleSheet("QLineEdit { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-                                   "background-color: #ffffff; color: #1d2129; font-size: 12px; }");
+    m_outputDirEdit->setMinimumHeight(30);
     dirRow->addWidget(m_outputDirEdit, 1);
-
     QPushButton* browseBtn = new QPushButton(tr("浏览"));
-    browseBtn->setMinimumHeight(28);
-    browseBtn->setFixedWidth(50);
-    browseBtn->setStyleSheet("QPushButton { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-                             "background-color: #f7f9fb; color: #4e5969; font-size: 12px; }"
-                             "QPushButton:hover { background-color: #f1f4f8; }");
+    browseBtn->setMinimumHeight(30);
+    browseBtn->setFixedWidth(52);
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this, tr("选择输出目录"), m_outputDirEdit->text());
         if (!dir.isEmpty())
@@ -298,56 +356,142 @@ void MainWindow::setupCentralWidget()
         }
     });
     dirRow->addWidget(browseBtn);
-
     configLayout->addLayout(dirRow);
 
-    // Spacer
-    configLayout->addStretch(1);
+    configLayout->addSpacing(10);
 
-    // ── Parameter settings button ─────────────────────────────────
     m_paramsBtn = new QPushButton(QIcon(":/icons/settings.svg"), tr(" 参数设置"));
-    m_paramsBtn->setMinimumHeight(28);
+    m_paramsBtn->setMinimumHeight(32);
     m_paramsBtn->setCursor(Qt::PointingHandCursor);
-    m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-                               "background-color: #f3f7ff; color: #1664ff; font-size: 12px; font-weight: 600; }"
-                               "QPushButton:hover { background-color: #ebf1ff; }"
-                               "QPushButton:pressed { background-color: #ccddff; }");
+    Theme::setCss(m_paramsBtn, "accent-outline");
     m_paramsBtn->setIconSize(QSize(14, 14));
     configLayout->addWidget(m_paramsBtn);
 
-    // Convert button
     m_convertBtn = new QPushButton(QIcon(":/icons/play.svg"), tr(" 开始转换"));
-    m_convertBtn->setMinimumHeight(30);
+    m_convertBtn->setMinimumHeight(38);
     m_convertBtn->setCursor(Qt::PointingHandCursor);
-    m_convertBtn->setStyleSheet("QPushButton { border: none; border-radius: 8px; "
-                                "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
-                                "QPushButton:hover { background-color: #0055ff; }"
-                                "QPushButton:pressed { background-color: #387bff; }"
-                                "QPushButton:disabled { background-color: #eceded; color: #c9cdd4; }");
-    m_convertBtn->setIconSize(QSize(14, 14));
+    Theme::setCss(m_convertBtn, "primary");
+    m_convertBtn->setIconSize(QSize(16, 16));
     configLayout->addWidget(m_convertBtn);
 
     contentLayout->addWidget(m_configPanel);
 
-    mainLayout->addLayout(contentLayout, 2);
-
-    // ── Bottom: progress + task list ──────────────────────────────
-    QGroupBox* taskGroup = new QGroupBox(tr("任务列表"));
-    taskGroup->setStyleSheet("QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; "
-                             "margin-top: 8px; padding-top: 8px; color: #1d2129; }"
-                             "QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }");
-    QVBoxLayout* taskLayout = new QVBoxLayout(taskGroup);
-    m_progressWidget = new ProgressWidget();
-    taskLayout->addWidget(m_progressWidget);
-    m_taskListWidget = new TaskListWidget();
-    taskLayout->addWidget(m_taskListWidget, 1);
-    mainLayout->addWidget(taskGroup, 1);
-
     setCentralWidget(centralWidget);
 
-    // Initialise format combo for default (first) tab
+    // Initialise format combo for default category
     populateFormatCombo(Cat::Image);
 }
+
+void MainWindow::setupSettingsPage()
+{
+    m_settingsPage = new QWidget();
+    QVBoxLayout* pageLayout = new QVBoxLayout(m_settingsPage);
+    pageLayout->setContentsMargins(8, 8, 8, 8);
+    pageLayout->setSpacing(10);
+
+    QLabel* title = new QLabel(tr("软件设置"));
+    Theme::setCss(title, "title");
+    pageLayout->addWidget(title);
+
+    // Appearance
+    QGroupBox* appearanceGroup = new QGroupBox(tr("外观"));
+    QHBoxLayout* appearanceRow = new QHBoxLayout(appearanceGroup);
+    QLabel* themeHint = new QLabel(tr("界面主题（即时生效，保存于配置）"));
+    Theme::setCss(themeHint, "muted");
+    appearanceRow->addWidget(themeHint);
+    appearanceRow->addStretch();
+    for (auto [label, mode] :
+         std::initializer_list<std::pair<const char*, Theme::Mode>>{{QT_TR_NOOP("跟随系统"), Theme::Mode::System},
+                                                                    {QT_TR_NOOP("浅色"), Theme::Mode::Light},
+                                                                    {QT_TR_NOOP("深色"), Theme::Mode::Dark}})
+    {
+        QPushButton* b = new QPushButton(tr(label));
+        b->setCheckable(true);
+        b->setProperty("mode", static_cast<int>(mode));
+        if (mode == Theme::loadMode())
+            b->setChecked(true);
+        connect(b, &QPushButton::clicked, this, [this, mode]() { setThemeMode(mode); });
+        appearanceRow->addWidget(b);
+    }
+    pageLayout->addWidget(appearanceGroup);
+
+    // Performance
+    QGroupBox* perfGroup = new QGroupBox(tr("性能"));
+    QGridLayout* perfRow = new QGridLayout(perfGroup);
+    perfRow->addWidget(new QLabel(tr("最大并行任务数")), 0, 0);
+    QSpinBox* parallelSpin = new QSpinBox();
+    parallelSpin->setRange(1, QThread::idealThreadCount() * 2);
+    parallelSpin->setValue(ConfigManager::instance().maxParallelTasks());
+    connect(parallelSpin, qOverload<int>(&QSpinBox::valueChanged), this, [](int v) {
+        ConfigManager::instance().setMaxParallelTasks(v);
+        TaskManager::instance()->setMaxParallelTasks(v);
+    });
+    perfRow->addWidget(parallelSpin, 0, 1);
+    perfRow->addWidget(new QLabel(tr("日志级别")), 1, 0);
+    QComboBox* logCombo = new QComboBox();
+    logCombo->addItems({"Debug", "Info", "Warning", "Error"});
+    logCombo->setCurrentIndex(ConfigManager::instance().logLevel());
+    connect(logCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [](int idx) {
+        ConfigManager::instance().setLogLevel(idx);
+        if (Logger* lg = g_logger.load())
+            lg->setLevel(static_cast<Logger::Level>(idx));
+    });
+    perfRow->addWidget(logCombo, 1, 1);
+    perfRow->setColumnStretch(2, 1);
+    pageLayout->addWidget(perfGroup);
+
+    // Notifications
+    QGroupBox* notifyGroup = new QGroupBox(tr("通知"));
+    QVBoxLayout* notifyRow = new QVBoxLayout(notifyGroup);
+    QCheckBox* notifyCheck = new QCheckBox(tr("所有任务完成后弹窗提示"));
+    notifyCheck->setChecked(ConfigManager::instance().value("showNotification", true).toBool());
+    connect(notifyCheck, &QCheckBox::toggled, this,
+            [](bool on) { ConfigManager::instance().setValue("showNotification", on); });
+    notifyRow->addWidget(notifyCheck);
+    pageLayout->addWidget(notifyGroup);
+
+    pageLayout->addStretch(1);
+}
+
+namespace
+{
+constexpr int kQueuePage = 0;
+constexpr int kSettingsPage = 5;
+
+int pageForCategory(FormatRegistry::Category cat)
+{
+    using C = FormatRegistry::Category;
+    switch (cat)
+    {
+        case C::Image:
+            return 1;
+        case C::Document:
+            return 2;
+        case C::Audio:
+            return 3;
+        case C::Video:
+            return 4;
+        default:
+            return 1;
+    }
+}
+
+FormatRegistry::Category categoryForPage(int page)
+{
+    using C = FormatRegistry::Category;
+    switch (page)
+    {
+        case 2:
+            return C::Document;
+        case 3:
+            return C::Audio;
+        case 4:
+            return C::Video;
+        default:
+            return C::Image;
+    }
+}
+} // namespace
 
 void MainWindow::setupConnections()
 {
@@ -357,9 +501,7 @@ void MainWindow::setupConnections()
     connect(tm, &TaskManager::taskProgressChanged, this, &MainWindow::onTaskProgressChanged);
     connect(tm, &TaskManager::taskCompleted, this, &MainWindow::onTaskCompleted);
     connect(tm, &TaskManager::allTasksCompleted, this, &MainWindow::onAllTasksCompleted);
-
-    // Tab change → update external config panel
-    connect(m_tabWidget, &QTabWidget::currentChanged, this, &MainWindow::onTabChanged);
+    connect(tm, &TaskManager::pauseStateChanged, this, &MainWindow::onQueuePauseStateChanged);
 
     // Convert button → start conversion
     connect(m_convertBtn, &QPushButton::clicked, this, &MainWindow::onStartConversion);
@@ -367,9 +509,53 @@ void MainWindow::setupConnections()
     // Parameter settings button → open dialog
     connect(m_paramsBtn, &QPushButton::clicked, this, &MainWindow::onConversionParams);
 
-    // When files are added to the current tab, auto-populate output dir
+    // Queue semantic actions (3FUI toolbar)
+    connect(m_queuePauseBtn, &QPushButton::clicked, this, &MainWindow::togglePauseQueue);
+    connect(m_queueCancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelAll);
+    connect(m_queueRemoveBtn, &QPushButton::clicked, this, [this]() { m_taskListWidget->removeSelected(); });
+    connect(m_queueRetryBtn, &QPushButton::clicked, this, [this]() {
+        QStringList failed;
+        for (ConversionTask* t : TaskManager::instance()->getFailedTasks())
+            failed << t->inputFile();
+        if (!failed.isEmpty())
+            onRetryFailed(failed);
+    });
+    connect(m_queueOpenBtn, &QPushButton::clicked, this, [this]() {
+        const QString taskId = m_taskListWidget->selectedTaskId();
+        if (taskId.isEmpty())
+            return;
+        if (ConversionTask* t = TaskManager::instance()->getTask(taskId))
+        {
+            QFileInfo fi(t->outputFile());
+            QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absolutePath()));
+        }
+    });
+    connect(m_taskListWidget, &TaskListWidget::selectionChanged, this, [this](const QString& taskId) {
+        const bool has = !taskId.isEmpty();
+        m_queueRemoveBtn->setEnabled(has);
+        m_queueOpenBtn->setEnabled(has);
+    });
+    // The empty-state hint only matters while the queue is literally empty.
+    auto syncHint = [this]() {
+        if (m_queueHint)
+            m_queueHint->setVisible(TaskManager::instance()->totalTaskCount() == 0);
+    };
+    connect(TaskManager::instance(), &TaskManager::taskAdded, this, syncHint);
+    connect(TaskManager::instance(), &TaskManager::taskRemoved, this, syncHint);
+    connect(m_taskListWidget, &TaskListWidget::rowActivated, this, [this](const QString& taskId) {
+        if (ConversionTask* t = TaskManager::instance()->getTask(taskId))
+        {
+            QFileInfo fi(t->outputFile());
+            QDesktopServices::openUrl(QUrl::fromLocalFile(fi.absolutePath()));
+        }
+    });
+
+    // Sidebar search filters nav buttons (3FUI: 搜索选项卡标题)
+    connect(m_sidebarSearch, &QLineEdit::textChanged, this, &MainWindow::onSidebarFilterChanged);
+
+    // When files are added to the current page's tab, auto-populate output dir
     auto updateDirOnAdd = [this](FileCategoryWidget* tab) {
-        if (m_tabWidget->currentWidget() == tab && tab->fileCount() > 0)
+        if (m_pageStack->currentWidget() == tab && tab->fileCount() > 0)
         {
             QFileInfo fi(tab->allFiles().first().filePath);
             m_outputDirEdit->setText(fi.absolutePath());
@@ -427,96 +613,62 @@ void MainWindow::populateFormatCombo(FormatRegistry::Category cat)
     m_formatCombo->blockSignals(false);
 }
 
-void MainWindow::onTabChanged(int index)
+void MainWindow::setNavSelected(int index)
 {
-    // Save current format for last active category (before switching)
-    if (m_formatCombo->count() > 0 && m_formatCombo->currentIndex() >= 0)
+    for (int i = 0; i < m_navButtons.size(); ++i)
     {
-        m_savedFormats[m_lastActiveCategory] = m_formatCombo->currentData();
+        m_navButtons[i]->setChecked(i == index);
+        m_navButtons[i]->setProperty("selected", i == index ? "true" : "false");
     }
+}
 
-    // Determine new category from the new index
-    FormatRegistry::Category newCat = FormatRegistry::Category::Image;
-    switch (index)
+void MainWindow::onSidebarNav(int index)
+{
+    if (index < 0 || index >= m_pageStack->count())
+        return;
+    m_pageStack->setCurrentIndex(index);
+    setNavSelected(index);
+
+    // Config panel follows the category (queue/settings pages keep last cat).
+    if (index >= 1 && index <= 4)
     {
-        case 0:
-            newCat = FormatRegistry::Category::Image;
-            break;
-        case 1:
-            newCat = FormatRegistry::Category::Document;
-            break;
-        case 2:
-            newCat = FormatRegistry::Category::Audio;
-            break;
-        case 3:
-            newCat = FormatRegistry::Category::Video;
-            break;
-        default:
-            break;
+        FormatRegistry::Category newCat = categoryForPage(index);
+        if (newCat != m_lastActiveCategory)
+        {
+            if (m_formatCombo->count() > 0 && m_formatCombo->currentIndex() >= 0)
+                m_savedFormats[m_lastActiveCategory] = m_formatCombo->currentData();
+            populateFormatCombo(newCat);
+            m_lastActiveCategory = newCat;
+        }
+        FileCategoryWidget* tab = qobject_cast<FileCategoryWidget*>(m_pageStack->currentWidget());
+        if (tab && tab->fileCount() > 0 && !tab->allFiles().isEmpty())
+        {
+            QFileInfo fi(tab->allFiles().first().filePath);
+            m_outputDirEdit->setText(fi.absolutePath());
+        }
     }
+    m_lastNavIndex = index;
+}
 
-    // Populate format combo for the new tab
-    populateFormatCombo(newCat);
-
-    // Update output dir from the new tab's first file
-    FileCategoryWidget* tab = nullptr;
-    switch (index)
+void MainWindow::onSidebarFilterChanged(const QString& text)
+{
+    const QString needle = text.trimmed();
+    for (QPushButton* nav : m_navButtons)
     {
-        case 0:
-            tab = m_imageTab;
-            break;
-        case 1:
-            tab = m_docTab;
-            break;
-        case 2:
-            tab = m_audioTab;
-            break;
-        case 3:
-            tab = m_videoTab;
-            break;
-        default:
-            break;
+        nav->setVisible(needle.isEmpty() || nav->text().contains(needle, Qt::CaseInsensitive));
     }
-    if (tab && tab->fileCount() > 0 && !tab->allFiles().isEmpty())
-    {
-        QFileInfo fi(tab->allFiles().first().filePath);
-        m_outputDirEdit->setText(fi.absolutePath());
-    }
-
-    m_lastActiveCategory = newCat;
 }
 
 void MainWindow::onConversionParams()
 {
-    // Determine current category from active tab
-    FormatRegistry::Category currentCat = FormatRegistry::Category::Image;
-    int idx = m_tabWidget->currentIndex();
-    switch (idx)
-    {
-        case 0:
-            currentCat = FormatRegistry::Category::Image;
-            break;
-        case 1:
-            currentCat = FormatRegistry::Category::Document;
-            break;
-        case 2:
-            currentCat = FormatRegistry::Category::Audio;
-            break;
-        case 3:
-            currentCat = FormatRegistry::Category::Video;
-            break;
-        default:
-            break;
-    }
+    // Determine current category from active page (queue page → last cat)
+    int idx = m_pageStack->currentIndex();
+    FormatRegistry::Category currentCat = (idx >= 1 && idx <= 4) ? categoryForPage(idx) : m_lastActiveCategory;
 
-    // Reset button style before opening dialog
-    m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-                               "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
-                               "QPushButton:hover { background-color: #ebf1ff; }"
-                               "QPushButton:pressed { background-color: #ccddff; }");
+    Theme::setCss(m_paramsBtn, "accent-outline");
 
     ConversionParamsDialog dialog(this);
-    dialog.setDarkMode(m_darkMode);
+    dialog.setDarkMode(Theme::currentMode() == Theme::Mode::Dark);
     dialog.setActiveCategory(currentCat);
 
     // Restore previously saved params for each category
@@ -546,115 +698,39 @@ void MainWindow::onConversionParams()
         LOG_INFO("MainWindow", "转换参数设置已更新");
 
         // Visual feedback
-        m_paramsBtn->setStyleSheet("QPushButton { border: 2px solid #1ebf6f; border-radius: 8px; "
-                                   "background-color: #e2f5eb; color: #2a814b; font-size: 13px; font-weight: 600; }"
-                                   "QPushButton:hover { background-color: #8dd8b3; }");
+        Theme::setCss(m_paramsBtn, "success-outline");
         m_statusLabel->setText(tr("转换参数已设置"));
     }
 }
 
-void MainWindow::toggleTheme()
+void MainWindow::setThemeMode(Theme::Mode mode)
 {
-    m_darkMode = !m_darkMode;
-    if (m_darkMode)
+    Theme::saveMode(mode);
+    // Re-polish widgets whose property-based QSS was cached (Qt quirk:
+    // unpolish/polish forces re-evaluation of attribute selectors).
+    for (QWidget* w : findChildren<QWidget*>())
     {
-        applyDarkTheme();
+        w->style()->unpolish(w);
+        w->style()->polish(w);
     }
+    LOG_INFO("MainWindow",
+             QString("界面主题已切换: %1")
+                 .arg(mode == Theme::Mode::Dark ? "dark" : (mode == Theme::Mode::Light ? "light" : "system")));
+}
+
+void MainWindow::togglePauseQueue()
+{
+    TaskManager* tm = TaskManager::instance();
+    if (tm->isPaused())
+        tm->resume();
     else
-    {
-        applyLightTheme();
-    }
+        tm->pause();
 }
 
-void MainWindow::applyLightTheme()
+void MainWindow::onQueuePauseStateChanged(bool paused)
 {
-    QString style = R"(
-        QMainWindow { background-color: #f7f9fb; }
-        QMenuBar { background-color: #ffffff; border-bottom: 1px solid #dde2e9; }
-        QMenuBar::item { padding: 6px 12px; background: transparent; color: #1d2129; }
-        QMenuBar::item:selected { background-color: #f3f7ff; }
-        QMenu { background-color: #ffffff; border: 1px solid #dde2e9; }
-        QMenu::item { padding: 6px 30px 6px 20px; color: #1d2129; }
-        QMenu::item:selected { background-color: #f3f7ff; }
-        QToolBar { background-color: #ffffff; border-bottom: 1px solid #dde2e9; spacing: 5px; padding: 4px; }
-        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #4e5969; }
-        QToolBar QToolButton:hover { background-color: #f3f7ff; }
-        QStatusBar { background-color: #ffffff; border-top: 1px solid #dde2e9; color: #86909c; }
-        QGroupBox { font-weight: 600; border: 1px solid #dde2e9; border-radius: 8px; margin-top: 8px; padding-top: 8px; color: #1d2129; }
-        QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
-        QTableWidget { border: 1px solid #dde2e9; border-radius: 8px; gridline-color: #eceded; background: #ffffff; }
-        QTableWidget::item:selected { background-color: #f3f7ff; color: #1664ff; }
-        QHeaderView::section { background-color: #f7f9fb; border: none; border-bottom: 1px solid #dde2e9; padding: 4px; font-weight: 600; color: #4e5969; }
-        QPushButton { padding: 6px 12px; border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; color: #1d2129; }
-        QPushButton:hover { background-color: #f7f9fb; }
-        QPushButton:disabled { background-color: #f7f9fb; color: #c9cdd4; }
-        QCheckBox { spacing: 6px; color: #1d2129; }
-        QLabel { color: #1d2129; }
-        QScrollBar:vertical { background: #f7f9fb; width: 8px; border-radius: 4px; }
-        QScrollBar::handle:vertical { background: #c9cdd4; border-radius: 4px; min-height: 30px; }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-    )";
-    setStyleSheet(style);
-    m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #dde2e9; border-radius: 12px; "
-        "background-color: #ffffff; }"
-        "#configPanel QLabel { color: #1d2129; background: transparent; border: none; }"
-        "#configTitleTxt { color: #1664ff; font-size: 16px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #4e5969; }");
-    QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#1ebf6f"))
-    {
-        m_paramsBtn->setStyleSheet("QPushButton { border: 1px solid #a0c0ff; border-radius: 8px; "
-                                   "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
-                                   "QPushButton:hover { background-color: #ebf1ff; }"
-                                   "QPushButton:pressed { background-color: #ccddff; }");
-    }
-}
-
-void MainWindow::applyDarkTheme()
-{
-    QString style = R"(
-        QMainWindow { background-color: #0c0d0e; }
-        QMenuBar { background-color: #1d2129; border-bottom: 1px solid #333333; color: #eceded; }
-        QMenuBar::item { padding: 6px 12px; background: transparent; color: #eceded; }
-        QMenuBar::item:selected { background-color: rgba(56, 123, 255, 0.16); }
-        QMenu { background-color: #1d2129; border: 1px solid #333333; color: #eceded; }
-        QMenu::item { padding: 6px 30px 6px 20px; color: #eceded; }
-        QMenu::item:selected { background-color: rgba(56, 123, 255, 0.16); }
-        QToolBar { background-color: #1d2129; border-bottom: 1px solid #333333; spacing: 5px; padding: 4px; }
-        QToolBar QToolButton { padding: 6px; border-radius: 4px; border: 1px solid transparent; color: #eceded; }
-        QToolBar QToolButton:hover { background-color: rgba(56, 123, 255, 0.16); }
-        QStatusBar { background-color: #1d2129; border-top: 1px solid #333333; color: #86909c; }
-        QGroupBox { font-weight: 600; border: 1px solid #333333; border-radius: 8px; margin-top: 8px; padding-top: 8px; color: #eceded; }
-        QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 5px; }
-        QTableWidget { border: 1px solid #333333; border-radius: 8px; gridline-color: #333333; background: #1d2129; }
-        QTableWidget::item:selected { background-color: rgba(56, 123, 255, 0.16); color: #ffffff; }
-        QHeaderView::section { background-color: #1d2129; border: none; border-bottom: 1px solid #333333; padding: 4px; font-weight: 600; color: #eceded; }
-        QPushButton { padding: 6px 12px; border: 1px solid #333333; border-radius: 8px; background-color: #1d2129; color: #eceded; }
-        QPushButton:hover { background-color: rgba(56, 123, 255, 0.16); }
-        QPushButton:disabled { background-color: #1d2129; color: #41464f; }
-        QCheckBox { spacing: 6px; color: #eceded; }
-        QLabel { color: #eceded; }
-        QScrollBar:vertical { background: #1d2129; width: 8px; border-radius: 4px; }
-        QScrollBar::handle:vertical { background: #41464f; border-radius: 4px; min-height: 30px; }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-    )";
-    setStyleSheet(style);
-    m_configPanel->setStyleSheet(
-        "#configPanel { border: 1px solid #333333; border-radius: 12px; "
-        "background-color: #1d2129; }"
-        "#configPanel QLabel { color: #eceded; background: transparent; border: none; }"
-        "#configTitleTxt { color: #387bff; font-size: 16px; font-weight: 600; }"
-        "#configFormatLabel, #configDirLabel { font-size: 13px; font-weight: 600; color: #86909c; }");
-    QString currentBtnStyle = m_paramsBtn->styleSheet();
-    if (!currentBtnStyle.contains("#1ebf6f"))
-    {
-        m_paramsBtn->setStyleSheet(
-            "QPushButton { border: 1px solid #1664ff; border-radius: 8px; "
-            "background-color: rgba(22, 100, 255, 0.12); color: #387bff; font-size: 13px; font-weight: 600; }"
-            "QPushButton:hover { background-color: rgba(22, 100, 255, 0.24); }"
-            "QPushButton:pressed { background-color: rgba(22, 100, 255, 0.32); }");
-    }
+    m_queuePauseBtn->setText(paused ? tr("恢复") : tr("暂停"));
+    m_statusLabel->setText(paused ? tr("队列已暂停") : tr("队列已恢复"));
 }
 
 // ── File handling ────────────────────────────────────────────────
@@ -687,14 +763,16 @@ void MainWindow::addFilesAndAutoRoute(const QStringList& filePaths)
     {
         msg = tr("已添加 ") + parts.join("，");
         int maxCount = qMax(qMax(imageCount, docCount), qMax(audioCount, videoCount));
+        int targetPage = 1;
         if (maxCount == imageCount)
-            m_tabWidget->setCurrentIndex(0);
+            targetPage = 1;
         else if (maxCount == docCount)
-            m_tabWidget->setCurrentIndex(1);
+            targetPage = 2;
         else if (maxCount == audioCount)
-            m_tabWidget->setCurrentIndex(2);
+            targetPage = 3;
         else if (maxCount == videoCount)
-            m_tabWidget->setCurrentIndex(3);
+            targetPage = 4;
+        onSidebarNav(targetPage);
     }
     if (skipped > 0)
     {
@@ -742,6 +820,8 @@ void MainWindow::onStartConversion()
     submitConversionTasks();
     TaskManager::instance()->start();
     m_statusLabel->setText(tr("正在转换..."));
+    if (m_queuePauseBtn)
+        m_queuePauseBtn->setEnabled(true);
     m_startAction->setEnabled(false);
     m_summaryAction->setEnabled(false);
     m_toolbarStartAction->setEnabled(false);
@@ -840,6 +920,8 @@ void MainWindow::onAllTasksCompleted()
 {
     m_statusLabel->setText(tr("所有任务已完成"));
     m_startAction->setEnabled(true);
+    if (m_queuePauseBtn)
+        m_queuePauseBtn->setEnabled(false);
     m_summaryAction->setEnabled(!m_conversionResults.isEmpty());
     m_toolbarStartAction->setEnabled(true);
     m_progressWidget->setCurrentFile(QString());
@@ -908,12 +990,21 @@ void MainWindow::updateStatusBar()
 {
     TaskManager* tm = TaskManager::instance();
     auto c = tm->counters();
-    m_taskStatsLabel->setText(tr("总计: %1 | 运行: %2 | 等待: %3 | 完成: %4 | 失败: %5")
-                                  .arg(c.total)
-                                  .arg(c.running)
-                                  .arg(c.pending)
-                                  .arg(c.completed)
-                                  .arg(c.failed));
+    const QString counters = tr("总计 %1 · 运行 %2 · 等待 %3 · 完成 %4 · 失败 %5")
+                                 .arg(c.total)
+                                 .arg(c.running)
+                                 .arg(c.pending)
+                                 .arg(c.completed)
+                                 .arg(c.failed);
+    m_taskStatsLabel->setText(counters);
+    if (m_queuePauseBtn)
+    {
+        // Pause only makes sense while there is something left to dispatch;
+        // keep it live while already paused so the user can resume.
+        m_queuePauseBtn->setEnabled(c.pending > 0 || tm->isPaused());
+    }
+    if (m_queueRetryBtn)
+        m_queueRetryBtn->setEnabled(c.failed > 0);
 }
 
 void MainWindow::updateProgressWidget()

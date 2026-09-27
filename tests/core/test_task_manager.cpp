@@ -250,6 +250,59 @@ void TestTaskManager::testParallelTasksAllSucceed()
     Q_UNUSED(doneSpy);
 }
 
+// ── Pause = no NEW dispatch; resume continues the queue ──
+void TestTaskManager::testPauseBlocksDispatchAndResumeContinues()
+{
+    auto* tm = TaskManager::instance();
+    tm->cancelAllTasks();
+    // Defensive: a previous run may have left the manager paused.
+    if (tm->isPaused())
+        tm->resume();
+
+    auto mock = std::make_shared<MockConverter>();
+    mock->setDelay(400);
+    tm->registerConverter("mock", mock);
+    const int originalMax = tm->maxParallelTasks();
+    tm->setMaxParallelTasks(1); // serialize: dispatch order is deterministic
+
+    QVariantMap params;
+    params["converter"] = "mock";
+    const QString id1 = tm->addTask("/in1.mock_in", "/out1.mock_out", params);
+    const QString id2 = tm->addTask("/in2.mock_in", "/out2.mock_out", params);
+
+    QSignalSpy startedSpy(tm, &TaskManager::taskStarted);
+    QSignalSpy doneSpy(tm, &TaskManager::taskCompleted);
+    QSignalSpy pauseSpy(tm, &TaskManager::pauseStateChanged);
+    tm->start();
+
+    // First task must get going.
+    while (startedSpy.count() < 1)
+        QVERIFY2(startedSpy.wait(2000), "first task never started");
+
+    tm->pause();
+    QCOMPARE(pauseSpy.count(), 1);
+    QVERIFY(tm->isPaused());
+
+    // First task finishes (running work is NOT interrupted by pause).
+    while (doneSpy.count() < 1)
+        QVERIFY2(doneSpy.wait(2000), "running task interrupted by pause");
+
+    // With the queue paused, the second task must stay Pending.
+    QTest::qWait(900);
+    QCOMPARE(tm->runningCount(), 0);
+    QVERIFY(tm->getTask(id2));
+    QCOMPARE((int)tm->getTask(id2)->status(), (int)ConversionTask::Status::Pending);
+
+    tm->resume();
+    QCOMPARE(pauseSpy.count(), 2);
+    while (doneSpy.count() < 2)
+        QVERIFY2(doneSpy.wait(2000), "resumed queue never dispatched task 2");
+    QVERIFY(tm->getTask(id1));
+    QCOMPARE((int)tm->getTask(id1)->status(), (int)ConversionTask::Status::Completed);
+
+    tm->setMaxParallelTasks(originalMax);
+}
+
 // ── Regression: TaskRunnable::progressChanged was never emitted (§3.2) ──
 void TestTaskManager::testProgressPropagation()
 {

@@ -14,7 +14,7 @@ TaskManager* TaskManager::instance()
     return &s_instance;
 }
 
-TaskManager::TaskManager() : m_threadPool(new QThreadPool(this)), m_maxParallel(4), m_started(false)
+TaskManager::TaskManager() : m_threadPool(new QThreadPool(this)), m_maxParallel(4), m_started(false), m_paused(false)
 {
     m_maxParallel = ConfigManager::instance().maxParallelTasks();
     m_threadPool->setMaxThreadCount(m_maxParallel);
@@ -342,6 +342,37 @@ bool TaskManager::isRunning() const
     return m_started;
 }
 
+void TaskManager::pause()
+{
+    {
+        QMutexLocker locker(&m_mutex);
+        if (m_paused)
+            return;
+        m_paused = true;
+        LOG_INFO("TaskManager", "队列已暂停（运行中的任务不受影响）");
+    }
+    emit pauseStateChanged(true);
+}
+
+void TaskManager::resume()
+{
+    {
+        QMutexLocker locker(&m_mutex);
+        if (!m_paused)
+            return;
+        m_paused = false;
+        LOG_INFO("TaskManager", "队列已恢复");
+    }
+    emit pauseStateChanged(false);
+    processQueue();
+}
+
+bool TaskManager::isPaused() const
+{
+    QMutexLocker locker(&m_mutex);
+    return m_paused;
+}
+
 void TaskManager::setMaxParallelTasks(int max)
 {
     QMutexLocker locker(&m_mutex);
@@ -435,7 +466,7 @@ int TaskManager::failedCount() const
 void TaskManager::processQueue()
 {
     QMutexLocker locker(&m_mutex);
-    if (!m_started)
+    if (!m_started || m_paused)
     {
         return;
     }

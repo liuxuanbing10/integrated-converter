@@ -44,6 +44,11 @@ public:
 
     void start();
     bool isRunning() const;
+    // Pause = stop dispatching NEW tasks; already-running conversions are not
+    // interrupted (3FUI queue semantics: ffmpeg processes are not resumable).
+    void pause();
+    void resume();
+    bool isPaused() const;
     /// Blocks until all worker threads finish (after cooperative cancel).
     /// Call on app exit BEFORE releasing the event loop so queued
     /// onTaskFinished slots still run and orphaned tasks get deleted.
@@ -75,6 +80,7 @@ signals:
     void taskCompleted(const QString& taskId, bool success);
     void taskRemoved(const QString& taskId);
     void allTasksCompleted();
+    void pauseStateChanged(bool paused);
 
 private slots:
     void onTaskStarted(const QString& taskId);
@@ -107,5 +113,6 @@ private:
     QThreadPool* m_threadPool;
     int m_maxParallel;
     bool m_started;
+    bool m_paused;
 };
 #endif // TASK_MANAGER_H
