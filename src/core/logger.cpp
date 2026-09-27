@@ -5,7 +5,7 @@
 #include <QFileInfoList>
 #include <algorithm>
 
-Logger* g_logger = nullptr;
+std::atomic<Logger*> g_logger{nullptr};
 
 Logger::Logger()
     : m_level(Level::Info)
@@ -19,6 +19,13 @@ Logger::Logger()
 
 Logger::~Logger() {
     QMutexLocker locker(&m_mutex);
+    // Clear the global pointer before any member dies: a static singleton
+    // destructed after main() returns (TaskManager) can still hit LOG_*
+    // macros; the atomic-null check there makes them a safe no-op instead
+    // of dereferencing this half-dead object (§3.5).
+    if (g_logger.load(std::memory_order_acquire) == this) {
+        g_logger.store(nullptr, std::memory_order_release);
+    }
     if (m_logFile.isOpen()) {
         m_stream.flush();
         m_logFile.close();
@@ -128,7 +135,9 @@ bool Logger::isModuleEnabled(const QString& module) const {
 }
 
 void Logger::log(Level level, const QString& module, const QString& message) {
-    if (level < m_level) {
+    // level() takes the mutex; reading m_level bare raced with setLevel()
+    // from other threads. (this-> needed: the parameter shadows the method.)
+    if (level < this->level()) {
         return;
     }
     if (!isModuleEnabled(module)) {

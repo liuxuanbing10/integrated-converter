@@ -74,13 +74,18 @@ private:
 
 /// Global logger pointer used by LOG_* convenience macros.
 /// Set at application startup (main.cpp) before any logging occurs.
-extern Logger* g_logger;
+/// Atomic + nulled in ~Logger: singletons with static destruction order
+/// (TaskManager) may log AFTER main()'s stack Logger has died; the atomic
+/// load lets them degrade to a safe no-op instead of hitting a dangling
+/// pointer (§3.5 UB fix).
+#include <atomic>
+extern std::atomic<Logger*> g_logger;
 
-// Convenience macros — check g_logger before dereferencing so they
-// safely degrade to a no-op when no logger has been installed.
-#define LOG_DEBUG(module, message)   do { if (::g_logger) ::g_logger->debug(module, message); } while(0)
-#define LOG_INFO(module, message)    do { if (::g_logger) ::g_logger->info(module, message); } while(0)
-#define LOG_WARNING(module, message) do { if (::g_logger) ::g_logger->warning(module, message); } while(0)
-#define LOG_ERROR(module, message)   do { if (::g_logger) ::g_logger->error(module, message); } while(0)
+// Convenience macros — load g_logger once into a local so the null check
+// and the call can never race with ~Logger clearing it.
+#define LOG_DEBUG(module, message)   do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->debug(module, message); } while(0)
+#define LOG_INFO(module, message)    do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->info(module, message); } while(0)
+#define LOG_WARNING(module, message) do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->warning(module, message); } while(0)
+#define LOG_ERROR(module, message)   do { auto* _lg = ::g_logger.load(std::memory_order_acquire); if (_lg) _lg->error(module, message); } while(0)
 
 #endif // LOGGER_H

@@ -88,8 +88,10 @@ int main(int argc, char *argv[]) {
         logFile.close();
     }
 
-    // _Exit skips static destruction which can hang due to singleton dependency order
-    // (TaskManager, etc.). Exit code is preserved intact.
+    // Clean return: the g_logger atomic is cleared in ~Logger, so late
+    // LOG_* calls from static destructors (TaskManager) are safe no-ops.
+    // The old _Exit() hack masked that UB and skipped leak-detection atexit
+    // handlers.
     std::fflush(stdout);
-    _Exit(status);
+    return status;
 }
