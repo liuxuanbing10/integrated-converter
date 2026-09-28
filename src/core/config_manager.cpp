@@ -119,7 +119,34 @@ void ConfigManager::detectTool(const QString& key, const QString& exeName)
         m_config[key] = detected;
         LOG_INFO("ConfigManager", QString("自动检测到%1: %2").arg(key, detected));
     }
+    else
+    {
+        // Nothing resolvable: normalize to the honest bare PATH-name so a
+        // stale absolute path never reaches QProcess (which would fail with
+        // a confusing launch error instead of "not installed").
+        m_config[key] = exeName;
+    }
 }
+
+namespace
+{
+/// True iff `exe --version` runs AND its combined output mentions `needle`.
+/// Guards the IM6 fallback: Windows ships a SYSTEM convert.exe (FAT->NTFS)
+/// that also starts and exits on --version — without this check CI resolved
+/// "ImageMagick" to the disk-conversion utility.
+bool probeOutputContains(const QString& exe, const QString& needle)
+{
+    QProcess p;
+    p.start(exe, QStringList() << QStringLiteral("--version"));
+    if (!p.waitForStarted(3000) || !p.waitForFinished(5000))
+    {
+        return false;
+    }
+    const QString out =
+        QString::fromLocal8Bit(p.readAllStandardOutput()) + QString::fromLocal8Bit(p.readAllStandardError());
+    return out.contains(needle, Qt::CaseInsensitive);
+}
+} // namespace
 
 void ConfigManager::ensureToolPaths()
 {
@@ -152,22 +179,29 @@ void ConfigManager::detectImageMagickPath()
     {
         return;
     }
-    // ImageMagick 7+ uses 'magick', IM6 uses 'convert'
+    // ImageMagick 7+ uses 'magick', IM6 uses 'convert'.
     QString detected = findExecutable(QStringLiteral("magick"));
+    QString flavor = QStringLiteral("magick");
     if (detected == QStringLiteral("magick"))
     {
-        // magick not found on PATH, try 'convert' for ImageMagick 6
+        // magick unavailable — IM6 fallback, but ONLY if the candidate
+        // actually identifies itself as ImageMagick (see probe note).
         detected = findExecutable(QStringLiteral("convert"));
-        if (detected != QStringLiteral("convert"))
+        flavor = QStringLiteral("convert");
+        if (detected == QStringLiteral("convert") || !probeOutputContains(detected, QStringLiteral("ImageMagick")))
         {
-            m_config[QStringLiteral("imagemagickPath")] = detected;
-            LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(convert)路径: %1").arg(detected));
+            detected = QStringLiteral("magick"); // nothing trustworthy found
+            flavor.clear();
         }
+    }
+    if (!flavor.isEmpty())
+    {
+        m_config[QStringLiteral("imagemagickPath")] = detected;
+        LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(%1)路径: %2").arg(flavor, detected));
     }
     else
     {
-        m_config[QStringLiteral("imagemagickPath")] = detected;
-        LOG_INFO("ConfigManager", QString("自动检测到ImageMagick(magick)路径: %1").arg(detected));
+        m_config[QStringLiteral("imagemagickPath")] = QStringLiteral("magick"); // honest fallback
     }
 }
 bool ConfigManager::loadConfig(const QString& filePath)

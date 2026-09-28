@@ -8,9 +8,21 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
 #include <QSignalSpy>
 #include <QTemporaryFile>
 #include <QTest>
+
+static bool probeLooksLikeImageMagick(const QString& exe)
+{
+    QProcess p;
+    p.start(exe, QStringList() << QStringLiteral("--version"));
+    if (!p.waitForStarted(3000) || !p.waitForFinished(5000))
+        return false;
+    const QString out =
+        QString::fromLocal8Bit(p.readAllStandardOutput()) + QString::fromLocal8Bit(p.readAllStandardError());
+    return out.contains(QStringLiteral("ImageMagick"), Qt::CaseInsensitive);
+}
 
 void TestConfigManager::initTestCase()
 {
@@ -152,8 +164,16 @@ void TestConfigManager::testLazyToolPathResolution()
 
     const QString pandoc = config.value("pandocPath").toString();
     QVERIFY(pandoc == QStringLiteral("pandoc") || QFileInfo::exists(pandoc));
+    // Normalized contract: resolvable absolute path, OR an honest bare
+    // PATH-name ("magick"/"convert" — findExecutable may return either).
     const QString im = config.value("imagemagickPath").toString();
-    QVERIFY(im == QStringLiteral("magick") || QFileInfo::exists(im));
+    QVERIFY(im == QStringLiteral("magick") || im == QStringLiteral("convert") || QFileInfo::exists(im));
+    // Regression guard (found by CI): the Windows SYSTEM convert.exe must
+    // never be stored as the ImageMagick path.
+    if (im.compare(QStringLiteral("convert"), Qt::CaseInsensitive) == 0)
+    {
+        QVERIFY(probeLooksLikeImageMagick(im)); // helper below keeps the contract honest
+    }
     QFile::remove(path);
 }
 
