@@ -1,8 +1,9 @@
 # 🏔️ Integrated Format Converter · 最终战略文档
 
-> **版本**：v2.0（2026-09-28 定稿，取代 v1.0）
-> **基线**：HEAD `058a9ee` · v1.4.0 · CI 全绿 · src 10.7k 行 / tests 2.5k 行 / 13 套件全过 · **§7.1 懒探测已落地**（启动探测 446ms → 稳态 0 探测，含 convert.exe 守护）
+> **版本**：v2.1（2026-09-28 第零阶段收官划账）
+> **基线**：HEAD `e16f560` → **v1.5.0 候补** · CI 全绿 · src 11.1k 行 / tests 3.3k 行 / **17 套件全过**（新增 TestCliRunner / TestConversionCoordinator / TestPortableMode / TestMainWindow 取证套件）· §7.1 懒探测已落地 · **第零阶段零.2/零.3/零.4/零.5 全部完成**
 > **v2.0 增量**：第三篇附录《第三方组件审计》——"换成熟件"候选的穷举裁决 + 里程碑相应调整
+> **v2.1 增量**：零.4 落地时踩实一条 Qt 6.12 漂移陷阱——`addVersionOption()` 抢占 `-v` 短形式与 `--verbose/-v` 冲突，改注册长名-only；`QCommandLineParser` 无法复现 `-i` 与位置参数交错序，混用改显式报错（宁报错不错配）；`QStandardPaths::findExecutable` 同时消灭了裸名 QProcess `--version` 探测段（convert.exe 温床）。
 > **性质**：0.x → 2.0 终极路线图。与本文冲突的旧规划（含 CODE_ANALYSIS_zh.md 剩余条目）以本文为准；引用旧条目时以 §编号标注。
 
 ---
@@ -107,9 +108,9 @@
 | 债务 | 来源 | 处置 | 截止 |
 |---|---|---|---|
 | ~~§7.1 半完成态~~ | — | **✅ 已清偿（058a9ee）**：懒探测挂钩 + 稳态零探测 + convert.exe 守护 | — |
-| main_window.cpp ~1500 行 ConversionCoordinator 拆分 | §10.11 | 零.2；拆分后 MainWindow 只做壳 | 1.5.0 前 |
-| CLI 手工解析 126 行（审计 A-1 新记） | 本轮审计发现 | 零.4 换 QCommandLineParser | 1.5.0 前 |
-| findExecutable 手写 PATH 段（审计 A-2 新记） | 本轮审计发现 | 零.4 换 QStandardPaths | 1.5.0 前 |
+| ~~main_window.cpp ~1500 行 ConversionCoordinator 拆分~~ | §10.11 | **✅ 已清偿（零.2）**：core/ConversionCoordinator + settings_page + window_drop 下沉；main_window.cpp 1173→1001；grab 逐字节一致取证行为零变化 | — |
+| ~~CLI 手工解析 126 行（审计 A-1 新记）~~ | 本轮审计发现 | **✅ 已清偿（零.4）**：QCommandLineParser + 基线测试 17 项（-v 陷阱已钉） | — |
+| ~~findExecutable 手写 PATH 段（审计 A-2 新记）~~ | 本轮审计发现 | **✅ 已清偿（零.4）**：QStandardPaths 接管系统查找；裸名 QProcess 探测段删除 | — |
 | windeployqt 打包脚本缺失（发布手工拼装） | 无 release 工程 | 一.5 建 release.yml 一并解决 | 1.6.0 前 |
 
 **铁律：任何新里程碑开工前，第零阶段必须全绿合入。地基裂缝上盖楼是战略罪。**
@@ -163,10 +164,10 @@
 | # | 任务 | 验收标准 | 人日 |
 |---|---|---|---|
 | 零.1 | ~~§7.1 收尾~~ **✅ 已完成**（058a9ee：三转换器挂钩 + testLazyToolPathResolution + 稳态零探测 + convert.exe 守护） | — | — |
-| 零.2 | **ConversionCoordinator 拆分**：submit/route/stats/pause 编排逻辑出壳，MainWindow 仅剩装配 | 新类带测试；main_window.cpp < 1000 行；行为零变化（Qt-native grab 对比） | 2 |
-| 零.3 | **便携模式**：exe 同目录 `portable.flag` → 全部数据落运行目录 | 双实例互不污染测试通过 | 0.5 |
-| 零.4 | **审计 A-1 + A-2 落地**（v2.0 新增）：QCommandLineParser 换 parseArgs、QStandardPaths 换 PATH 段 | `--help/--version` 自动生成；未知参数报错；既有 CLI 行为全保留为断言基线；真机 wav→mp3 端到端 | 1 |
-| 零.5 | 版本号一致性巡查（单一版本源） | grep 全仓一致 | 0.5 |
+| 零.2 | ~~**ConversionCoordinator 拆分**~~ **✅ 已完成**：core/ConversionCoordinator（submit/route/ledger/pause）+ settings_page/window_drop 下沉，MainWindow 仅剩装配 | 新类带测试（TestConversionCoordinator）；main_window.cpp 1001 行；Qt-native grab SHA256 前后逐字节一致（dfbc1c33…）＝行为零变化 | 2 |
+| 零.3 | ~~**便携模式**~~ **✅ 已完成**：exe 同目录 `portable.flag` → 全部数据落运行目录 | TestPortableMode 4 例 + 真机双实例取证：A(带flag)落 config/log 于自身目录、B(无flag)落 %LOCALAPPDATA%，互不污染 | 0.5 |
+| 零.4 | ~~**审计 A-1 + A-2 落地**~~ **✅ 已完成**：QCommandLineParser 换 parseArgs、QStandardPaths 换系统查找段 | `--help/--version` 自动生成；未知参数报错；TestCliRunner 17 项基线；真机 wav→mp3 端到端通过 | 1 |
+| 零.5 | ~~版本号一致性巡查~~ **✅ 已完成**：单一版本源 = CMakeLists `project(VERSION)` → `APP_VERSION` 宏注入（CLI/GUI/标题/关于框/测试全部同源），全仓 grep 无散落硬编码 | grep 全仓一致 | 0.5 |
 | 零.6 | tag **v1.5.0** + Release 说明 | CI 绿 | 0.5 |
 
 **阶段裁决点**：构造期若实测仍有任何 >100ms 阻塞（§7.1 已消 446ms 大头），就地加异步兜底（QFuture），不带病进下一阶段。
