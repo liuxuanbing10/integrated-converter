@@ -13,6 +13,7 @@
 #include "core/test_large_file_handler.h"
 #include "core/test_logger.h"
 #include "core/test_portable_mode.h"
+#include "core/test_preset.h"
 #include "core/test_task_manager.h"
 #include "ui/test_main_window.h"
 #include "ui/test_params_widgets.h"
@@ -115,6 +116,9 @@ int main(int argc, char* argv[])
 
             TestPortableMode testPortable;
             status |= runSuite(&testPortable, argc, argv, "TestPortableMode", log);
+
+            TestPreset testPreset;
+            status |= runSuite(&testPreset, argc, argv, "TestPreset", log);
 
             // Clean shutdown of singletons in reverse dependency order to prevent
             // hangs during static destruction (TaskManager thread pool)

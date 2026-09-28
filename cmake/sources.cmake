@@ -9,6 +9,7 @@ set(CORE_SOURCES
     ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.cpp
     ${PROJECT_SOURCE_DIR}/src/core/conversion_task.cpp
     ${PROJECT_SOURCE_DIR}/src/core/portable_mode.cpp
+    ${PROJECT_SOURCE_DIR}/src/core/preset.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_manager.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_runnable.cpp
     ${PROJECT_SOURCE_DIR}/src/core/config_manager.cpp
@@ -29,6 +30,7 @@ set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/error_types.h
     ${PROJECT_SOURCE_DIR}/src/core/large_file_handler.h
     ${PROJECT_SOURCE_DIR}/src/core/portable_mode.h
+    ${PROJECT_SOURCE_DIR}/src/core/preset.h
     ${PROJECT_SOURCE_DIR}/src/core/format_registry.h
     ${PROJECT_SOURCE_DIR}/src/core/file_info.h
     ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.h

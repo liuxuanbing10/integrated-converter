@@ -16,6 +16,7 @@ set(TEST_SOURCES
     core/test_conversion_coordinator.cpp
     core/test_conversion_planner.cpp
     core/test_portable_mode.cpp
+    core/test_preset.cpp
     converters/test_ffmpeg_converter.cpp
     converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp
