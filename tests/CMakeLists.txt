@@ -13,7 +13,9 @@ set(TEST_SOURCES
     core/test_config_manager.cpp
     core/test_task_manager.cpp
     core/test_error_types.cpp
+    core/test_conversion_coordinator.cpp
     core/test_conversion_planner.cpp
+    core/test_portable_mode.cpp
     converters/test_ffmpeg_converter.cpp
     converters/test_ffmpeg_progress_parser.cpp
     converters/test_pandoc_converter.cpp
@@ -22,6 +24,7 @@ set(TEST_SOURCES
     core/test_large_file_handler.cpp
     core/test_format_registry.cpp
 
+    ui/test_main_window.cpp
     ui/test_params_widgets.cpp
 )
 set(WIDGET_SOURCES
@@ -31,6 +34,17 @@ set(WIDGET_SOURCES
     ${PROJECT_SOURCE_DIR}/src/ui/document_params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/audio_params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/video_params_widget.cpp
+    # §零.2 harness: MainWindow must link into the test binary so the
+    # Qt-native grab取证 test can pin pre/post-refactor visual parity.
+    ${PROJECT_SOURCE_DIR}/src/ui/main_window.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/settings_page.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/window_drop.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/file_category_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/progress_widget.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/batch_conversion_summary.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/conversion_params_dialog.cpp
+    ${PROJECT_SOURCE_DIR}/resources/resources.qrc
 )
 add_executable(test_runner ${TEST_SOURCES} ${WIDGET_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES} ${CLI_SOURCES})
 target_include_directories(test_runner PRIVATE
@@ -58,6 +72,9 @@ set_target_properties(test_runner PROPERTIES
     AUTOUIC ON
     AUTORCC ON
 )
+# UI tests assert the single-version-source contract (§零.5), so the
+# CMake-injected APP_VERSION must exist in the test target too.
+target_compile_definitions(test_runner PRIVATE APP_VERSION="${PROJECT_VERSION}")
 enable_testing()
 add_test(NAME UnitTests COMMAND test_runner)
 

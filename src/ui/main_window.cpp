@@ -10,9 +10,11 @@
 #include "format_registry.h"
 #include "logger.h"
 #include "progress_widget.h"
+#include "settings_page.h"
 #include "task_list_widget.h"
 #include "task_manager.h"
 #include "theme.h"
+#include "window_drop.h"
 
 #include <QActionGroup>
 #include <QApplication>
@@ -306,8 +308,12 @@ void MainWindow::setupCentralWidget()
     m_pageStack->addWidget(m_audioTab);
     m_pageStack->addWidget(m_videoTab);
 
-    // Page 5: settings
-    setupSettingsPage();
+    // Page 5: settings (§零.2: extracted to ui/settings_page.{h,cpp})
+    {
+        SettingsPage* settings = new SettingsPage();
+        connect(settings, &SettingsPage::themeModeRequested, this, &MainWindow::setThemeMode);
+        m_settingsPage = settings;
+    }
     m_pageStack->addWidget(m_settingsPage);
 
     // ── Config panel (right, sticky across pages) ─────────────────
@@ -385,76 +391,6 @@ void MainWindow::setupCentralWidget()
     populateFormatCombo(Cat::Image);
 }
 
-void MainWindow::setupSettingsPage()
-{
-    m_settingsPage = new QWidget();
-    QVBoxLayout* pageLayout = new QVBoxLayout(m_settingsPage);
-    pageLayout->setContentsMargins(8, 8, 8, 8);
-    pageLayout->setSpacing(10);
-
-    QLabel* title = new QLabel(tr("软件设置"));
-    Theme::setCss(title, "title");
-    pageLayout->addWidget(title);
-
-    // Appearance
-    QGroupBox* appearanceGroup = new QGroupBox(tr("外观"));
-    QHBoxLayout* appearanceRow = new QHBoxLayout(appearanceGroup);
-    QLabel* themeHint = new QLabel(tr("界面主题（即时生效，保存于配置）"));
-    Theme::setCss(themeHint, "muted");
-    appearanceRow->addWidget(themeHint);
-    appearanceRow->addStretch();
-    for (auto [label, mode] :
-         std::initializer_list<std::pair<const char*, Theme::Mode>>{{QT_TR_NOOP("跟随系统"), Theme::Mode::System},
-                                                                    {QT_TR_NOOP("浅色"), Theme::Mode::Light},
-                                                                    {QT_TR_NOOP("深色"), Theme::Mode::Dark}})
-    {
-        QPushButton* b = new QPushButton(tr(label));
-        b->setCheckable(true);
-        b->setProperty("mode", static_cast<int>(mode));
-        if (mode == Theme::loadMode())
-            b->setChecked(true);
-        connect(b, &QPushButton::clicked, this, [this, mode]() { setThemeMode(mode); });
-        appearanceRow->addWidget(b);
-    }
-    pageLayout->addWidget(appearanceGroup);
-
-    // Performance
-    QGroupBox* perfGroup = new QGroupBox(tr("性能"));
-    QGridLayout* perfRow = new QGridLayout(perfGroup);
-    perfRow->addWidget(new QLabel(tr("最大并行任务数")), 0, 0);
-    QSpinBox* parallelSpin = new QSpinBox();
-    parallelSpin->setRange(1, QThread::idealThreadCount() * 2);
-    parallelSpin->setValue(ConfigManager::instance().maxParallelTasks());
-    connect(parallelSpin, qOverload<int>(&QSpinBox::valueChanged), this, [](int v) {
-        ConfigManager::instance().setMaxParallelTasks(v);
-        TaskManager::instance()->setMaxParallelTasks(v);
-    });
-    perfRow->addWidget(parallelSpin, 0, 1);
-    perfRow->addWidget(new QLabel(tr("日志级别")), 1, 0);
-    QComboBox* logCombo = new QComboBox();
-    logCombo->addItems({"Debug", "Info", "Warning", "Error"});
-    logCombo->setCurrentIndex(ConfigManager::instance().logLevel());
-    connect(logCombo, qOverload<int>(&QComboBox::currentIndexChanged), this, [](int idx) {
-        ConfigManager::instance().setLogLevel(idx);
-        if (Logger* lg = g_logger.load())
-            lg->setLevel(static_cast<Logger::Level>(idx));
-    });
-    perfRow->addWidget(logCombo, 1, 1);
-    perfRow->setColumnStretch(2, 1);
-    pageLayout->addWidget(perfGroup);
-
-    // Notifications
-    QGroupBox* notifyGroup = new QGroupBox(tr("通知"));
-    QVBoxLayout* notifyRow = new QVBoxLayout(notifyGroup);
-    QCheckBox* notifyCheck = new QCheckBox(tr("所有任务完成后弹窗提示"));
-    notifyCheck->setChecked(ConfigManager::instance().value("showNotification", true).toBool());
-    connect(notifyCheck, &QCheckBox::toggled, this,
-            [](bool on) { ConfigManager::instance().setValue("showNotification", on); });
-    notifyRow->addWidget(notifyCheck);
-    pageLayout->addWidget(notifyGroup);
-
-    pageLayout->addStretch(1);
-}
 
 namespace
 {
@@ -517,9 +453,7 @@ void MainWindow::setupConnections()
     connect(m_queueCancelBtn, &QPushButton::clicked, this, &MainWindow::onCancelAll);
     connect(m_queueRemoveBtn, &QPushButton::clicked, this, [this]() { m_taskListWidget->removeSelected(); });
     connect(m_queueRetryBtn, &QPushButton::clicked, this, [this]() {
-        QStringList failed;
-        for (ConversionTask* t : TaskManager::instance()->getFailedTasks())
-            failed << t->inputFile();
+        const QStringList failed = m_coordinator.failedTaskInputs();
         if (!failed.isEmpty())
             onRetryFailed(failed);
     });
@@ -555,6 +489,9 @@ void MainWindow::setupConnections()
 
     // Sidebar search filters nav buttons (3FUI: 搜索选项卡标题)
     connect(m_sidebarSearch, &QLineEdit::textChanged, this, &MainWindow::onSidebarFilterChanged);
+
+    // §零.2: ledger changes (append/prune/clear) mirror into action state.
+    connect(&m_coordinator, &ConversionCoordinator::resultsChanged, this, &MainWindow::onResultsChanged);
 
     // When files are added to the current page's tab, auto-populate output dir
     auto updateDirOnAdd = [this](FileCategoryWidget* tab) {
@@ -723,11 +660,7 @@ void MainWindow::setThemeMode(Theme::Mode mode)
 
 void MainWindow::togglePauseQueue()
 {
-    TaskManager* tm = TaskManager::instance();
-    if (tm->isPaused())
-        tm->resume();
-    else
-        tm->pause();
+    m_coordinator.togglePause();
 }
 
 void MainWindow::onQueuePauseStateChanged(bool paused)
@@ -819,7 +752,7 @@ void MainWindow::onStartConversion()
         QMessageBox::warning(this, tr("警告"), tr("请先添加要转换的文件"));
         return;
     }
-    m_conversionResults.clear();
+    m_coordinator.clearResults();
     submitConversionTasks();
     TaskManager::instance()->start();
     m_statusLabel->setText(tr("正在转换..."));
@@ -884,13 +817,8 @@ void MainWindow::onTaskAdded(const QString& taskId)
 
 void MainWindow::onTaskStarted(const QString& taskId)
 {
-    ConversionTask* task = TaskManager::instance()->getTask(taskId);
-    if (task)
-    {
-        m_currentConvertingFile = task->inputFile();
-        QFileInfo fi(m_currentConvertingFile);
-        m_progressWidget->setCurrentFile(fi.fileName());
-    }
+    m_coordinator.markStarted(taskId);
+    m_progressWidget->setCurrentFile(m_coordinator.currentFile());
     updateStatusBar();
     updateProgressWidget();
 }
@@ -903,17 +831,9 @@ void MainWindow::onTaskProgressChanged(const QString& taskId, int progress)
 
 void MainWindow::onTaskCompleted(const QString& taskId, bool success)
 {
-    ConversionTask* task = TaskManager::instance()->getTask(taskId);
-    if (task)
-    {
-        ConversionResult result;
-        result.inputPath = task->inputFile();
-        result.outputPath = task->outputFile();
-        result.success = success;
-        result.errorMessage = task->errorMessage();
-        result.durationMs = task->durationMs();
-        m_conversionResults.append(result);
-    }
+    // §零.2: ledger bookkeeping moved to ConversionCoordinator (resultsChanged
+    // signal drives onResultsChanged; onAllTasksCompleted also re-checks).
+    m_coordinator.recordCompletedTask(taskId, success);
     updateStatusBar();
     updateProgressWidget();
     m_taskListWidget->refreshTaskList();
@@ -925,8 +845,9 @@ void MainWindow::onAllTasksCompleted()
     m_startAction->setEnabled(true);
     if (m_queuePauseBtn)
         m_queuePauseBtn->setEnabled(false);
-    m_summaryAction->setEnabled(!m_conversionResults.isEmpty());
+    m_summaryAction->setEnabled(m_coordinator.hasResults());
     m_toolbarStartAction->setEnabled(true);
+    m_coordinator.markFinished();
     m_progressWidget->setCurrentFile(QString());
     updateProgressWidget();
     m_taskListWidget->refreshTaskList();
@@ -943,11 +864,16 @@ void MainWindow::onAllTasksCompleted()
             QMessageBox::information(this, tr("转换完成"), msg);
         }
     }
-    if (!m_conversionResults.isEmpty())
+    if (m_coordinator.hasResults())
     {
         showConversionSummary();
     }
     LOG_INFO("MainWindow", "所有任务已完成");
+}
+
+void MainWindow::onResultsChanged()
+{
+    m_summaryAction->setEnabled(m_coordinator.hasResults());
 }
 
 void MainWindow::onShowSummary()
@@ -967,18 +893,9 @@ void MainWindow::onRetryFailed(const QList<QString>& inputPaths)
     const QSet<QString> retry(inputPaths.begin(), inputPaths.end());
 
     // Drop the stale failure records so the summary/results show the fresh
-    // attempt instead of duplicates. Successes stay (they aren't re-run).
-    for (auto it = m_conversionResults.begin(); it != m_conversionResults.end();)
-    {
-        if (retry.contains(it->inputPath) && !it->success)
-        {
-            it = m_conversionResults.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
+    // attempt instead of duplicates (§零.2: ledger prune moved to the
+    // coordinator; successes stay — they aren't re-run).
+    m_coordinator.dropFailedResultsFor(retry);
 
     m_startAction->setEnabled(false);
     m_summaryAction->setEnabled(false);
@@ -993,13 +910,7 @@ void MainWindow::updateStatusBar()
 {
     TaskManager* tm = TaskManager::instance();
     auto c = tm->counters();
-    const QString counters = tr("总计 %1 · 运行 %2 · 等待 %3 · 完成 %4 · 失败 %5")
-                                 .arg(c.total)
-                                 .arg(c.running)
-                                 .arg(c.pending)
-                                 .arg(c.completed)
-                                 .arg(c.failed);
-    m_taskStatsLabel->setText(counters);
+    m_taskStatsLabel->setText(m_coordinator.countersText());
     if (m_queuePauseBtn)
     {
         // Pause only makes sense while there is something left to dispatch;
@@ -1019,78 +930,33 @@ void MainWindow::updateProgressWidget()
 
 void MainWindow::submitConversionTasks(const QSet<QString>& onlyPaths)
 {
-    QString outputDir = m_outputDirEdit->text();
-    if (outputDir.isEmpty())
-    {
-        outputDir = QDir::homePath();
-    }
-    QDir().mkpath(outputDir);
+    // §零.2: routing/naming/param-merge semantics live in the coordinator +
+    // ConversionPlanner; this shell only harvests widget state.
+    using Cat = FormatRegistry::Category;
 
-    // Helper lambda: submit tasks for one category using its saved format
-    auto submitTab = [&](FileCategoryWidget* tab, FormatRegistry::Category cat) {
-        QList<FileInfo> files = tab->allFiles();
-        if (files.isEmpty())
-            return;
-
-        // Use per-category saved format; fall back to current combo selection
-        QString outputFormat;
+    auto inputFor = [&](FileCategoryWidget* tab, Cat cat) {
+        ConversionCoordinator::CategoryInput in;
+        in.category = cat;
+        in.files = tab->allFiles();
         QVariant saved = m_savedFormats.value(cat);
-        if (saved.isValid())
-        {
-            outputFormat = saved.toString();
-        }
-        else
-        {
-            outputFormat = m_formatCombo->currentData().toString();
-        }
-
-        // Get saved conversion params for this category (from dialog)
-        QVariantMap dialogParams = m_conversionParams.value(cat);
-
-        for (const FileInfo& fileInfo : files)
-        {
-            // Retry mode: skip anything not in the requested path set.
-            if (!onlyPaths.isEmpty() && !onlyPaths.contains(fileInfo.filePath))
-            {
-                continue;
-            }
-            // Output naming + converter routing now live in
-            // ConversionPlanner (shared with the CLI; analysis §4.2).
-            const QString outputFile =
-                ConversionPlanner::outputPath(fileInfo.filePath, QString(), outputDir, outputFormat);
-            if (QFileInfo(outputFile).fileName().contains("_converted."))
-            {
-                LOG_WARNING("MainWindow", QString("输出路径与输入相同，自动重命名: %1").arg(outputFile));
-            }
-
-            QVariantMap params;
-            params["outputFormat"] = outputFormat;
-            const QString converter =
-                ConversionPlanner::converterNameFor(outputFormat, QFileInfo(fileInfo.filePath).suffix());
-            params["converter"] = converter.isEmpty() ? QStringLiteral("FFmpeg") : converter;
-
-            // Merge dialog conversion params
-            if (!dialogParams.isEmpty())
-            {
-                params = ConversionPlanner::mergeParams(params, dialogParams, cat);
-            }
-
-            TaskManager::instance()->addTask(fileInfo.filePath, outputFile, params);
-        }
+        in.outputFormat = saved.isValid() ? saved.toString() : m_formatCombo->currentData().toString();
+        in.dialogParams = m_conversionParams.value(cat);
+        return in;
     };
 
-    submitTab(m_imageTab, FormatRegistry::Category::Image);
-    submitTab(m_docTab, FormatRegistry::Category::Document);
-    submitTab(m_audioTab, FormatRegistry::Category::Audio);
-    submitTab(m_videoTab, FormatRegistry::Category::Video);
-
-    LOG_INFO("MainWindow", "已从所有分类标签提交转换任务");
+    const QList<ConversionCoordinator::CategoryInput> inputs = {
+        inputFor(m_imageTab, Cat::Image),
+        inputFor(m_docTab, Cat::Document),
+        inputFor(m_audioTab, Cat::Audio),
+        inputFor(m_videoTab, Cat::Video),
+    };
+    m_coordinator.submit(inputs, m_outputDirEdit->text(), onlyPaths);
 }
 
 void MainWindow::showConversionSummary()
 {
     BatchConversionSummary summary(this);
-    summary.setResults(m_conversionResults);
+    summary.setResults(m_coordinator.results());
     connect(&summary, &BatchConversionSummary::retryRequested, this, &MainWindow::onRetryFailed);
     summary.exec();
 }
@@ -1107,16 +973,11 @@ void MainWindow::onRetryTriggered(const QString& taskId, int retryCount)
 }
 
 // ---------------------------------------------------------------------------
-// Drag-and-drop
+// Drag-and-drop (payload logic in ui/window_drop.{h,cpp}, §零.2)
 // ---------------------------------------------------------------------------
 void MainWindow::dragEnterEvent(QDragEnterEvent* event)
 {
-    // Accept the drop only if the drag payload contains at least one local
-    // file URL. Other MIME types (text, images, etc.) are ignored so we
-    // don't show the "no entry" cursor for things we can't handle.
-    if (event->mimeData()->hasUrls() &&
-        std::any_of(event->mimeData()->urls().cbegin(), event->mimeData()->urls().cend(),
-                    [](const QUrl& u) { return u.isLocalFile(); }))
+    if (WindowDrop::hasLocalFileUrls(event->mimeData()))
     {
         event->acceptProposedAction();
     }
@@ -1134,35 +995,7 @@ void MainWindow::dragMoveEvent(QDragMoveEvent* event)
 
 void MainWindow::dropEvent(QDropEvent* event)
 {
-    if (!event->mimeData()->hasUrls())
-    {
-        return;
-    }
-    QStringList paths;
-    for (const QUrl& url : event->mimeData()->urls())
-    {
-        if (url.isLocalFile())
-        {
-            const QString localPath = url.toLocalFile();
-            QFileInfo info(localPath);
-            // Drop a folder → expand to its immediate children. This matches
-            // what most users expect (dragging a folder in should add the
-            // folder's contents, not just one "path/to/folder" string).
-            if (info.isDir())
-            {
-                QDir dir(localPath);
-                const QStringList entries = dir.entryList(QDir::Files);
-                for (const QString& name : entries)
-                {
-                    paths << dir.absoluteFilePath(name);
-                }
-            }
-            else if (info.isFile())
-            {
-                paths << localPath;
-            }
-        }
-    }
+    const QStringList paths = WindowDrop::pathsFromDrop(event);
     if (paths.isEmpty())
     {
         return;

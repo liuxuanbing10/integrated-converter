@@ -1,6 +1,7 @@
 #ifndef MAIN_WINDOW_H
 #define MAIN_WINDOW_H
 
+#include "conversion_coordinator.h"
 #include "format_registry.h"
 
 #include <QAction>
@@ -54,6 +55,9 @@ private slots:
     void onAllTasksCompleted();
     void onShowSummary();
     void onRetryFailed(const QList<QString>& inputPaths);
+    /// §零.2: the results ledger lives in ConversionCoordinator; this slot
+    /// only mirrors ledger state into actions/labels when it changes.
+    void onResultsChanged();
     void setThemeMode(Theme::Mode mode);
     void togglePauseQueue();
     void onQueuePauseStateChanged(bool paused);
@@ -71,12 +75,12 @@ private:
     void setupStatusBar();
     void setupCentralWidget();
     void setupConnections();
-    /// Submit every file currently in the four category tabs. When
-    /// onlyPaths is non-empty, submit ONLY the listed input paths
-    /// (retry-failed flow) instead of re-converting the whole queue.
+    /// §零.2: builds per-category CategoryInput from the widgets and hands
+    /// the batch to ConversionCoordinator::submit. When onlyPaths is
+    /// non-empty, submit ONLY the listed input paths (retry-failed flow).
     void submitConversionTasks(const QSet<QString>& onlyPaths = QSet<QString>());
+    /// View-only: render the coordinator's ledger through BatchConversionSummary.
     void showConversionSummary();
-    void setupSettingsPage();
 
     /// Opens a file dialog that accepts ALL supported formats,
     /// then auto-routes each file to the correct category tab.
@@ -133,6 +137,10 @@ protected:
     // Per-category conversion parameters
     QMap<FormatRegistry::Category, QVariantMap> m_conversionParams;
 
+    // §零.2: session orchestration (submit/route/ledger/pause) lives here,
+    // not in this window — MainWindow is assembly + rendering only.
+    ConversionCoordinator m_coordinator;
+
     TaskListWidget* m_taskListWidget;
     ProgressWidget* m_progressWidget;
     QLabel* m_statusLabel;
@@ -141,8 +149,6 @@ protected:
     QAction* m_cancelAction;
     QAction* m_summaryAction;
     QAction* m_toolbarStartAction;
-    QList<ConversionResult> m_conversionResults;
-    QString m_currentConvertingFile;
 };
 
 #endif // MAIN_WINDOW_H

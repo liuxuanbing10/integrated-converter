@@ -6,12 +6,15 @@
 #include "core/logger.h"
 #include "core/task_manager.h"
 #include "core/test_config_manager.h"
+#include "core/test_conversion_coordinator.h"
 #include "core/test_conversion_planner.h"
 #include "core/test_error_types.h"
 #include "core/test_format_registry.h"
 #include "core/test_large_file_handler.h"
 #include "core/test_logger.h"
+#include "core/test_portable_mode.h"
 #include "core/test_task_manager.h"
+#include "ui/test_main_window.h"
 #include "ui/test_params_widgets.h"
 
 #include <QApplication>
@@ -86,11 +89,17 @@ int main(int argc, char* argv[])
             TestConversionPlanner testPlanner;
             status |= runSuite(&testPlanner, argc, argv, "TestConversionPlanner", log);
 
+            TestConversionCoordinator testCoord;
+            status |= runSuite(&testCoord, argc, argv, "TestConversionCoordinator", log);
+
             TestCliRunner testCli;
             status |= runSuite(&testCli, argc, argv, "TestCliRunner", log);
 
             TestParamsWidgets testParamsWidgets;
             status |= runSuite(&testParamsWidgets, argc, argv, "TestParamsWidgets", log);
+
+            TestMainWindow testMainWindow;
+            status |= runSuite(&testMainWindow, argc, argv, "TestMainWindow", log);
             TestFFmpegConverter testFFmpeg;
             status |= runSuite(&testFFmpeg, argc, argv, "TestFFmpegConverter", log);
             TestFfmpegProgressParser testParser;
@@ -103,6 +112,9 @@ int main(int argc, char* argv[])
             status |= runSuite(&testLargeFileHandler, argc, argv, "TestLargeFileHandler", log);
             TestFormatRegistry testFormatRegistry;
             status |= runSuite(&testFormatRegistry, argc, argv, "TestFormatRegistry", log);
+
+            TestPortableMode testPortable;
+            status |= runSuite(&testPortable, argc, argv, "TestPortableMode", log);
 
             // Clean shutdown of singletons in reverse dependency order to prevent
             // hangs during static destruction (TaskManager thread pool)

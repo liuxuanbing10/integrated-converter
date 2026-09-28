@@ -5,8 +5,10 @@
 
 # ── Core framework ──────────────────────────────────────────────────────────
 set(CORE_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/core/conversion_coordinator.cpp
     ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.cpp
     ${PROJECT_SOURCE_DIR}/src/core/conversion_task.cpp
+    ${PROJECT_SOURCE_DIR}/src/core/portable_mode.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_manager.cpp
     ${PROJECT_SOURCE_DIR}/src/core/task_runnable.cpp
     ${PROJECT_SOURCE_DIR}/src/core/config_manager.cpp
@@ -17,6 +19,8 @@ set(CORE_SOURCES
 )
 set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/iconverter.h
+    ${PROJECT_SOURCE_DIR}/src/core/conversion_coordinator.h
+    ${PROJECT_SOURCE_DIR}/src/core/conversion_result.h
     ${PROJECT_SOURCE_DIR}/src/core/conversion_task.h
     ${PROJECT_SOURCE_DIR}/src/core/task_manager.h
     ${PROJECT_SOURCE_DIR}/src/core/task_runnable.h
@@ -24,6 +28,7 @@ set(CORE_HEADERS
     ${PROJECT_SOURCE_DIR}/src/core/logger.h
     ${PROJECT_SOURCE_DIR}/src/core/error_types.h
     ${PROJECT_SOURCE_DIR}/src/core/large_file_handler.h
+    ${PROJECT_SOURCE_DIR}/src/core/portable_mode.h
     ${PROJECT_SOURCE_DIR}/src/core/format_registry.h
     ${PROJECT_SOURCE_DIR}/src/core/file_info.h
     ${PROJECT_SOURCE_DIR}/src/core/conversion_planner.h
@@ -48,6 +53,8 @@ set(UI_SOURCES
     ${PROJECT_SOURCE_DIR}/src/ui/theme.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/settings_page.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/window_drop.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/file_category_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/progress_widget.cpp
@@ -62,6 +69,8 @@ set(UI_HEADERS
     ${PROJECT_SOURCE_DIR}/src/ui/theme.h
     ${PROJECT_SOURCE_DIR}/src/ui/params_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.h
+    ${PROJECT_SOURCE_DIR}/src/ui/settings_page.h
+    ${PROJECT_SOURCE_DIR}/src/ui/window_drop.h
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/file_category_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/progress_widget.h

@@ -1,5 +1,6 @@
 #ifndef BATCH_CONVERSION_SUMMARY_H
 #define BATCH_CONVERSION_SUMMARY_H
+#include "conversion_result.h" // §零.2: struct moved to core/, shared with ConversionCoordinator
 #include <QWidget>
 #include <QDialog>
 #include <QTableWidget>
@@ -9,24 +10,6 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QDateTime>
-struct ConversionResult {
-    QString inputPath;
-    QString outputPath;
-    bool success;
-    QString errorMessage;
-    qint64 durationMs;
-    ConversionResult()
-        : success(false)
-        , durationMs(0)
-    {}
-    ConversionResult(const QString& in, const QString& out, bool ok, const QString& err, qint64 dur)
-        : inputPath(in)
-        , outputPath(out)
-        , success(ok)
-        , errorMessage(err)
-        , durationMs(dur)
-    {}
-};
 class BatchConversionSummary : public QDialog {
     Q_OBJECT
 public:
