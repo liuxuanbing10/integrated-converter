@@ -19,6 +19,7 @@
 #include "core/config_manager.h"
 #include "core/iconverter.h"
 #include "core/logger.h"
+#include "core/portable_mode.h"
 #include "core/task_manager.h"
 #include "ui/main_window.h"
 #include "ui/theme.h"
@@ -187,7 +188,9 @@ int main(int argc, char* argv[])
     app.setOrganizationName("ConverterTools");
     Logger logger;
     g_logger = &logger;
-    QString configDir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    // §零.3 portable mode: exe-dir portable.flag -> all data lives next to
+    // the exe (config + log travel with the folder); else %APPDATA%.
+    QString configDir = PortableMode::currentDataDir();
     QDir().mkpath(configDir);
     QString logPath = configDir + "/converter.log";
     logger.setLogFile(logPath);
