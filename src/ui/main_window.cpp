@@ -611,29 +611,26 @@ void MainWindow::onConversionParams()
     dialog.setDarkMode(Theme::currentMode() == Theme::Mode::Dark);
     dialog.setActiveCategory(currentCat);
 
+    static constexpr FormatRegistry::Category kAllCats[] = {
+        FormatRegistry::Category::Image, FormatRegistry::Category::Document, FormatRegistry::Category::Audio,
+        FormatRegistry::Category::Video};
+
     // Restore previously saved params for each category
-    auto restoreCat = [&](FormatRegistry::Category cat) {
+    for (auto cat : kAllCats)
+    {
         if (m_conversionParams.contains(cat))
         {
             dialog.setParamsForCategory(cat, m_conversionParams[cat]);
         }
-    };
-    restoreCat(FormatRegistry::Category::Image);
-    restoreCat(FormatRegistry::Category::Document);
-    restoreCat(FormatRegistry::Category::Audio);
-    restoreCat(FormatRegistry::Category::Video);
+    }
 
     if (dialog.exec() == QDialog::Accepted)
     {
         // Store params from dialog for all categories
-        m_conversionParams[FormatRegistry::Category::Image] =
-            dialog.getParamsForCategory(FormatRegistry::Category::Image);
-        m_conversionParams[FormatRegistry::Category::Document] =
-            dialog.getParamsForCategory(FormatRegistry::Category::Document);
-        m_conversionParams[FormatRegistry::Category::Audio] =
-            dialog.getParamsForCategory(FormatRegistry::Category::Audio);
-        m_conversionParams[FormatRegistry::Category::Video] =
-            dialog.getParamsForCategory(FormatRegistry::Category::Video);
+        for (auto cat : kAllCats)
+        {
+            m_conversionParams[cat] = dialog.getParamsForCategory(cat);
+        }
 
         LOG_INFO("MainWindow", "转换参数设置已更新");
 
@@ -698,17 +695,15 @@ void MainWindow::addFilesAndAutoRoute(const QStringList& filePaths)
     if (total > 0)
     {
         msg = tr("已添加 ") + parts.join("，");
-        int maxCount = qMax(qMax(imageCount, docCount), qMax(audioCount, videoCount));
-        int targetPage = 1;
-        if (maxCount == imageCount)
-            targetPage = 1;
-        else if (maxCount == docCount)
-            targetPage = 2;
-        else if (maxCount == audioCount)
-            targetPage = 3;
-        else if (maxCount == videoCount)
-            targetPage = 4;
-        onSidebarNav(targetPage);
+        // Jump to the page that received the most files (1..4 == image..video).
+        const int counts[] = {imageCount, docCount, audioCount, videoCount};
+        int best = 0;
+        for (int i = 1; i < 4; ++i)
+        {
+            if (counts[i] > counts[best])
+                best = i;
+        }
+        onSidebarNav(1 + best);
     }
     if (skipped > 0)
     {
