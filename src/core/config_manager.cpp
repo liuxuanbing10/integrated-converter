@@ -9,6 +9,7 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QSaveFile>
+#include <QStandardPaths>
 ConfigManager& ConfigManager::instance()
 {
     static ConfigManager instance;
@@ -39,8 +40,17 @@ void ConfigManager::initDefaultConfig()
 }
 QString ConfigManager::findExecutable(const QString& name)
 {
+    // Audit A-2: system PATH lookup is QStandardPaths' job — its Windows
+    // search skips the CURRENT DIRECTORY (CreateProcess-style lookup did not,
+    // which is exactly how the system convert.exe nearly poisoned IM6
+    // detection in §7.1). Empty result means "not on PATH", not "absent":
+    // package-manager roots below still get their chance.
+    const QString onPath = QStandardPaths::findExecutable(name);
+    if (!onPath.isEmpty())
+    {
+        return onPath;
+    }
     QStringList possiblePaths;
-    possiblePaths << name;
     possiblePaths << QDir::homePath() + "/bin/" + name;
     possiblePaths << QDir::rootPath() + "Program Files/ffmpeg/bin/" + name + ".exe";
     possiblePaths << QDir::rootPath() + "Program Files (x86)/ffmpeg/bin/" + name + ".exe";
@@ -80,13 +90,6 @@ QString ConfigManager::findExecutable(const QString& name)
     {
         QFileInfo fi(path);
         if (fi.exists() && fi.isExecutable())
-        {
-            return path;
-        }
-        // 用 --version 验证可执行文件，等待完成再销毁 QProcess，避免 "Destroyed while process running" 警告
-        QProcess p;
-        p.start(path, QStringList() << "--version");
-        if (p.waitForStarted(3000) && p.waitForFinished(5000))
         {
             return path;
         }

@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
         // are valid from process start. No AttachConsole / freopen_s needed.
         // QCoreApplication is sufficient — converters don't need GUI.
         QCoreApplication coreApp(argc, argv);
-        coreApp.setApplicationName("IntegratedConverter");
+        coreApp.setApplicationName(QStringLiteral("IntegratedConverter"));
         coreApp.setApplicationVersion(QStringLiteral(APP_VERSION));
         coreApp.setOrganizationName("ConverterTools");
 
@@ -124,6 +124,34 @@ int main(int argc, char* argv[])
         g_logger = &cliLogger;
         cliLogger.setFileOutput(false);
 
+        QStringList cliArgs = coreApp.arguments().mid(1);
+        // Strip the "--cli" sentinel that triggered this branch — the parser
+        // would otherwise reject it as an unknown option.
+        cliArgs.removeAll("--cli");
+        QString err;
+        CliRunner::Options opts = CliRunner::parseArgs(cliArgs, &err);
+        if (!err.isEmpty())
+        {
+            QTextStream(stderr) << err << "\n\n";
+            CliRunner::printHelp(opts);
+            return 2;
+        }
+        if (opts.showHelp)
+        {
+            CliRunner::printHelp(opts);
+            return 0;
+        }
+        if (opts.showVersion)
+        {
+            CliRunner::printVersion(opts);
+            return 0;
+        }
+        if (opts.listFormats)
+        {
+            CliRunner::printFormats();
+            return 0;
+        }
+
         auto ffmpegConverter = std::make_shared<FFmpegConverter>();
         auto pandocConverter = std::make_shared<PandocConverter>();
         auto imagemagickConverter = std::make_shared<ImageMagickConverter>();
@@ -132,28 +160,6 @@ int main(int argc, char* argv[])
         byName.insert("Pandoc", pandocConverter.get());
         byName.insert("ImageMagick", imagemagickConverter.get());
 
-        QStringList cliArgs = coreApp.arguments().mid(1);
-        // Strip the "--cli" sentinel that triggered this branch — the parser
-        // treats it as positional and would miscount it as an input.
-        cliArgs.removeAll("--cli");
-        QString err;
-        CliRunner::Options opts = CliRunner::parseArgs(cliArgs, &err);
-        if (!err.isEmpty())
-        {
-            QTextStream(stderr) << err << "\n\n";
-            CliRunner::printHelp();
-            return 2;
-        }
-        if (opts.showHelp)
-        {
-            CliRunner::printHelp();
-            return 0;
-        }
-        if (opts.listFormats)
-        {
-            CliRunner::printFormats();
-            return 0;
-        }
         // Wire the advertised --verbose flag: without this the option was parsed,
         // printed in help, and then ignored.
         if (Logger* lg = g_logger.load())

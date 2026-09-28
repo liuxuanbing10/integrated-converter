@@ -7,6 +7,8 @@ include(../cmake/sources.cmake)
 set(TEST_SOURCES
     test_main.cpp
 
+    cli/test_cli_runner.cpp
+
     core/test_logger.cpp
     core/test_config_manager.cpp
     core/test_task_manager.cpp
@@ -30,12 +32,13 @@ set(WIDGET_SOURCES
     ${PROJECT_SOURCE_DIR}/src/ui/audio_params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/video_params_widget.cpp
 )
-add_executable(test_runner ${TEST_SOURCES} ${WIDGET_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES})
+add_executable(test_runner ${TEST_SOURCES} ${WIDGET_SOURCES} ${CORE_SOURCES} ${CONVERTER_SOURCES} ${CLI_SOURCES})
 target_include_directories(test_runner PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../src
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/core
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/converters
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/cli
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
 )

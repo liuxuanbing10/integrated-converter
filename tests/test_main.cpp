@@ -1,3 +1,4 @@
+#include "cli/test_cli_runner.h"
 #include "converters/test_ffmpeg_converter.h"
 #include "converters/test_ffmpeg_progress_parser.h"
 #include "converters/test_imagemagick_converter.h"
@@ -84,6 +85,9 @@ int main(int argc, char* argv[])
 
             TestConversionPlanner testPlanner;
             status |= runSuite(&testPlanner, argc, argv, "TestConversionPlanner", log);
+
+            TestCliRunner testCli;
+            status |= runSuite(&testCli, argc, argv, "TestCliRunner", log);
 
             TestParamsWidgets testParamsWidgets;
             status |= runSuite(&testParamsWidgets, argc, argv, "TestParamsWidgets", log);

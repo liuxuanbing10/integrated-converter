@@ -5,6 +5,7 @@
 #include "core/iconverter.h"
 #include "core/logger.h"
 
+#include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -46,156 +47,121 @@ Options parseArgs(const QStringList& args, QString* errorMessage)
     auto fail = [&](const QString& msg) {
         if (errorMessage)
             *errorMessage = msg;
+        return opts;
     };
 
-    for (int i = 0; i < args.size(); ++i)
+    // Audit A-1: QCommandLineParser replaces the 126-line hand-rolled loop.
+    // parse() (not process()) — the hand-rolled contract never exits() from
+    // inside parsing; main owns exit codes (0 ok / 1 run-failure / 2 usage).
+    QCommandLineParser parser;
+    parser.setApplicationDescription(QStringLiteral("Integrated Format Converter - CLI mode"));
+    parser.addHelpOption();
+    // Qt 6.12 regression trap: addVersionOption() now OWNS the -v short form,
+    // which collides with our advertised "--verbose/-v" (the verbose option
+    // silently fails to register — CI caught it via "option already added: v").
+    // Register version long-name-only so -v stays verbose (baseline contract).
+    parser.addOption(QCommandLineOption(QStringLiteral("version"), QStringLiteral("Show version information.")));
+    parser.addOptions({
+        {{QStringLiteral("i"), QStringLiteral("input")},
+         QStringLiteral("Input file (repeatable, or pass positionally)"),
+         QStringLiteral("path")},
+        {{QStringLiteral("o"), QStringLiteral("output")},
+         QStringLiteral("Output file (repeatable, must match --input count)"),
+         QStringLiteral("path")},
+        {QStringLiteral("output-dir"), QStringLiteral("Directory to write outputs to (use with --format)"),
+         QStringLiteral("dir")},
+        {{QStringLiteral("f"), QStringLiteral("format")},
+         QStringLiteral("Target format/extension (e.g. mp3, mp4, png)"),
+         QStringLiteral("ext")},
+        {QStringLiteral("codec"), QStringLiteral("Video codec (e.g. libx264, libx265, libvpx-vp9)"),
+         QStringLiteral("name")},
+        {QStringLiteral("audio-codec"), QStringLiteral("Audio codec (e.g. aac, libmp3lame, libopus)"),
+         QStringLiteral("name")},
+        {QStringLiteral("crf"), QStringLiteral("Constant rate factor (0-51, lower = better)"), QStringLiteral("int")},
+        {QStringLiteral("bitrate"), QStringLiteral("Video bitrate"), QStringLiteral("kbps")},
+        {QStringLiteral("audio-bitrate"), QStringLiteral("Audio bitrate"), QStringLiteral("kbps")},
+        {QStringLiteral("preset"), QStringLiteral("Encoder preset (ultrafast..veryslow)"), QStringLiteral("name")},
+        {{QStringLiteral("s"), QStringLiteral("resolution")},
+         QStringLiteral("Output resolution (e.g. 1920x1080)"),
+         QStringLiteral("WxH")},
+        {QStringLiteral("list-formats"), QStringLiteral("Print all supported formats and exit")},
+        {{QStringLiteral("v"), QStringLiteral("verbose")}, QStringLiteral("Verbose logging to stderr")},
+    });
+
+    // parse() expects argv[0] to be the executable name.
+    QStringList fullArgs;
+    fullArgs << QStringLiteral("integrated_converter") << args;
+    const bool parsed = parser.parse(fullArgs);
+    opts.helpText = parser.helpText();
+    opts.versionText =
+        QStringLiteral("%1 %2").arg(QCoreApplication::applicationName(), QCoreApplication::applicationVersion());
+    if (!parsed)
     {
-        const QString& a = args[i];
-        if (a == "--help" || a == "-h")
-        {
-            opts.showHelp = true;
-        }
-        else if (a == "--list-formats")
-        {
-            opts.listFormats = true;
-        }
-        else if (a == "--verbose" || a == "-v")
-        {
-            opts.verbose = true;
-        }
-        else if (a == "--input" || a == "-i")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--input requires a path");
-                return opts;
-            }
-            opts.inputs << args[++i];
-        }
-        else if (a == "--output" || a == "-o")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--output requires a path");
-                return opts;
-            }
-            opts.outputs << args[++i];
-        }
-        else if (a == "--output-dir")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--output-dir requires a path");
-                return opts;
-            }
-            opts.outputDir = args[++i];
-        }
-        else if (a == "--format" || a == "-f")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--format requires an extension");
-                return opts;
-            }
-            opts.format = args[++i].toLower();
-            if (opts.format.startsWith('.'))
-                opts.format = opts.format.mid(1);
-        }
-        else if (a == "--codec")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--codec requires a name");
-                return opts;
-            }
-            opts.conversionParams["videoCodec"] = args[++i];
-        }
-        else if (a == "--audio-codec")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--audio-codec requires a name");
-                return opts;
-            }
-            opts.conversionParams["audioCodec"] = args[++i];
-        }
-        else if (a == "--crf")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--crf requires an int");
-                return opts;
-            }
-            opts.conversionParams["crf"] = args[++i].toInt();
-        }
-        else if (a == "--bitrate")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--bitrate requires kbps");
-                return opts;
-            }
-            opts.conversionParams["videoBitrate"] = args[++i].toInt();
-        }
-        else if (a == "--audio-bitrate")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--audio-bitrate requires kbps");
-                return opts;
-            }
-            opts.conversionParams["audioBitrate"] = args[++i].toInt();
-        }
-        else if (a == "--preset")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--preset requires a name");
-                return opts;
-            }
-            opts.conversionParams["preset"] = args[++i];
-        }
-        else if (a == "--resolution" || a == "-s")
-        {
-            if (i + 1 >= args.size())
-            {
-                fail("--resolution requires WxH");
-                return opts;
-            }
-            opts.conversionParams["resolution"] = args[++i];
-        }
-        else if (a.startsWith("--"))
-        {
-            fail(QStringLiteral("Unknown option: %1").arg(a));
-            return opts;
-        }
-        else
-        {
-            // Positional argument: treat as another --input.
-            opts.inputs << a;
-        }
+        return fail(parser.errorText());
+    }
+    opts.showHelp = parser.isSet(QStringLiteral("help"));
+    opts.showVersion = parser.isSet(QStringLiteral("version"));
+    opts.listFormats = parser.isSet(QStringLiteral("list-formats"));
+    opts.verbose = parser.isSet(QStringLiteral("verbose"));
+    if (opts.showHelp || opts.showVersion || opts.listFormats)
+    {
+        return opts; // info flags short-circuit validation (baseline contract)
     }
 
-    if (!opts.showHelp && !opts.listFormats)
+    // QCommandLineParser separates option values from positionals, so the old
+    // traversal-interleave order of "-i a b -i c" cannot be reconstructed.
+    // Pairing ambiguity is worse than a usage error (玉衡: 宁可报错，不可错配):
+    // fail loudly when explicit --input values and positionals are mixed.
+    // Positionals ALONE remain fully supported (README: --cli *.png ...).
+    opts.inputs = parser.values(QStringLiteral("input"));
+    const QStringList positional = parser.positionalArguments();
+    opts.outputs = parser.values(QStringLiteral("output"));
+    if (!positional.isEmpty())
     {
-        if (opts.inputs.isEmpty())
+        if (!opts.inputs.isEmpty())
         {
-            fail("No input files. Use --input <path> or pass files positionally.");
+            return fail(QStringLiteral("Cannot mix --input with positional files (pairing order is undefined). "
+                                       "Use repeated --input/--output, or positionals with --output-dir + --format."));
         }
-        else if (opts.outputs.isEmpty() && opts.outputDir.isEmpty())
-        {
-            fail("Either --output (one per input) or --output-dir + --format is required.");
-        }
-        else if (!opts.outputs.isEmpty() && opts.outputs.size() != opts.inputs.size())
-        {
-            fail(QStringLiteral("--output count (%1) must match --input count (%2).")
-                     .arg(opts.outputs.size())
-                     .arg(opts.inputs.size()));
-        }
-        else if (!opts.outputDir.isEmpty() && opts.format.isEmpty())
-        {
-            fail("--output-dir requires --format <ext>.");
-        }
+        opts.inputs = positional;
+    }
+    opts.outputDir = parser.value(QStringLiteral("output-dir"));
+    opts.format = parser.value(QStringLiteral("format")).toLower();
+    if (opts.format.startsWith(QStringLiteral(".")))
+        opts.format = opts.format.mid(1);
+
+    auto put = [&](const QString& key, const QString& name) {
+        if (parser.isSet(name))
+            opts.conversionParams[key] = parser.value(name);
+    };
+    put(QStringLiteral("videoCodec"), QStringLiteral("codec"));
+    put(QStringLiteral("audioCodec"), QStringLiteral("audio-codec"));
+    put(QStringLiteral("preset"), QStringLiteral("preset"));
+    put(QStringLiteral("resolution"), QStringLiteral("resolution"));
+    if (parser.isSet(QStringLiteral("crf")))
+        opts.conversionParams[QStringLiteral("crf")] = parser.value(QStringLiteral("crf")).toInt();
+    if (parser.isSet(QStringLiteral("bitrate")))
+        opts.conversionParams[QStringLiteral("videoBitrate")] = parser.value(QStringLiteral("bitrate")).toInt();
+    if (parser.isSet(QStringLiteral("audio-bitrate")))
+        opts.conversionParams[QStringLiteral("audioBitrate")] = parser.value(QStringLiteral("audio-bitrate")).toInt();
+
+    if (opts.inputs.isEmpty())
+    {
+        return fail(QStringLiteral("No input files. Use --input <path> or pass files positionally."));
+    }
+    if (opts.outputs.isEmpty() && opts.outputDir.isEmpty())
+    {
+        return fail(QStringLiteral("Either --output (one per input) or --output-dir + --format is required."));
+    }
+    if (!opts.outputs.isEmpty() && opts.outputs.size() != opts.inputs.size())
+    {
+        return fail(QStringLiteral("--output count (%1) must match --input count (%2).")
+                        .arg(opts.outputs.size())
+                        .arg(opts.inputs.size()));
+    }
+    if (!opts.outputDir.isEmpty() && opts.format.isEmpty())
+    {
+        return fail(QStringLiteral("--output-dir requires --format <ext>."));
     }
     return opts;
 }
@@ -268,32 +234,14 @@ int run(const Options& opts, const QHash<QString, IConverter*>& convertersByName
     return failures == 0 ? 0 : 1;
 }
 
-void printHelp()
+void printHelp(const Options& opts)
 {
-    printOut("Integrated Format Converter - CLI mode\n"
-             "Usage: integrated_converter --cli [options]\n"
-             "\n"
-             "Options:\n"
-             "  -i, --input <path>         Input file (repeatable, or pass positionally)\n"
-             "  -o, --output <path>        Output file (repeatable, must match --input count)\n"
-             "      --output-dir <dir>     Directory to write outputs to (use with --format)\n"
-             "  -f, --format <ext>         Target format/extension (e.g. mp3, mp4, png)\n"
-             "      --codec <name>         Video codec (e.g. libx264, libx265, libvpx-vp9)\n"
-             "      --audio-codec <name>   Audio codec (e.g. aac, libmp3lame, libopus)\n"
-             "      --crf <int>            Constant rate factor (0-51, lower = better)\n"
-             "      --bitrate <kbps>       Video bitrate\n"
-             "      --audio-bitrate <kbps> Audio bitrate\n"
-             "      --preset <name>        Encoder preset (ultrafast..veryslow)\n"
-             "  -s, --resolution <WxH>    Output resolution (e.g. 1920x1080)\n"
-             "      --list-formats         Print all supported formats and exit\n"
-             "  -v, --verbose              Verbose logging to stderr\n"
-             "  -h, --help                 Show this help\n"
-             "\n"
-             "Examples:\n"
-             "  integrated_converter --cli -i in.mp4 -o out.mp3\n"
-             "  integrated_converter --cli -i in.mov -o out.mp4 --codec libx265 --crf 28\n"
-             "  integrated_converter --cli -i *.png --output-dir ./out --format webp\n"
-             "\n");
+    printOutLine(opts.helpText.isEmpty() ? QStringLiteral("Use --help for usage.") : opts.helpText);
+}
+
+void printVersion(const Options& opts)
+{
+    printOutLine(opts.versionText);
 }
 
 void printFormats()
