@@ -9,6 +9,7 @@
 PandocConverter::PandocConverter(QObject* parent) :
     QObject(parent), m_pandocPath("pandoc"), m_currentProcess(nullptr), m_isConverting(false)
 {
+    ConfigManager::instance().ensureToolPaths(); // §7.1 lazy detection hook
     m_pandocPath = ConfigManager::instance().value("pandocPath", "pandoc").toString();
     const auto& reg = FormatRegistry::instance();
     m_inputFormats = QSet<QString>(reg.documentInputFormats().begin(), reg.documentInputFormats().end());

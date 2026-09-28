@@ -16,11 +16,12 @@ ConfigManager& ConfigManager::instance()
 }
 ConfigManager::ConfigManager()
 {
+    // §7.1: the constructor must be trivial. Tool detection used to run four
+    // findExecutable() scans here (candidate list x `--version` process
+    // probes) on the MAIN THREAD before the window appears. Detection is now
+    // lazy (ensureToolPaths), memoized, and skipped when a stored path is
+    // already usable — steady-state startup does four QFileInfo::exists.
     initDefaultConfig();
-    detectFFmpegPath();
-    detectFFprobePath();
-    detectPandocPath();
-    detectImageMagickPath();
 }
 ConfigManager::~ConfigManager()
 { }
@@ -92,35 +93,65 @@ QString ConfigManager::findExecutable(const QString& name)
     }
     return name;
 }
+bool ConfigManager::toolPathUsable(const QString& key, const QString& exeName) const
+{
+    const QString val = m_config.value(key).toString();
+    if (val.isEmpty() || val.compare(exeName, Qt::CaseInsensitive) == 0)
+    {
+        return false; // missing or bare PATH-name: cannot trust, re-verify
+    }
+    if (val.contains(QStringLiteral("Shared"), Qt::CaseInsensitive))
+    {
+        return false; // stale shared build: DLLs unloadable by QProcess
+    }
+    return QFileInfo::exists(val) || QFileInfo::exists(val + QStringLiteral(".exe"));
+}
+
+void ConfigManager::detectTool(const QString& key, const QString& exeName)
+{
+    if (toolPathUsable(key, exeName))
+    {
+        return; // stored absolute path still on disk — zero probing
+    }
+    const QString detected = findExecutable(exeName);
+    if (detected != exeName)
+    {
+        m_config[key] = detected;
+        LOG_INFO("ConfigManager", QString("自动检测到%1: %2").arg(key, detected));
+    }
+}
+
+void ConfigManager::ensureToolPaths()
+{
+    if (m_toolsResolved)
+    {
+        return; // one resolve per session
+    }
+    m_toolsResolved = true;
+    detectFFmpegPath();
+    detectFFprobePath();
+    detectPandocPath();
+    detectImageMagickPath();
+}
+
 void ConfigManager::detectFFmpegPath()
 {
-    QString detected = findExecutable(QStringLiteral("ffmpeg"));
-    if (detected != QStringLiteral("ffmpeg"))
-    {
-        m_config[QStringLiteral("ffmpegPath")] = detected;
-        LOG_INFO("ConfigManager", QString("自动检测到FFmpeg路径: %1").arg(detected));
-    }
+    detectTool(QStringLiteral("ffmpegPath"), QStringLiteral("ffmpeg"));
 }
 void ConfigManager::detectFFprobePath()
 {
-    QString detected = findExecutable(QStringLiteral("ffprobe"));
-    if (detected != QStringLiteral("ffprobe"))
-    {
-        m_config[QStringLiteral("ffprobePath")] = detected;
-        LOG_INFO("ConfigManager", QString("自动检测到FFprobe路径: %1").arg(detected));
-    }
+    detectTool(QStringLiteral("ffprobePath"), QStringLiteral("ffprobe"));
 }
 void ConfigManager::detectPandocPath()
 {
-    QString detected = findExecutable(QStringLiteral("pandoc"));
-    if (detected != QStringLiteral("pandoc"))
-    {
-        m_config[QStringLiteral("pandocPath")] = detected;
-        LOG_INFO("ConfigManager", QString("自动检测到Pandoc路径: %1").arg(detected));
-    }
+    detectTool(QStringLiteral("pandocPath"), QStringLiteral("pandoc"));
 }
 void ConfigManager::detectImageMagickPath()
 {
+    if (toolPathUsable(QStringLiteral("imagemagickPath"), QStringLiteral("magick")))
+    {
+        return;
+    }
     // ImageMagick 7+ uses 'magick', IM6 uses 'convert'
     QString detected = findExecutable(QStringLiteral("magick"));
     if (detected == QStringLiteral("magick"))
@@ -163,23 +194,11 @@ bool ConfigManager::loadConfig(const QString& filePath)
     }
     m_config = doc.object().toVariantMap();
     m_configFilePath = filePath;
-    // ponytail: loadConfig() replaces m_config wholesale, overwriting auto-detected
-    // paths with bare names or stale Shared paths from config.json. Re-detect.
-    for (const auto& [key, name] : {QPair{"ffmpegPath", "ffmpeg"}, QPair{"ffprobePath", "ffprobe"},
-                                    QPair{"pandocPath", "pandoc"}, QPair{"imagemagickPath", "magick"}})
-    {
-        QString val = m_config.value(key).toString();
-        bool stale = (val == name) || val.contains("Shared", Qt::CaseInsensitive);
-        if (stale)
-        {
-            QString detected = findExecutable(name);
-            if (detected != name)
-            {
-                m_config[key] = detected;
-                LOG_INFO("ConfigManager", QString("配置加载后重新检测到%1: %2").arg(key, detected));
-            }
-        }
-    }
+    // loadConfig() replaces m_config wholesale, possibly with bare names or
+    // stale Shared paths. Re-run resolution over the file's values (the
+    // per-tool usable-guard skips every still-valid stored path for free).
+    m_toolsResolved = false;
+    ensureToolPaths();
     LOG_INFO("ConfigManager", QString("配置已加载: %1").arg(filePath));
     return true;
 }

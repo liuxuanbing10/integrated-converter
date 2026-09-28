@@ -23,6 +23,9 @@ FFmpegConverter::FFmpegConverter(QObject* parent) :
     m_processedBytes(0),
     m_conversionStartTime(0)
 {
+    // §7.1: first tool-path read of the session triggers lazy detection
+    // (ctor is no longer allowed to probe; memoized, skips stored-valid paths).
+    ConfigManager::instance().ensureToolPaths();
     m_ffmpegPath = ConfigManager::instance().value("ffmpegPath", "ffmpeg").toString();
     m_ffprobePath = ConfigManager::instance().value("ffprobePath", "ffprobe").toString();
     const auto& reg = FormatRegistry::instance();

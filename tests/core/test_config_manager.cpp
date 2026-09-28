@@ -1,36 +1,45 @@
-#include <QTest>
-#include <QSignalSpy>
-#include <QTemporaryFile>
-#include <QFile>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QDir>
-#include "../../src/core/config_manager.h"
 #include "test_config_manager.h"
 
-void TestConfigManager::initTestCase() {
+#include "../../src/core/config_manager.h"
+
+#include <QCoreApplication>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSignalSpy>
+#include <QTemporaryFile>
+#include <QTest>
+
+void TestConfigManager::initTestCase()
+{
     m_testConfigFile = QDir::tempPath() + "/test_config.json";
     QFile::remove(m_testConfigFile);
 }
 
-void TestConfigManager::cleanupTestCase() {
+void TestConfigManager::cleanupTestCase()
+{
     QFile::remove(m_testConfigFile);
 }
 
-void TestConfigManager::init() {
+void TestConfigManager::init()
+{
     ConfigManager::instance().setValue("maxParallelTasks", 4);
     ConfigManager::instance().setValue("outputDirectory", QDir::tempPath());
     ConfigManager::instance().setValue("logLevel", 1);
 }
 
-void TestConfigManager::testDefaultConfig() {
+void TestConfigManager::testDefaultConfig()
+{
     ConfigManager& config = ConfigManager::instance();
     QVERIFY(config.maxParallelTasks() > 0);
     QVERIFY(!config.outputDirectory().isEmpty());
     QVERIFY(config.logLevel() >= 0);
 }
 
-void TestConfigManager::testSetAndGet() {
+void TestConfigManager::testSetAndGet()
+{
     ConfigManager& config = ConfigManager::instance();
     config.setValue("testKey", "testValue");
     QCOMPARE(config.value("testKey").toString(), QString("testValue"));
@@ -42,14 +51,15 @@ void TestConfigManager::testSetAndGet() {
     QCOMPARE(config.value("boolKey").toBool(), true);
 }
 
-void TestConfigManager::testDefaultValue() {
+void TestConfigManager::testDefaultValue()
+{
     ConfigManager& config = ConfigManager::instance();
-    QCOMPARE(config.value("nonExistentKey", "default").toString(),
-            QString("default"));
+    QCOMPARE(config.value("nonExistentKey", "default").toString(), QString("default"));
     QCOMPARE(config.value("nonExistentInt", 100).toInt(), 100);
 }
 
-void TestConfigManager::testSaveAndLoad() {
+void TestConfigManager::testSaveAndLoad()
+{
     ConfigManager& config = ConfigManager::instance();
     config.setValue("maxParallelTasks", 8);
     config.setValue("outputDirectory", "C:/test/output");
@@ -68,7 +78,8 @@ void TestConfigManager::testSaveAndLoad() {
     QCOMPARE(config2.value("customKey").toString(), QString("customValue"));
 }
 
-void TestConfigManager::testMaxParallelTasks() {
+void TestConfigManager::testMaxParallelTasks()
+{
     ConfigManager& config = ConfigManager::instance();
     config.setMaxParallelTasks(16);
     QCOMPARE(config.maxParallelTasks(), 16);
@@ -78,7 +89,8 @@ void TestConfigManager::testMaxParallelTasks() {
     QCOMPARE(config.maxParallelTasks(), 32);
 }
 
-void TestConfigManager::testOutputDirectory() {
+void TestConfigManager::testOutputDirectory()
+{
     ConfigManager& config = ConfigManager::instance();
     QString testDir = "C:/custom/output";
     config.setOutputDirectory(testDir);
@@ -88,7 +100,8 @@ void TestConfigManager::testOutputDirectory() {
     QCOMPARE(config.outputDirectory(), testDir);
 }
 
-void TestConfigManager::testLogLevel() {
+void TestConfigManager::testLogLevel()
+{
     ConfigManager& config = ConfigManager::instance();
     config.setLogLevel(0);
     QCOMPARE(config.logLevel(), 0);
@@ -98,13 +111,15 @@ void TestConfigManager::testLogLevel() {
     QCOMPARE(config.logLevel(), 1);
 }
 
-void TestConfigManager::testInvalidConfigFile() {
+void TestConfigManager::testInvalidConfigFile()
+{
     ConfigManager& config = ConfigManager::instance();
     QString invalidFile = "/nonexistent/path/config.json";
     QVERIFY(!config.loadConfig(invalidFile));
 }
 
-void TestConfigManager::testAllConfig() {
+void TestConfigManager::testAllConfig()
+{
     ConfigManager& config = ConfigManager::instance();
     config.setValue("key1", "value1");
     config.setValue("key2", 42);
@@ -115,7 +130,35 @@ void TestConfigManager::testAllConfig() {
     QCOMPARE(allConfig["key2"].toInt(), 42);
 }
 
-void TestConfigManager::testSingleton() {
+void TestConfigManager::testLazyToolPathResolution()
+{
+    // §7.1: a stored absolute path that exists on disk must survive loadConfig
+    // untouched; bare/stale names must end up either still-bare (tool absent,
+    // honest fallback) or resolved to a file that actually exists.
+    QString path = QDir::tempPath() + "/lazy_toolpaths_cfg.json";
+    {
+        QFile f(path);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        QJsonObject obj;
+        obj["ffmpegPath"] = QCoreApplication::applicationFilePath();  // definitely exists
+        obj["pandocPath"] = "pandoc";                                 // bare name
+        obj["imagemagickPath"] = "C:/nonexistent_dir_zzz/magick.exe"; // stale absolute
+        f.write(QJsonDocument(obj).toJson());
+        f.close();
+    }
+    ConfigManager& config = ConfigManager::instance();
+    QVERIFY(config.loadConfig(path));
+    QCOMPARE(config.value("ffmpegPath").toString(), QCoreApplication::applicationFilePath());
+
+    const QString pandoc = config.value("pandocPath").toString();
+    QVERIFY(pandoc == QStringLiteral("pandoc") || QFileInfo::exists(pandoc));
+    const QString im = config.value("imagemagickPath").toString();
+    QVERIFY(im == QStringLiteral("magick") || QFileInfo::exists(im));
+    QFile::remove(path);
+}
+
+void TestConfigManager::testSingleton()
+{
     ConfigManager& instance1 = ConfigManager::instance();
     ConfigManager& instance2 = ConfigManager::instance();
     QCOMPARE(&instance1, &instance2);

@@ -22,6 +22,7 @@ private slots:
     void testInvalidConfigFile();
     void testAllConfig();
     void testSingleton();
+    void testLazyToolPathResolution();
 private:
     QString m_testConfigFile;
 };

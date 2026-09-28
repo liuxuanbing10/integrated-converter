@@ -110,3 +110,6 @@ test_results.log
 # local analysis doc & editor configs (not repo content)
 CODE_ANALYSIS_zh.md
 .opencode/
+
+# build helper (local, not repo content)
+build_release.ps1

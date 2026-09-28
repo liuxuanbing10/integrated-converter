@@ -14,6 +14,7 @@ static constexpr qint64 WAIT_FOR_FINISHED_TIMEOUT_MS = 300000; // 5 min
 ImageMagickConverter::ImageMagickConverter(QObject* parent) :
     QObject(parent), m_magickPath("magick"), m_process(nullptr), m_isRunning(false), m_currentProgress(0.0)
 {
+    ConfigManager::instance().ensureToolPaths(); // §7.1 lazy detection hook
     m_magickPath = ConfigManager::instance().value("imagemagickPath", "magick").toString();
     const auto& reg = FormatRegistry::instance();
     m_inputFormats = QSet<QString>(reg.imageInputFormats().begin(), reg.imageInputFormats().end());
