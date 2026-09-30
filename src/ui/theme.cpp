@@ -218,6 +218,11 @@ QLabel[cssClass="chip-warning"] { background-color: {warningSoft}; color: {warni
     border-radius: 6px; padding: 3px 10px; font-weight: 600; }
 QLabel[cssClass="chip-danger"] { background-color: {dangerSoft}; color: {danger};
     border-radius: 6px; padding: 3px 10px; font-weight: 600; }
+/* §一.1 preset chips: clickable chip buttons beside the format combo */
+QPushButton[cssClass="chip-btn"] { background-color: {accentSoft}; color: {accent};
+    border: 1px solid {accentSoft}; border-radius: 10px; padding: 3px 12px; font-size: 11px; font-weight: 600; }
+QPushButton[cssClass="chip-btn"]:hover { border-color: {accent}; }
+QPushButton[cssClass="chip-btn"]:pressed { background-color: {surfaceAlt}; }
 
 /* ── text roles ───────────────────────────────────────────────── */
 QLabel[cssClass="title"] { font-size: 15px; font-weight: 700; color: {text}; background: transparent; }

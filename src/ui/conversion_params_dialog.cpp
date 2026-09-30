@@ -1,35 +1,38 @@
 #include "conversion_params_dialog.h"
-#include "image_params_widget.h"
-#include "document_params_widget.h"
-#include "audio_params_widget.h"
-#include "video_params_widget.h"
-#include "config_manager.h"
-#include "format_registry.h"
-#include "logger.h"
 
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
+#include "audio_params_widget.h"
+#include "config_manager.h"
+#include "document_params_widget.h"
+#include "format_registry.h"
+#include "image_params_widget.h"
+#include "logger.h"
+#include "video_params_widget.h"
+
+#include <QDir>
+#include <QFileInfo>
 #include <QFrame>
+#include <QGroupBox>
+#include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLineEdit>
 #include <QMessageBox>
 #include <QScrollArea>
-#include <QFileInfo>
-#include <QDir>
+#include <QVBoxLayout>
 
-ConversionParamsDialog::ConversionParamsDialog(QWidget* parent)
-    : QDialog(parent)
-    , m_activeCategory(FormatRegistry::Category::Image)
-    , m_categoryCombo(nullptr)
-    , m_stackedWidget(nullptr)
-    , m_imageParams(nullptr)
-    , m_docParams(nullptr)
-    , m_audioParams(nullptr)
-    , m_videoParams(nullptr)
-    , m_okBtn(nullptr)
-    , m_cancelBtn(nullptr)
-    , m_resetBtn(nullptr)
-    , m_statusLabel(nullptr)
-    , m_darkMode(false)
+ConversionParamsDialog::ConversionParamsDialog(QWidget* parent) :
+    QDialog(parent),
+    m_activeCategory(FormatRegistry::Category::Image),
+    m_categoryCombo(nullptr),
+    m_stackedWidget(nullptr),
+    m_imageParams(nullptr),
+    m_docParams(nullptr),
+    m_audioParams(nullptr),
+    m_videoParams(nullptr),
+    m_okBtn(nullptr),
+    m_cancelBtn(nullptr),
+    m_resetBtn(nullptr),
+    m_statusLabel(nullptr),
+    m_darkMode(false)
 {
     setWindowTitle(tr("转换参数设置"));
     setMinimumSize(520, 480);
@@ -41,7 +44,8 @@ ConversionParamsDialog::ConversionParamsDialog(QWidget* parent)
     loadPreferences();
 }
 
-void ConversionParamsDialog::setupUI() {
+void ConversionParamsDialog::setupUI()
+{
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(16, 16, 16, 16);
     mainLayout->setSpacing(12);
@@ -53,23 +57,25 @@ void ConversionParamsDialog::setupUI() {
     selectorRow->addWidget(switchLabel);
 
     m_categoryCombo = new QComboBox();
-    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x96\xBC") + tr(" 图片"), static_cast<int>(FormatRegistry::Category::Image));
-    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x93\x84") + tr(" 文档"), static_cast<int>(FormatRegistry::Category::Document));
-    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x8E\xB5") + tr(" 音频"), static_cast<int>(FormatRegistry::Category::Audio));
-    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x8E\xAC") + tr(" 视频"), static_cast<int>(FormatRegistry::Category::Video));
+    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x96\xBC") + tr(" 图片"),
+                             static_cast<int>(FormatRegistry::Category::Image));
+    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x93\x84") + tr(" 文档"),
+                             static_cast<int>(FormatRegistry::Category::Document));
+    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x8E\xB5") + tr(" 音频"),
+                             static_cast<int>(FormatRegistry::Category::Audio));
+    m_categoryCombo->addItem(QString::fromUtf8("\xF0\x9F\x8E\xAC") + tr(" 视频"),
+                             static_cast<int>(FormatRegistry::Category::Video));
     m_categoryCombo->setMinimumHeight(34);
     m_categoryCombo->setMinimumWidth(200);
-    m_categoryCombo->setStyleSheet(
-        "QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
-        "QComboBox::drop-down { border: none; width: 22px; "
-        "background-color: #ffffff; }"
-        "QComboBox::down-arrow { width: 10px; height: 10px; }"
-        "QComboBox QAbstractItemView { "
-        "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
-        "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
-        "font-size: 12px; }"
-    );
+    m_categoryCombo->setStyleSheet("QComboBox { padding: 3px 8px; border: 1px solid #dde2e9; border-radius: 8px; "
+                                   "background-color: #ffffff; color: #1d2129; font-size: 12px; min-width: 100px; }"
+                                   "QComboBox::drop-down { border: none; width: 22px; "
+                                   "background-color: #ffffff; }"
+                                   "QComboBox::down-arrow { width: 10px; height: 10px; }"
+                                   "QComboBox QAbstractItemView { "
+                                   "border: 1px solid #dde2e9; border-radius: 8px; background-color: #ffffff; "
+                                   "color: #1d2129; selection-background-color: #f3f7ff; selection-color: #1664ff; "
+                                   "font-size: 12px; }");
     selectorRow->addWidget(m_categoryCombo);
     selectorRow->addStretch();
     mainLayout->addLayout(selectorRow);
@@ -88,8 +94,7 @@ void ConversionParamsDialog::setupUI() {
         "QScrollArea { border: none; background: transparent; }"
         "QScrollBar:vertical { background: #f7f9fb; width: 8px; border-radius: 4px; }"
         "QScrollBar::handle:vertical { background: #c9cdd4; border-radius: 4px; min-height: 30px; }"
-        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-    );
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
 
     m_stackedWidget = new QStackedWidget();
 
@@ -118,13 +123,22 @@ void ConversionParamsDialog::setupUI() {
     m_resetBtn = new QPushButton(tr("恢复默认"));
     m_resetBtn->setMinimumHeight(36);
     m_resetBtn->setCursor(Qt::PointingHandCursor);
-    m_resetBtn->setStyleSheet(
-        "QPushButton { padding: 8px 20px; border: 1px solid #dde2e9; border-radius: 8px; "
-        "background-color: #f7f9fb; color: #4e5969; font-size: 12px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #f1f4f8; }"
-        "QPushButton:pressed { background-color: #eceded; }"
-    );
+    m_resetBtn->setStyleSheet("QPushButton { padding: 8px 20px; border: 1px solid #dde2e9; border-radius: 8px; "
+                              "background-color: #f7f9fb; color: #4e5969; font-size: 12px; font-weight: 600; }"
+                              "QPushButton:hover { background-color: #f1f4f8; }"
+                              "QPushButton:pressed { background-color: #eceded; }");
     btnLayout->addWidget(m_resetBtn);
+
+    // §一.1: capture the current panel as a named, shareable preset.
+    m_presetBtn = new QPushButton(tr("存为预设"));
+    m_presetBtn->setMinimumHeight(36);
+    m_presetBtn->setCursor(Qt::PointingHandCursor);
+    m_presetBtn->setToolTip(tr("将当前分类的参数保存为预设，可在格式下拉旁一键套用，或导出 .json 分享"));
+    m_presetBtn->setStyleSheet("QPushButton { padding: 8px 20px; border: 1px solid #a0c0ff; border-radius: 8px; "
+                               "background-color: #f3f7ff; color: #1664ff; font-size: 12px; font-weight: 600; }"
+                               "QPushButton:hover { background-color: #ebf1ff; }"
+                               "QPushButton:pressed { background-color: #ccddff; }");
+    btnLayout->addWidget(m_presetBtn);
 
     btnLayout->addStretch();
 
@@ -132,35 +146,33 @@ void ConversionParamsDialog::setupUI() {
     m_okBtn->setMinimumHeight(36);
     m_okBtn->setMinimumWidth(100);
     m_okBtn->setCursor(Qt::PointingHandCursor);
-    m_okBtn->setStyleSheet(
-        "QPushButton { padding: 8px 24px; border: none; border-radius: 8px; "
-        "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #0055ff; }"
-        "QPushButton:pressed { background-color: #387bff; }"
-    );
+    m_okBtn->setStyleSheet("QPushButton { padding: 8px 24px; border: none; border-radius: 8px; "
+                           "background-color: #1664ff; color: #ffffff; font-size: 13px; font-weight: 600; }"
+                           "QPushButton:hover { background-color: #0055ff; }"
+                           "QPushButton:pressed { background-color: #387bff; }");
     btnLayout->addWidget(m_okBtn);
 
     m_cancelBtn = new QPushButton(tr("取消"));
     m_cancelBtn->setMinimumHeight(36);
     m_cancelBtn->setMinimumWidth(100);
     m_cancelBtn->setCursor(Qt::PointingHandCursor);
-    m_cancelBtn->setStyleSheet(
-        "QPushButton { padding: 8px 24px; border: 1px solid #a0c0ff; border-radius: 8px; "
-        "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
-        "QPushButton:hover { background-color: #ebf1ff; }"
-        "QPushButton:pressed { background-color: #ccddff; }"
-    );
+    m_cancelBtn->setStyleSheet("QPushButton { padding: 8px 24px; border: 1px solid #a0c0ff; border-radius: 8px; "
+                               "background-color: #f3f7ff; color: #1664ff; font-size: 13px; font-weight: 600; }"
+                               "QPushButton:hover { background-color: #ebf1ff; }"
+                               "QPushButton:pressed { background-color: #ccddff; }");
     btnLayout->addWidget(m_cancelBtn);
 
     mainLayout->addLayout(btnLayout);
 }
 
-void ConversionParamsDialog::setupConnections() {
-    connect(m_categoryCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &ConversionParamsDialog::onCategoryChanged);
+void ConversionParamsDialog::setupConnections()
+{
+    connect(m_categoryCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+            &ConversionParamsDialog::onCategoryChanged);
     connect(m_okBtn, &QPushButton::clicked, this, &ConversionParamsDialog::onValidateAndAccept);
     connect(m_cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
     connect(m_resetBtn, &QPushButton::clicked, this, &ConversionParamsDialog::onResetToDefaults);
+    connect(m_presetBtn, &QPushButton::clicked, this, &ConversionParamsDialog::onSaveAsPreset);
 
     // Forward all param change signals
     connect(m_imageParams, &ImageParamsWidget::paramsChanged, this, &ConversionParamsDialog::onAnyParamsChanged);
@@ -169,13 +181,16 @@ void ConversionParamsDialog::setupConnections() {
     connect(m_videoParams, &VideoParamsWidget::paramsChanged, this, &ConversionParamsDialog::onAnyParamsChanged);
 }
 
-void ConversionParamsDialog::setDarkMode(bool enabled) {
+void ConversionParamsDialog::setDarkMode(bool enabled)
+{
     m_darkMode = enabled;
     applyDialogStyleSheet();
 }
 
-void ConversionParamsDialog::applyDialogStyleSheet() {
-    if (m_darkMode) {
+void ConversionParamsDialog::applyDialogStyleSheet()
+{
+    if (m_darkMode)
+    {
         setStyleSheet(
             "QDialog { background-color: #1d2129; }"
             "QGroupBox { font-weight: 600; border: 1px solid #333333; border-radius: 8px; "
@@ -206,8 +221,7 @@ void ConversionParamsDialog::applyDialogStyleSheet() {
             "QScrollArea { border: none; }"
             "QScrollBar:vertical { background: #1d2129; width: 8px; border-radius: 4px; }"
             "QScrollBar::handle:vertical { background: #41464f; border-radius: 4px; min-height: 30px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        );
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }");
         return;
     }
     setStyleSheet(
@@ -240,41 +254,65 @@ void ConversionParamsDialog::applyDialogStyleSheet() {
         "QSlider::handle:horizontal { background: #1664ff; border: none; width: 16px; "
         "height: 16px; margin: -6px 0; border-radius: 8px; }"
         "QSlider::sub-page:horizontal { background: #a0c0ff; border-radius: 3px; }"
-        "QScrollArea { border: none; }"
-    );
+        "QScrollArea { border: none; }");
 }
 
-void ConversionParamsDialog::setActiveCategory(FormatRegistry::Category category) {
+void ConversionParamsDialog::setActiveCategory(FormatRegistry::Category category)
+{
     m_activeCategory = category;
     int idx = 0;
-    switch (category) {
-        case FormatRegistry::Category::Image:    idx = 0; break;
-        case FormatRegistry::Category::Document:  idx = 1; break;
-        case FormatRegistry::Category::Audio:     idx = 2; break;
-        case FormatRegistry::Category::Video:     idx = 3; break;
-        default: idx = 0; break;
+    switch (category)
+    {
+        case FormatRegistry::Category::Image:
+            idx = 0;
+            break;
+        case FormatRegistry::Category::Document:
+            idx = 1;
+            break;
+        case FormatRegistry::Category::Audio:
+            idx = 2;
+            break;
+        case FormatRegistry::Category::Video:
+            idx = 3;
+            break;
+        default:
+            idx = 0;
+            break;
     }
     m_categoryCombo->setCurrentIndex(idx);
     m_stackedWidget->setCurrentIndex(idx);
 }
 
-void ConversionParamsDialog::onCategoryChanged(int index) {
-    switch (index) {
-        case 0: m_activeCategory = FormatRegistry::Category::Image; break;
-        case 1: m_activeCategory = FormatRegistry::Category::Document; break;
-        case 2: m_activeCategory = FormatRegistry::Category::Audio; break;
-        case 3: m_activeCategory = FormatRegistry::Category::Video; break;
-        default: break;
+void ConversionParamsDialog::onCategoryChanged(int index)
+{
+    switch (index)
+    {
+        case 0:
+            m_activeCategory = FormatRegistry::Category::Image;
+            break;
+        case 1:
+            m_activeCategory = FormatRegistry::Category::Document;
+            break;
+        case 2:
+            m_activeCategory = FormatRegistry::Category::Audio;
+            break;
+        case 3:
+            m_activeCategory = FormatRegistry::Category::Video;
+            break;
+        default:
+            break;
     }
     m_stackedWidget->setCurrentIndex(index);
     m_statusLabel->setText(tr("已切换到 %1 参数").arg(m_categoryCombo->currentText().trimmed()));
 }
 
-void ConversionParamsDialog::onAnyParamsChanged() {
+void ConversionParamsDialog::onAnyParamsChanged()
+{
     m_statusLabel->setText(tr("参数已更新"));
 }
 
-void ConversionParamsDialog::onValidateAndAccept() {
+void ConversionParamsDialog::onValidateAndAccept()
+{
     // Validate all parameter widgets
     QStringList allErrors;
     allErrors << m_imageParams->validate();
@@ -282,9 +320,11 @@ void ConversionParamsDialog::onValidateAndAccept() {
     allErrors << m_audioParams->validate();
     allErrors << m_videoParams->validate();
 
-    if (!allErrors.isEmpty()) {
+    if (!allErrors.isEmpty())
+    {
         QString errorMsg = tr("参数验证失败:\n");
-        for (const QString& err : allErrors) {
+        for (const QString& err : allErrors)
+        {
             errorMsg += "• " + err + "\n";
         }
         m_statusLabel->setStyleSheet("color: #d32f2f; font-size: 12px; padding: 2px 0;");
@@ -311,12 +351,28 @@ void ConversionParamsDialog::onValidateAndAccept() {
     accept();
 }
 
-void ConversionParamsDialog::onResetToDefaults() {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("确认"),
-        tr("确定要恢复所有参数到默认值吗？"),
-        QMessageBox::Yes | QMessageBox::No);
+void ConversionParamsDialog::onSaveAsPreset()
+{
+    // §一.1: name capture is a prompt, persistence is the shell's job — the
+    // dialog never touches the filesystem (testability + one owner per file).
+    bool ok = false;
+    const QString name =
+        QInputDialog::getText(this, tr("存为预设"), tr("预设名称："), QLineEdit::Normal, QString(), &ok);
+    if (!ok || name.trimmed().isEmpty())
+    {
+        return;
+    }
+    m_statusLabel->setText(tr("预设「%1」已提交保存").arg(name.trimmed()));
+    emit saveAsPresetRequested(m_activeCategory, getParamsForCategory(m_activeCategory), name.trimmed());
+}
 
-    if (reply == QMessageBox::No) return;
+void ConversionParamsDialog::onResetToDefaults()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("确认"), tr("确定要恢复所有参数到默认值吗？"),
+                                                              QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::No)
+        return;
 
     // Reset each widget by passing empty params
     m_imageParams->setParams(QVariantMap());
@@ -330,20 +386,25 @@ void ConversionParamsDialog::onResetToDefaults() {
     LOG_INFO("ConversionParamsDialog", "参数已恢复默认");
 }
 
-QVariantMap ConversionParamsDialog::getParams() const {
+QVariantMap ConversionParamsDialog::getParams() const
+{
     return getParamsForCategory(m_activeCategory);
 }
 
-QVariantMap ConversionParamsDialog::getParamsForCategory(FormatRegistry::Category category) const {
-    if (m_savedParams.contains(category)) {
+QVariantMap ConversionParamsDialog::getParamsForCategory(FormatRegistry::Category category) const
+{
+    if (m_savedParams.contains(category))
+    {
         return m_savedParams[category];
     }
     return QVariantMap();
 }
 
-void ConversionParamsDialog::setParamsForCategory(FormatRegistry::Category category, const QVariantMap& params) {
+void ConversionParamsDialog::setParamsForCategory(FormatRegistry::Category category, const QVariantMap& params)
+{
     m_savedParams[category] = params;
-    switch (category) {
+    switch (category)
+    {
         case FormatRegistry::Category::Image:
             m_imageParams->setParams(params);
             break;
@@ -359,13 +420,15 @@ void ConversionParamsDialog::setParamsForCategory(FormatRegistry::Category categ
     }
 }
 
-void ConversionParamsDialog::loadPreferences() {
+void ConversionParamsDialog::loadPreferences()
+{
     ConfigManager& cm = ConfigManager::instance();
 
     // Load per-category params from config
     auto loadCat = [&](FormatRegistry::Category cat, const QString& key) {
         QVariantMap params = cm.value(key).toMap();
-        if (!params.isEmpty()) {
+        if (!params.isEmpty())
+        {
             setParamsForCategory(cat, params);
         }
     };
@@ -384,7 +447,8 @@ void ConversionParamsDialog::loadPreferences() {
     m_statusLabel->setText(tr("已加载保存的参数设置"));
 }
 
-void ConversionParamsDialog::savePreferences() {
+void ConversionParamsDialog::savePreferences()
+{
     ConfigManager& cm = ConfigManager::instance();
 
     cm.setValue("params_image", QVariant(m_imageParams->getParams()));
@@ -394,12 +458,11 @@ void ConversionParamsDialog::savePreferences() {
 
     // Persist to disk (use saved config path or fallback to default)
     QString configPath = cm.value("configFilePath").toString();
-    if (configPath.isEmpty()) {
+    if (configPath.isEmpty())
+    {
         configPath = QDir::homePath() + "/.integrated_converter/config.json";
     }
     cm.saveConfig(configPath);
 
     LOG_INFO("ConversionParamsDialog", "参数偏好已保存到配置文件");
 }
-
-

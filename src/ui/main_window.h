@@ -26,6 +26,8 @@
 
 class TaskListWidget;
 class ProgressWidget;
+class PresetChipsWidget;
+class PresetLibrary;
 namespace Theme
 {
 enum class Mode;
@@ -34,6 +36,7 @@ class BatchConversionSummary;
 class FileCategoryWidget;
 class ConversionParamsDialog;
 struct ConversionResult;
+struct Preset;
 
 class MainWindow : public QMainWindow
 {
@@ -68,6 +71,8 @@ private slots:
     void updateStatusBar();
     void updateProgressWidget();
     void onConversionParams();
+    /// §一.1: chips row clicked -> apply recipe to the active category.
+    void onApplyPreset(const Preset& preset);
 
 private:
     void setupMenuBar();
@@ -118,6 +123,8 @@ protected:
     // External config panel (right of pages)
     QFrame* m_configPanel = nullptr;
     QComboBox* m_formatCombo = nullptr;
+    PresetChipsWidget* m_presetChips = nullptr;
+    PresetLibrary* m_presetLibrary = nullptr;
     QLineEdit* m_outputDirEdit = nullptr;
     QPushButton* m_paramsBtn = nullptr;
     QPushButton* m_convertBtn = nullptr;

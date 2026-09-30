@@ -38,6 +38,7 @@ set(WIDGET_SOURCES
     # §零.2 harness: MainWindow must link into the test binary so the
     # Qt-native grab取证 test can pin pre/post-refactor visual parity.
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/preset_chips.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/settings_page.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/window_drop.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.cpp

@@ -55,6 +55,7 @@ set(UI_SOURCES
     ${PROJECT_SOURCE_DIR}/src/ui/theme.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/params_widget.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.cpp
+    ${PROJECT_SOURCE_DIR}/src/ui/preset_chips.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/settings_page.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/window_drop.cpp
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.cpp
@@ -71,6 +72,7 @@ set(UI_HEADERS
     ${PROJECT_SOURCE_DIR}/src/ui/theme.h
     ${PROJECT_SOURCE_DIR}/src/ui/params_widget.h
     ${PROJECT_SOURCE_DIR}/src/ui/main_window.h
+    ${PROJECT_SOURCE_DIR}/src/ui/preset_chips.h
     ${PROJECT_SOURCE_DIR}/src/ui/settings_page.h
     ${PROJECT_SOURCE_DIR}/src/ui/window_drop.h
     ${PROJECT_SOURCE_DIR}/src/ui/task_list_widget.h

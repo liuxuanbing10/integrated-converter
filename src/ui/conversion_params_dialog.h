@@ -1,20 +1,22 @@
 #ifndef CONVERSION_PARAMS_DIALOG_H
 #define CONVERSION_PARAMS_DIALOG_H
 
-#include <QDialog>
-#include <QStackedWidget>
-#include <QPushButton>
-#include <QLabel>
-#include <QComboBox>
-#include <QVariantMap>
 #include "format_registry.h"
+
+#include <QComboBox>
+#include <QDialog>
+#include <QLabel>
+#include <QPushButton>
+#include <QStackedWidget>
+#include <QVariantMap>
 
 class ImageParamsWidget;
 class DocumentParamsWidget;
 class AudioParamsWidget;
 class VideoParamsWidget;
 
-class ConversionParamsDialog : public QDialog {
+class ConversionParamsDialog : public QDialog
+{
     Q_OBJECT
 public:
     explicit ConversionParamsDialog(QWidget* parent = nullptr);
@@ -22,7 +24,10 @@ public:
 
     /// Set the active category — switches to the appropriate params page
     void setActiveCategory(FormatRegistry::Category category);
-    FormatRegistry::Category activeCategory() const { return m_activeCategory; }
+    FormatRegistry::Category activeCategory() const
+    {
+        return m_activeCategory;
+    }
 
     /// Get merged params for all categories (or for the active category)
     QVariantMap getParams() const;
@@ -42,12 +47,17 @@ public:
 signals:
     void paramsAccepted(FormatRegistry::Category category, const QVariantMap& params);
     void paramsChanged(FormatRegistry::Category category);
+    /// §一.1 preset save request: shell persists (category, params, name).
+    void saveAsPresetRequested(FormatRegistry::Category category, const QVariantMap& params, const QString& name);
 
 private slots:
     void onCategoryChanged(int index);
     void onValidateAndAccept();
     void onResetToDefaults();
     void onAnyParamsChanged();
+    /// §一.1: capture current-category params as a named preset (the shell
+    /// owns the library + target format, so this travels as a signal).
+    void onSaveAsPreset();
 
 private:
     void setupUI();
@@ -73,6 +83,7 @@ private:
     QPushButton* m_okBtn;
     QPushButton* m_cancelBtn;
     QPushButton* m_resetBtn;
+    QPushButton* m_presetBtn;
     QLabel* m_statusLabel;
     bool m_darkMode;
 };

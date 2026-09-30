@@ -9,6 +9,9 @@
 #include "file_info.h"
 #include "format_registry.h"
 #include "logger.h"
+#include "portable_mode.h"
+#include "preset.h"
+#include "preset_chips.h"
 #include "progress_widget.h"
 #include "settings_page.h"
 #include "task_list_widget.h"
@@ -39,6 +42,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QUrl>
+#include <QUuid>
 #include <QVBoxLayout>
 
 #include <chrono>
@@ -341,6 +345,12 @@ void MainWindow::setupCentralWidget()
     m_formatCombo->setMinimumHeight(30);
     configLayout->addWidget(m_formatCombo);
 
+    // §一.1: preset chips (only visible when the active category has presets)
+    m_presetLibrary = new PresetLibrary(PortableMode::currentDataDir() + QStringLiteral("/presets"));
+    m_presetChips = new PresetChipsWidget(m_presetLibrary);
+    configLayout->addWidget(m_presetChips);
+    connect(m_presetChips, &PresetChipsWidget::applyRequested, this, &MainWindow::onApplyPreset);
+
     QLabel* dirLabel = new QLabel(tr("输出目录"));
     dirLabel->setObjectName("configDirLabel");
     Theme::setCss(dirLabel, "muted");
@@ -580,6 +590,8 @@ void MainWindow::onSidebarNav(int index)
             populateFormatCombo(newCat);
             m_lastActiveCategory = newCat;
         }
+        if (m_presetChips)
+            m_presetChips->showCategory(newCat); // §一.1 chips follow the page
         FileCategoryWidget* tab = qobject_cast<FileCategoryWidget*>(m_pageStack->currentWidget());
         if (tab && tab->fileCount() > 0 && !tab->allFiles().isEmpty())
         {
@@ -611,6 +623,38 @@ void MainWindow::onConversionParams()
     dialog.setDarkMode(Theme::currentMode() == Theme::Mode::Dark);
     dialog.setActiveCategory(currentCat);
 
+    // §一.1: dialog owns UI, we own the library — persist on request.
+    connect(&dialog, &ConversionParamsDialog::saveAsPresetRequested, this,
+            [this](FormatRegistry::Category cat, const QVariantMap& params, const QString& name) {
+                Preset p;
+                p.id = QUuid::createUuid().toString(QUuid::WithoutBraces).left(13);
+                p.name = name;
+                p.category = cat;
+                // Target format = what the combo currently shows for this cat.
+                p.format = m_savedFormats.contains(cat) ? m_savedFormats.value(cat).toString()
+                                                        : m_formatCombo->currentData().toString();
+                p.engine = FormatRegistry::instance().converterForExt(p.format);
+                p.params = params;
+                p.createdAt = QDateTime::currentDateTimeUtc();
+                const QString bad = p.validate();
+                if (!bad.isEmpty())
+                {
+                    m_statusLabel->setText(tr("预设无法保存: %1").arg(bad));
+                    return;
+                }
+                QString err;
+                if (m_presetLibrary->save(p, &err))
+                {
+                    m_statusLabel->setText(tr("预设「%1」已保存 — 右键可导出分享").arg(name));
+                    m_presetChips->showCategory(cat);
+                    LOG_INFO("MainWindow", QStringLiteral("preset saved: %1 (%2)").arg(name, p.id));
+                }
+                else
+                {
+                    m_statusLabel->setText(tr("预设保存失败: %1").arg(err));
+                }
+            });
+
     static constexpr FormatRegistry::Category kAllCats[] = {
         FormatRegistry::Category::Image, FormatRegistry::Category::Document, FormatRegistry::Category::Audio,
         FormatRegistry::Category::Video};
@@ -638,6 +682,26 @@ void MainWindow::onConversionParams()
         Theme::setCss(m_paramsBtn, "success-outline");
         m_statusLabel->setText(tr("转换参数已设置"));
     }
+}
+
+void MainWindow::onApplyPreset(const Preset& preset)
+{
+    // §一.1 chip click = "share a json, share a solution" in one gesture:
+    // target format into the combo, params into the per-category store.
+    const FormatRegistry::Category cat = preset.category;
+    const int idx = m_formatCombo->findData(preset.format);
+    if (idx < 0)
+    {
+        // Preset targets a format this machine's registry does not offer for
+        // the current page — say so instead of silently doing half the job.
+        m_statusLabel->setText(tr("预设「%1」目标格式 .%2 不在当前格式列表").arg(preset.name, preset.format));
+        return;
+    }
+    m_formatCombo->setCurrentIndex(idx);
+    m_savedFormats[cat] = preset.format;
+    m_conversionParams[cat] = preset.params;
+    m_statusLabel->setText(tr("已套用预设「%1」→ .%2").arg(preset.name, preset.format));
+    LOG_INFO("MainWindow", QStringLiteral("preset applied: %1").arg(preset.name));
 }
 
 void MainWindow::setThemeMode(Theme::Mode mode)
