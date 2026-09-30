@@ -35,6 +35,8 @@ private slots:
     void testRunRoutesAndCounts();
     void testRunFailureExitCode();
     void testRunSkipsMissingFile();
+    void testPresetFileApplies();
+    void testPresetFileRejectsBadInput();
 };
 
 #endif // TEST_CLI_RUNNER_H

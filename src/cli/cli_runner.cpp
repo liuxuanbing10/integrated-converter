@@ -4,11 +4,14 @@
 #include "core/format_registry.h"
 #include "core/iconverter.h"
 #include "core/logger.h"
+#include "core/preset.h"
 
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QJsonDocument>
 #include <QStringList>
 #include <QTextStream>
 
@@ -81,6 +84,12 @@ Options parseArgs(const QStringList& args, QString* errorMessage)
         {QStringLiteral("bitrate"), QStringLiteral("Video bitrate"), QStringLiteral("kbps")},
         {QStringLiteral("audio-bitrate"), QStringLiteral("Audio bitrate"), QStringLiteral("kbps")},
         {QStringLiteral("preset"), QStringLiteral("Encoder preset (ultrafast..veryslow)"), QStringLiteral("name")},
+        // §一.1: apply a preset share file. Strategy text said `--preset
+        // file.json`, but that name is taken by the x264 encoder knob above —
+        // reusing it would silently retype an existing flag. `--preset-file`
+        // it is; README documents both so no user guesses wrong.
+        {QStringLiteral("preset-file"),
+         QStringLiteral("Apply a preset .json share file (its format may fill --format)"), QStringLiteral("file")},
         {{QStringLiteral("s"), QStringLiteral("resolution")},
          QStringLiteral("Output resolution (e.g. 1920x1080)"),
          QStringLiteral("WxH")},
@@ -129,6 +138,49 @@ Options parseArgs(const QStringList& args, QString* errorMessage)
     opts.format = parser.value(QStringLiteral("format")).toLower();
     if (opts.format.startsWith(QStringLiteral(".")))
         opts.format = opts.format.mid(1);
+
+    // §一.1 CLI preset application: explicit flags always win over the file,
+    // the file fills gaps (--format omitted -> preset.format; params merged
+    // under the same rule ConversionPlanner::mergeParams uses for dialogs).
+    opts.presetFile = parser.value(QStringLiteral("preset-file"));
+    if (!opts.presetFile.isEmpty())
+    {
+        QFile pf(opts.presetFile);
+        if (!pf.open(QIODevice::ReadOnly))
+        {
+            return fail(QStringLiteral("--preset-file: cannot read %1").arg(opts.presetFile));
+        }
+        QJsonParseError pe{};
+        const QJsonDocument doc = QJsonDocument::fromJson(pf.readAll(), &pe);
+        Preset preset;
+        QString reason;
+        if (pe.error != QJsonParseError::NoError || !doc.isObject() ||
+            !Preset::fromShareJson(doc.object(), &preset, &reason))
+        {
+            return fail(QStringLiteral("--preset-file: %1 (%2)").arg(opts.presetFile, reason));
+        }
+        if (opts.format.isEmpty())
+        {
+            opts.format = preset.format;
+        }
+        QVariantMap merged = preset.params;
+        // CLI flags override preset params: re-collect the set flags on top.
+        auto over = [&](const QString& key, const QString& name) {
+            if (parser.isSet(name))
+                merged[key] = parser.value(name);
+        };
+        over(QStringLiteral("videoCodec"), QStringLiteral("codec"));
+        over(QStringLiteral("audioCodec"), QStringLiteral("audio-codec"));
+        over(QStringLiteral("preset"), QStringLiteral("preset"));
+        over(QStringLiteral("resolution"), QStringLiteral("resolution"));
+        if (parser.isSet(QStringLiteral("crf")))
+            merged[QStringLiteral("crf")] = parser.value(QStringLiteral("crf")).toInt();
+        if (parser.isSet(QStringLiteral("bitrate")))
+            merged[QStringLiteral("videoBitrate")] = parser.value(QStringLiteral("bitrate")).toInt();
+        if (parser.isSet(QStringLiteral("audio-bitrate")))
+            merged[QStringLiteral("audioBitrate")] = parser.value(QStringLiteral("audio-bitrate")).toInt();
+        opts.conversionParams = merged;
+    }
 
     auto put = [&](const QString& key, const QString& name) {
         if (parser.isSet(name))

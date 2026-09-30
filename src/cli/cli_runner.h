@@ -18,6 +18,9 @@ struct Options
     bool showVersion = false;
     bool listFormats = false;
     bool verbose = false;
+    QString presetFile; // §一.1: share-file recipe to apply (NOT the
+                        // x264 --preset encoder knob — name collision
+                        // resolved in the strategy audit note)
     QStringList inputs;
     QStringList outputs;          // parallel to inputs; may be empty
     QString outputDir;            // when outputs are not specified explicitly

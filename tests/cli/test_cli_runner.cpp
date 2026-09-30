@@ -1,10 +1,26 @@
 #include "test_cli_runner.h"
 
 #include "../../src/cli/cli_runner.h"
+#include "../../src/core/preset.h"
 
 #include <QHash>
 #include <QTemporaryDir>
 #include <QTest>
+
+namespace
+{
+Preset sampleCliPreset()
+{
+    Preset p;
+    p.id = QStringLiteral("cli-test-1");
+    p.name = QStringLiteral("cli test preset");
+    p.category = FormatRegistry::Category::Video;
+    p.engine = FormatRegistry::Converter::FFmpeg;
+    p.format = QStringLiteral("mp4");
+    p.params[QStringLiteral("videoCodec")] = QStringLiteral("libx264");
+    return p;
+}
+} // namespace
 
 namespace
 {
@@ -273,4 +289,50 @@ void TestCliRunner::testRunSkipsMissingFile()
     int rc = CliRunner::run(o, byName, &err);
     QCOMPARE(rc, 1);
     QCOMPARE(ffmpeg.calls.size(), 0);
+}
+
+void TestCliRunner::testPresetFileApplies()
+{
+    // §一.1 CLI contract: --preset-file loads a share .json, fills --format,
+    // merges params; an explicit CLI flag still overrides the preset value.
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    Preset p = sampleCliPreset();
+    PresetLibrary lib(tmp.path());
+    QString err;
+    QVERIFY2(lib.save(p, &err), qPrintable(err));
+    const QString share = tmp.filePath(QStringLiteral("share.json"));
+    QVERIFY2(lib.exportTo(p, share, &err), qPrintable(err));
+
+    auto o = CliRunner::parseArgs({"-i", "a.mp4", "--output-dir", "out", "--preset-file", share}, &err);
+    QVERIFY2(err.isEmpty(), qPrintable(err));
+    // Contract: an explicit destination is still required (the preset fills
+    // --format, not WHERE to write); preset params land in conversionParams.
+    QCOMPARE(o.format, QString("mp4"));
+    QCOMPARE(o.conversionParams.value("videoCodec").toString(), QString("libx264"));
+
+    // explicit flag wins over the preset file
+    o = CliRunner::parseArgs({"-i", "a.mp4", "--output-dir", "out", "--preset-file", share, "--codec", "libx265"},
+                             &err);
+    QVERIFY(err.isEmpty());
+    QCOMPARE(o.conversionParams.value("videoCodec").toString(), QString("libx265"));
+}
+
+void TestCliRunner::testPresetFileRejectsBadInput()
+{
+    QTemporaryDir tmp;
+    QVERIFY(tmp.isValid());
+    const QString bogus = tmp.filePath(QStringLiteral("not_a_preset.json"));
+    QFile f(bogus);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write("{\"maxParallelTasks\": 4}");
+    f.close();
+
+    QString err;
+    CliRunner::parseArgs({"-i", "a.mp4", "--preset-file", bogus}, &err);
+    QVERIFY(err.contains(QStringLiteral("marker")));
+
+    err.clear();
+    CliRunner::parseArgs({"-i", "a.mp4", "--preset-file", tmp.filePath(QStringLiteral("ghost.json"))}, &err);
+    QVERIFY(!err.isEmpty());
 }
